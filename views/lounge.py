@@ -1,0 +1,204 @@
+"""🛋️ Peer Interactive Lounge: shared rooms, live chat, reactions, polls and sync-watch."""
+from __future__ import annotations
+
+import time
+
+import streamlit as st
+import streamlit.components.v1 as components
+
+from core import cards, config
+from core.data import CATALOG
+from core.emoji import BADGES, REACTIONS, SHORTCODES
+from core.state import get_hub, get_profile
+from core.store import clean_name, normalize_code, poll_winner
+from views.common import html
+
+REFRESH = config.CHAT_REFRESH_SECONDS
+
+
+# ───────────────────────── helpers ─────────────────────────
+def _me() -> str:
+    return st.session_state.get("lounge_name", "")
+
+
+def _code() -> str:
+    return st.session_state.get("lounge_code", "")
+
+
+def _enter(code: str, name: str) -> None:
+    st.session_state.lounge_code = code
+    st.session_state.lounge_name = name
+    st.query_params["room"] = code
+
+
+def _leave() -> None:
+    get_hub().leave(_code(), _me())
+    st.session_state.pop("lounge_code", None)
+    st.query_params.pop("room", None)
+
+
+def _share_link(code: str) -> str:
+    try:
+        headers = st.context.headers
+        host = headers.get("X-Forwarded-Host") or headers.get("Host") or "localhost:8501"
+        proto = headers.get("X-Forwarded-Proto") or ("http" if host.startswith(("localhost", "127.", "192.168.", "10.")) else "https")
+    except Exception:                       # very old Streamlit without st.context
+        host, proto = "localhost:8501", "http"
+    return f"{proto}://{host}/?room={code}"
+
+
+# ───────────────────────── lobby ─────────────────────────
+def _lobby() -> None:
+    html(cards.section_html("🛋️", "Peer Lounge", "Open a room, share the code, watch together"))
+    hub = get_hub()
+    default_name = st.session_state.get("lounge_name") or get_profile().name()
+    name = clean_name(st.text_input("Your display name", value=default_name, max_chars=config.MAX_NAME_LEN,
+                                    placeholder="e.g. Anish"))
+    invited = normalize_code(st.query_params.get("room", ""))
+
+    left, right = st.columns(2, gap="large")
+    with left:
+        with st.container(border=True):
+            st.markdown("#### ✨ Create a room")
+            room_name = st.text_input("Room name", placeholder="BB Telugu weekend watch 👁️", max_chars=40)
+            if st.button("🚀 Create room", use_container_width=True, disabled=not name):
+                code = hub.create_room(room_name, name)
+                _enter(code, name)
+                st.rerun()
+    with right:
+        with st.container(border=True):
+            st.markdown("#### 🔑 Join with a code")
+            code_in = st.text_input("Room code", value=invited, placeholder="e.g. 7KQ2XM", max_chars=12)
+            if st.button("🎟️ Join room", use_container_width=True, disabled=not (name and code_in)):
+                code = normalize_code(code_in)
+                if hub.join(code, name):
+                    _enter(code, name)
+                    st.rerun()
+                else:
+                    st.error("That room doesn't exist (or expired). Double-check the code.")
+    if not name:
+        st.caption("Enter a display name to create or join a room.")
+    if invited and not hub.exists(invited):
+        st.warning(f"The invite link points to room {invited}, which no longer exists.")
+
+
+# ───────────────────────── live fragments ─────────────────────────
+@st.fragment(run_every=REFRESH)
+def _live_chat() -> None:
+    hub, code, me = get_hub(), _code(), _me()
+    room = hub.snapshot(code)
+    if room is None:
+        st.warning("This room has closed.")
+        return
+    hub.heartbeat(code, me)
+    html(cards.floating_reactions_html(room["messages"], time.time()))
+    html(cards.chat_html(room["messages"], me))
+    cols = st.columns(len(REACTIONS))
+    for col, emo in zip(cols, REACTIONS):
+        if col.button(emo, key=f"react_{emo}", use_container_width=True):
+            hub.react(code, me, emo)
+            st.rerun(scope="fragment")
+
+
+@st.fragment(run_every=REFRESH)
+def _live_members() -> None:
+    hub, code = get_hub(), _code()
+    room = hub.snapshot(code)
+    if room:
+        html(cards.members_html(hub.online(code), room["members"], room["host"]))
+
+
+@st.fragment(run_every=REFRESH)
+def _live_poll() -> None:
+    hub, code, me = get_hub(), _code(), _me()
+    room = hub.snapshot(code)
+    if room is None:
+        return
+    poll = room.get("poll")
+    if poll:
+        html(cards.poll_html(poll, me))
+        st.caption("Tap to vote, tap again to unvote")
+        for i, opt in enumerate(poll["options"]):
+            mine = me in opt["votes"]
+            if st.button(("✅ " if mine else "🗳️ ") + opt["label"], key=f"vote_{poll['ts']}_{i}",
+                         use_container_width=True):
+                hub.vote(code, me, i)
+                st.rerun(scope="fragment")
+        c1, c2 = st.columns(2)
+        winner = poll_winner(poll)
+        if c1.button("▶ Sync-start winner", use_container_width=True, disabled=not winner):
+            hub.start_sync(code, me, winner)
+            st.rerun()
+        if c2.button("🧹 Close poll", use_container_width=True):
+            hub.clear_poll(code, me)
+            st.rerun(scope="fragment")
+    else:
+        with st.form("new_poll", clear_on_submit=True, border=False):
+            question = st.text_input("Question", value="What are we watching tonight?", max_chars=80)
+            picks = st.multiselect("Pick options", [i["title"] for i in CATALOG], max_selections=6,
+                                   placeholder="Choose 2-6 titles…")
+            extra = st.text_input("Or add your own (comma separated)",
+                                  placeholder="BBT10 weekend episode, Nominations promo")
+            if st.form_submit_button("🗳️ Launch poll", use_container_width=True):
+                options = picks + [x for x in extra.split(",") if x.strip()]
+                if hub.create_poll(code, me, question, options):
+                    st.rerun(scope="fragment")
+                else:
+                    st.error("Add at least 2 different options.")
+
+
+@st.fragment(run_every=3)
+def _live_sync() -> None:
+    room = get_hub().snapshot(_code())
+    sync = room and room.get("sync")
+    if sync and time.time() - sync["start_at"] < 15 * 60:
+        components.html(cards.countdown_component_html(sync["title"], sync["start_at"]), height=150)
+
+
+# ───────────────────────── room ─────────────────────────
+def _room() -> None:
+    hub, code, me = get_hub(), _code(), _me()
+    room = hub.snapshot(code)
+    if room is None:
+        st.session_state.pop("lounge_code", None)
+        st.query_params.pop("room", None)
+        st.toast("That room has closed or expired.", icon="🚪")
+        st.rerun()
+    hub.join(code, me)   # no-op if already a member; restores presence after refresh
+
+    html(f'<div class="vs-roomhead"><div><div class="vs-roomname">🛋️ {cards.esc(room["name"])}</div>'
+         f'<div style="color:var(--muted);font-size:.85rem">You are <b>{cards.esc(me)}</b> · host {cards.esc(room["host"])}</div></div>'
+         f'<div class="vs-code">{code}</div></div>')
+
+    with st.expander("🔗 Invite friends"):
+        st.write("Share this link (or just the code). Friends must be able to reach this server, so see the README for LAN and online options.")
+        st.code(_share_link(code), language=None)
+
+    chat_col, side_col = st.columns([3, 2], gap="large")
+    with chat_col:
+        _live_chat()
+        badge = st.pills("Message type", options=list(BADGES), format_func=lambda k: BADGES[k][0],
+                         default="none", key="badge", label_visibility="collapsed") or "none"
+        text = st.chat_input("Drop a hot take… (try :fire: :goat: :evicted:)", max_chars=config.MAX_MESSAGE_LEN)
+        if text:
+            hub.post(code, me, text, badge)
+            st.rerun()
+        with st.expander("😎 Custom emoji codes"):
+            html('<div class="vs-tags">' + "".join(
+                f'<span class="vs-tag">{cards.esc(k)} {v}</span>' for k, v in SHORTCODES.items()) + "</div>")
+    with side_col:
+        with st.container(border=True):
+            st.markdown("##### 👥 In the room")
+            _live_members()
+        with st.container(border=True):
+            st.markdown("##### 🗳️ Sync & Vote")
+            _live_poll()
+        _live_sync()
+        st.button("🚪 Leave room", on_click=_leave, use_container_width=True)
+
+
+def render() -> None:
+    if _code() and _me():
+        _room()
+    else:
+        _lobby()

@@ -1,0 +1,10 @@
+<resources>
+    <!-- Dark neon theme: no action bar, VibeSync background behind the WebView -->
+    <style name="Theme.VibeSync" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">#00F0FF</item>
+        <item name="colorSecondary">#7A5CFF</item>
+        <item name="android:windowBackground">#07060F</item>
+        <item name="android:statusBarColor">#07060F</item>
+        <item name="android:navigationBarColor">#07060F</item>
+    </style>
+</resources>

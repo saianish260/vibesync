@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">VibeSync</string>
+    <!-- ⚠️ Replace with YOUR deployed app URL (Streamlit Community Cloud, or http://<laptop-ip>:8501 for Wi-Fi testing) -->
+    <string name="vibesync_url">https://your-vibesync-app.streamlit.app/</string>
+</resources>

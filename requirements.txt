@@ -1,0 +1,2 @@
+streamlit>=1.40,<2
+tzdata>=2024.1   # time-zone data for Windows (zoneinfo needs it there)
