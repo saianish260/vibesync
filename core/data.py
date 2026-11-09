@@ -197,6 +197,38 @@ for _item in CATALOG:          # sensible defaults so the UI never KeyErrors
 
 BY_ID = {item["id"]: item for item in CATALOG}
 
+# Browse screen: category -> ordered rows of (row title, item ids)
+CATEGORIES = {
+    "anime": "🍥 Anime",
+    "movie": "🎬 Movies",
+    "series": "📺 Series",
+    "reality": "👁️ Reality TV",
+    "sports": "🏏 Sports",
+}
+GROUPS: dict[str, list[tuple[str, list[str]]]] = {
+    "anime": [
+        ("Top anime series", ["jjk", "demon-slayer", "solo-leveling", "frieren", "one-piece",
+                              "spy-family", "haikyu", "aot"]),
+        ("Doraemon movies · Telugu audio", ["sbm-doraemon", "sbm-doraemon-2", "doraemon-dinosaur",
+                                            "doraemon-steel-troops", "doraemon-sky-utopia"]),
+    ],
+    "movie": [
+        ("Telugu blockbusters", ["pushpa2", "kalki", "devara", "lucky-baskhar", "hanuman"]),
+        ("Global hits", ["interstellar", "spiderverse"]),
+    ],
+    "series": [
+        ("Indian originals", ["family-man", "panchayat", "kota-factory"]),
+        ("International", ["stranger-things", "arcane", "squid-game", "breaking-bad"]),
+    ],
+    "reality": [
+        ("Telugu reality shows", ["bbt10", "bbjodi2"]),
+    ],
+    "sports": [
+        ("Cricket", ["ipl", "team-india"]),
+        ("More sports", ["pkl", "epl", "f1"]),
+    ],
+}
+
 MOODS: dict[str, dict] = {
     "bored":     {"label": "😐 Bored",       "tags": {"hype", "fun"},
                   "line": "Boredom detected. Deploying countermeasures…"},

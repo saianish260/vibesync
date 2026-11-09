@@ -30,6 +30,14 @@ def greeting() -> str:
     return "Night mode activated"
 
 
+def go(page: str, **state) -> None:
+    """Button callback: switch the top nav to `page` and preset any session values."""
+    st.session_state.page = page
+    st.session_state.nav_widget = page
+    for key, value in state.items():
+        st.session_state[key] = value
+
+
 def html(markup: str) -> None:
     st.markdown(markup, unsafe_allow_html=True)
 

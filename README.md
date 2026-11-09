@@ -1,15 +1,12 @@
 # ⚡ VibeSync
 
-A neon, cyberpunk-styled entertainment hub that kills boredom on contact. It has three parts:
+A fast, dark-themed entertainment hub that kills boredom on contact. It has three screens:
 
-- **🏠 Mood Feed.** Pick how you feel and you get a curated card grid instantly. Below that are anime and Doraemon (Telugu) quick-picks, a Reality TV Central with episode trackers for **Bigg Boss Telugu 10** and **BB Jodi Season 2**, and a Movies / Series / Sports vault.
-- **🎛️ Entertainment Matrix.** Filter by category, genre, platform and Telugu audio, or search. The glowing **SURPRISE ME!** button picks from your favourites.
-- **🛋️ Peer Lounge.** Create a room, share the code or link, and get:
-  - live chat with custom `:emoji:` codes, message badges (🌶️ Hot take, ⚠️ blurred Spoiler, ⚡ Hype, 🚪 Elimination) and floating reactions
-  - a live vote on what to watch
-  - a synced "3-2-1 PLAY" countdown for everyone in the room
+- **🏠 Home.** A short greeting, a mood picker that builds a feed instantly, a big **SURPRISE ME** button, "Live now" (Bigg Boss Telugu 10), quick category jumps and your favourites row.
+- **🧭 Browse.** Category tabs (Anime, Movies, Series, Reality TV, Sports) with swipeable rows such as "Top anime series", "Doraemon movies · Telugu audio" and "Telugu blockbusters". It also has search, collapsible filters, the Reality TV episode tracker, and a favourites manager.
+- **🛋️ Lounge.** Shared rooms with a code or link: live chat with `:emoji:` codes and badges (🌶️ Hot take, ⚠️ blurred Spoiler, ⚡ Hype, 🚪 Elimination), floating reactions, a watch poll and a synced "3-2-1 PLAY" countdown.
 
-Built with **Python + Streamlit** and custom HTML/CSS (glassmorphism, neon glows, animations). It's responsive for laptop (Asus TUF F15) and phone (Realme P1 5G).
+Built with **Python + Streamlit** and custom lightweight HTML/CSS (midnight palette, violet + cyan accents, no heavy blur or looping animations, so it stays smooth on phones). It's responsive for laptop (Asus TUF F15) and phone (Realme P1 5G).
 
 ---
 
@@ -114,7 +111,7 @@ For a shareable release build, use **Build → Generate Signed App Bundle / APK*
 
 | Want to…                         | Edit                                                                                  |
 |----------------------------------|---------------------------------------------------------------------------------------|
-| Add / change shows, movies, anime | `core/data.py` → `CATALOG` (each entry is a simple dict, documented at the top)       |
+| Add / change shows, movies, anime | `core/data.py` → `CATALOG`, then place it in a Browse row in `GROUPS`               |
 | Use real poster images           | add `poster="https://…jpg"` to an item; it replaces the generated neon art             |
 | Add moods or boost lines         | `MOODS` and `BOOSTS` in `core/data.py`                                                |
 | New chat emoji codes / badges    | `core/emoji.py`                                                                       |
@@ -129,12 +126,12 @@ vibesync/
 ├─ core/
 │  ├─ config.py           # tunable settings
 │  ├─ data.py             # catalog, moods, tracker seeds, filters
-│  ├─ styles.py           # the neon / glassmorphism CSS
+│  ├─ styles.py           # the midnight theme CSS
 │  ├─ cards.py            # HTML builders for cards, chat, poll, countdown
 │  ├─ emoji.py            # :shortcodes:, badges, reactions
 │  ├─ store.py            # thread-safe JSON stores (rooms, profile)
 │  └─ state.py            # shared singletons (st.cache_resource)
-├─ views/                 # home.py · matrix.py · lounge.py · common.py
+├─ views/                 # home.py · browse.py · tracker.py · lounge.py · common.py
 ├─ tests/                 # unit tests for store, cards, filters
 ├─ android/               # WebView APK shell + icon
 └─ .streamlit/config.toml # dark theme

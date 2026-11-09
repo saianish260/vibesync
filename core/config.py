@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"          # runtime JSON lives here (git-ignored)
 
 # Lounge (social room) tuning
-CHAT_REFRESH_SECONDS = 2          # how often chat / poll / members auto-refresh
+CHAT_REFRESH_SECONDS = 3          # how often the Lounge (chat, poll, members) refreshes
 ONLINE_WINDOW_SECONDS = 20        # "online" if seen within this window
 MAX_MESSAGES = 200                # per room, oldest trimmed first
 MAX_MESSAGE_LEN = 300

@@ -110,6 +110,16 @@ class CardTests(unittest.TestCase):
         self.assertIn("🔥", out)
         self.assertIn("vs-spoiler", out)
 
+    def test_browse_groups_cover_catalog(self):
+        grouped = [i for rows in data.GROUPS.values() for _, ids in rows for i in ids]
+        self.assertEqual(sorted(grouped), sorted(data.BY_ID))                # every item in exactly one row
+        for cat, rows in data.GROUPS.items():
+            self.assertIn(cat, data.CATEGORIES)
+            for _, ids in rows:
+                self.assertTrue(all(data.BY_ID[i]["kind"] == cat for i in ids), cat)
+        self.assertIn("vs-rail", cards.rail_html(data.CATALOG[:3]))
+        self.assertNotIn("\n", cards.wide_card_html(data.BY_ID["bbt10"]))
+
     def test_filters(self):
         self.assertTrue(all(i["telugu"] for i in data.filter_items(telugu_only=True)))
         self.assertEqual([i["id"] for i in data.filter_items("anime", query="nobita's dinosaur")],
