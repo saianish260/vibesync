@@ -22,3 +22,4 @@ android/local.properties
 *.aab
 *.jks
 *.keystore
+components/discover/catalog.json

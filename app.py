@@ -1,51 +1,41 @@
-"""VibeSync: instant mood-boost entertainment hub.
+"""VibeSync: pick something to watch in seconds, then open it straight in its app.
 
 Run with:  streamlit run app.py
 """
 import streamlit as st
 
-st.set_page_config(page_title="VibeSync", page_icon="🎧", layout="wide",
-                   initial_sidebar_state="collapsed")
+st.set_page_config(page_title="VibeSync", page_icon="🎬", layout="wide", initial_sidebar_state="collapsed")
 
-from core import styles                       # noqa: E402  (page config must come first)
-from core.state import get_profile            # noqa: E402
-from views import browse, home, lounge        # noqa: E402
-from views.common import html                 # noqa: E402
+from core import styles             # noqa: E402  (page config must come first)
+from views import discover, lounge  # noqa: E402
 
-PAGES = {"home": "🏠 Home", "browse": "🧭 Browse", "lounge": "🛋️ Lounge"}
-RENDER = {"home": home.render, "browse": browse.render, "lounge": lounge.render}
+PAGES = {"discover": "Discover", "lounge": "Lounge"}
 
-styles.inject()
-
-# Open straight into the Lounge when someone follows an invite link (?room=CODE)
+if "theme" not in st.session_state:
+    st.session_state.theme = "cinema"
+# Invite links (?room=CODE) open straight into the Lounge
 if "page" not in st.session_state:
-    st.session_state.page = "lounge" if st.query_params.get("room") else "home"
+    st.session_state.page = "lounge" if st.query_params.get("room") else "discover"
 if "nav_widget" not in st.session_state:
     st.session_state.nav_widget = st.session_state.page
 
 
 def _on_nav() -> None:
-    choice = st.session_state.nav_widget
-    if choice:                       # ignore "deselect" clicks, keep current page
-        st.session_state.page = choice
-    else:
+    if st.session_state.nav_widget:
+        st.session_state.page = st.session_state.nav_widget
+    else:                                   # tapping the active option again keeps it selected
         st.session_state.nav_widget = st.session_state.page
 
 
-brand, nav = st.columns([1, 2], vertical_alignment="center")
-with brand:
-    html('<div class="vs-brand">VIBESYNC</div>')
-with nav:
-    st.segmented_control("Navigate", options=list(PAGES), format_func=PAGES.get, key="nav_widget",
-                         on_change=_on_nav, label_visibility="collapsed")
+styles.inject(st.session_state.theme)
+st.segmented_control("Navigate", options=list(PAGES), format_func=PAGES.get, key="nav_widget",
+                     on_change=_on_nav, label_visibility="collapsed")
 
-with st.sidebar:
-    st.markdown("### ⚙️ Settings")
-    profile = get_profile()
-    name = st.text_input("Your name (for greetings)", value=profile.name(), max_chars=20)
-    if name != profile.name():
-        profile.set_name(name)
-    st.caption("Favourites: Browse → Manage favourites.")
-    st.caption("Made with 💜 + Streamlit")
-
-RENDER.get(st.session_state.page, home.render)()
+if st.session_state.page == "lounge":
+    lounge.render()
+else:
+    value = discover.render(st.session_state.theme)
+    picked = value.get("theme") if isinstance(value, dict) else None
+    if picked in styles.THEMES and picked != st.session_state.theme:
+        st.session_state.theme = picked     # keep page chrome + Lounge in the same look
+        st.rerun()

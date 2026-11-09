@@ -88,43 +88,65 @@ class ProfileTests(unittest.TestCase):
             self.assertEqual(again.tracker("bbt10")["updates"][0]["tag"], "Captaincy")
 
 
-class CardTests(unittest.TestCase):
+class CatalogTests(unittest.TestCase):
     def test_catalog_integrity(self):
         ids = [i["id"] for i in data.CATALOG]
         self.assertEqual(len(ids), len(set(ids)))
         for item in data.CATALOG:
-            self.assertIn(item["kind"], cards.KIND_TAG)
-            self.assertEqual(len(item["colors"]), 2)
+            self.assertIn(item["kind"], data.KIND_LABELS)
+            for prov, url in item["offers"]:
+                self.assertIn(prov, data.PROVIDERS, item["id"])
+                self.assertTrue(url.startswith("https://"), url)
+            if item["poster"]:
+                self.assertIsInstance(item["poster"]["id"], int)
         for mood in data.MOODS:
             self.assertGreaterEqual(len(data.items_for_mood(mood)), 4, mood)
-        self.assertTrue(all(BY in data.BY_ID for BY in data.default_favorites()))
 
-    def test_html_is_single_line_and_escaped(self):
-        for item in data.CATALOG:
-            out = cards.card_html(item)
-            self.assertNotIn("\n", out)                                  # markdown-safe
+    def test_rows_cover_catalog_once(self):
+        grouped = [i for rows in data.ROWS.values() for _, ids in rows for i in ids]
+        self.assertEqual(sorted(grouped), sorted(data.BY_ID))
+        for kind, rows in data.ROWS.items():
+            for _, ids in rows:
+                self.assertTrue(all(data.BY_ID[i]["kind"] == kind for i in ids), kind)
+        self.assertTrue(all(i in data.BY_ID for i in data.FEATURED))
+
+    def test_verified_facts(self):
+        """Spot-checks from the JustWatch India research (Nov 2026)."""
+        offers = lambda i: {p for p, _ in data.BY_ID[i]["offers"]}
+        self.assertEqual(offers("spiderverse"), {"sonyliv"})
+        self.assertEqual(offers("kalki"), {"prime", "netflix"})
+        self.assertEqual(offers("hanuman"), {"zee5", "hotstar"})
+        self.assertEqual(offers("doraemon-sky-utopia"), set())
+        self.assertIn("netflix.com/title/82006666", dict(data.BY_ID["pushpa2"]["offers"])["netflix"])
+
+    def test_payload_is_json(self):
+        import json
+        payload = data.catalog_payload()
+        text = json.dumps(payload)
+        self.assertEqual(len(payload["items"]), len(data.CATALOG))
+        self.assertTrue(all(i["trailer"].startswith("https://www.youtube.com/") for i in payload["items"]))
+        self.assertLess(len(text), 60000)
+
+
+class LoungeHtmlTests(unittest.TestCase):
+    def test_messages_escaped(self):
         msg = {"id": 1, "ts": 1_700_000_000, "user": "<b>x</b>", "text": "<script>alert(1)</script> :fire:",
                "kind": "msg", "badge": "spoiler"}
         out = cards.message_html(msg, "me")
         self.assertNotIn("<script>", out)
         self.assertIn("🔥", out)
         self.assertIn("vs-spoiler", out)
+        self.assertNotIn("\n", cards.chat_html([msg], "me"))
 
-    def test_browse_groups_cover_catalog(self):
-        grouped = [i for rows in data.GROUPS.values() for _, ids in rows for i in ids]
-        self.assertEqual(sorted(grouped), sorted(data.BY_ID))                # every item in exactly one row
-        for cat, rows in data.GROUPS.items():
-            self.assertIn(cat, data.CATEGORIES)
-            for _, ids in rows:
-                self.assertTrue(all(data.BY_ID[i]["kind"] == cat for i in ids), cat)
-        self.assertIn("vs-rail", cards.rail_html(data.CATALOG[:3]))
-        self.assertNotIn("\n", cards.wide_card_html(data.BY_ID["bbt10"]))
-
-    def test_filters(self):
-        self.assertTrue(all(i["telugu"] for i in data.filter_items(telugu_only=True)))
-        self.assertEqual([i["id"] for i in data.filter_items("anime", query="nobita's dinosaur")],
-                         ["doraemon-dinosaur"])
-        self.assertTrue(data.filter_items(platforms=["JioHotstar"]))       # '*' suffix ignored
+    def test_styles_format_for_every_theme(self):
+        import sys
+        import types
+        sys.modules.setdefault("streamlit", types.SimpleNamespace(markdown=lambda *a, **k: None))  # not needed to format CSS
+        from core import styles
+        for name, pal in styles.THEMES.items():
+            css = styles.CSS % pal
+            self.assertIn(pal["accent"], css, name)
+            self.assertNotIn("%(", css)
 
     def test_expand(self):
         self.assertEqual(expand(":goat: :unknown:"), "🐐 :unknown:")

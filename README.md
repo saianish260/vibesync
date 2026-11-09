@@ -1,12 +1,13 @@
 # ⚡ VibeSync
 
-A fast, dark-themed entertainment hub that kills boredom on contact. It has three screens:
+Pick something to watch in seconds, then jump straight into it.
 
-- **🏠 Home.** A short greeting, a mood picker that builds a feed instantly, a big **SURPRISE ME** button, "Live now" (Bigg Boss Telugu 10), quick category jumps and your favourites row.
-- **🧭 Browse.** Category tabs (Anime, Movies, Series, Reality TV, Sports) with swipeable rows such as "Top anime series", "Doraemon movies · Telugu audio" and "Telugu blockbusters". It also has search, collapsible filters, the Reality TV episode tracker, and a favourites manager.
-- **🛋️ Lounge.** Shared rooms with a code or link: live chat with `:emoji:` codes and badges (🌶️ Hot take, ⚠️ blurred Spoiler, ⚡ Hype, 🚪 Elimination), floating reactions, a watch poll and a synced "3-2-1 PLAY" countdown.
+- **Discover.** Real posters, a featured carousel, a mood picker, category tabs (For you, Anime, Movies, Series, Reality TV, Sports, Saved), search and a Surprise Me roll. Tap any poster for details: IMDb rating, where it streams in India, and buttons that open that exact title in Netflix, Prime Video, JioHotstar, Crunchyroll, Sony LIV, ZEE5 or FanCode. Bigg Boss Telugu and BB Jodi have a built-in episode tracker. There are four looks to pick from (Cinema hall, Daylight, Late show, Poster black). Favourites, tracker notes and your look are saved on your device.
+- **Lounge.** Shared rooms with a code or link: live chat with `:emoji:` codes and badges, floating reactions, a watch poll and a synced countdown.
 
-Built with **Python + Streamlit** and custom lightweight HTML/CSS (midnight palette, violet + cyan accents, no heavy blur or looping animations, so it stays smooth on phones). It's responsive for laptop (Asus TUF F15) and phone (Realme P1 5G).
+Availability, deep links, posters and ratings were checked on JustWatch India (Nov 2026). Platforms change, so re-check on justwatch.com/in and edit `core/data.py`.
+
+Built with **Python + Streamlit**. Discover is a custom Streamlit component (plain HTML/CSS/JS in `components/discover/`) that runs in the browser, so every tap is instant. It's responsive for laptop (Asus TUF F15) and phone (Realme P1 5G).
 
 ---
 
@@ -126,12 +127,13 @@ vibesync/
 ├─ core/
 │  ├─ config.py           # tunable settings
 │  ├─ data.py             # catalog, moods, tracker seeds, filters
-│  ├─ styles.py           # the midnight theme CSS
+│  ├─ styles.py           # page + Lounge CSS for each look
 │  ├─ cards.py            # HTML builders for cards, chat, poll, countdown
 │  ├─ emoji.py            # :shortcodes:, badges, reactions
 │  ├─ store.py            # thread-safe JSON stores (rooms, profile)
 │  └─ state.py            # shared singletons (st.cache_resource)
-├─ views/                 # home.py · browse.py · tracker.py · lounge.py · common.py
+├─ views/                 # discover.py (component wrapper) · lounge.py
+├─ components/discover/   # index.html: the whole Discover UI
 ├─ tests/                 # unit tests for store, cards, filters
 ├─ android/               # WebView APK shell + icon
 └─ .streamlit/config.toml # dark theme

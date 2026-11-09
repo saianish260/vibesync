@@ -6,14 +6,17 @@ import time
 import streamlit as st
 import streamlit.components.v1 as components
 
-from core import cards, config
+from core import cards, config, styles
 from core.data import CATALOG
 from core.emoji import BADGES, REACTIONS, SHORTCODES
-from core.state import get_hub, get_profile
+from core.state import get_hub
 from core.store import clean_name, normalize_code, poll_winner
-from views.common import html
 
 REFRESH = config.CHAT_REFRESH_SECONDS
+
+
+def html(markup: str) -> None:
+    st.markdown(markup, unsafe_allow_html=True)
 
 
 # ───────────────────────── helpers ─────────────────────────
@@ -49,9 +52,9 @@ def _share_link(code: str) -> str:
 
 # ───────────────────────── lobby ─────────────────────────
 def _lobby() -> None:
-    html(cards.section_html("🛋️", "Peer Lounge", "Open a room, share the code, watch together"))
+    html(cards.section_html("", "Watch together", "Open a room, share the code, vote on what to watch and chat live."))
     hub = get_hub()
-    default_name = st.session_state.get("lounge_name") or get_profile().name()
+    default_name = st.session_state.get("lounge_name", "")
     name = clean_name(st.text_input("Your display name", value=default_name, max_chars=config.MAX_NAME_LEN,
                                     placeholder="e.g. Anish"))
     invited = normalize_code(st.query_params.get("room", ""))
@@ -125,7 +128,7 @@ def _live_room() -> None:
                 st.rerun(scope="fragment")
         sync = room.get("sync")
         if sync and time.time() - sync["start_at"] < 15 * 60:
-            components.html(cards.countdown_component_html(sync["title"], sync["start_at"]), height=140)
+            components.html(cards.countdown_component_html(sync["title"], sync["start_at"], styles.palette(st.session_state.get("theme", "cinema"))), height=140)
 
 
 def _new_poll_form() -> None:
@@ -157,7 +160,7 @@ def _room() -> None:
         st.rerun()
     hub.join(code, me)   # no-op if already a member; restores presence after refresh
 
-    html(f'<div class="vs-roomhead"><div><div class="vs-roomname">🛋️ {cards.esc(room["name"])}</div>'
+    html(f'<div class="vs-roomhead"><div><div class="vs-roomname">{cards.esc(room["name"])}</div>'
          f'<div style="color:var(--muted);font-size:.85rem">You are <b>{cards.esc(me)}</b> · host {cards.esc(room["host"])}</div></div>'
          f'<div class="vs-code">{code}</div></div>')
 

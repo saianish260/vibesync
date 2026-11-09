@@ -10,105 +10,16 @@ import hashlib
 import html
 import random
 from datetime import datetime
-from urllib.parse import quote_plus
 from zoneinfo import ZoneInfo
 
 from . import config
 from .emoji import BADGES, expand
 
-KIND_TAG = {"movie": "MOVIE", "series": "SERIES", "anime": "ANIME", "reality": "REALITY", "sports": "SPORTS"}
-NEON = ["#22D3EE", "#7C5CFF", "#FF4D8D", "#34D399", "#FBBF24", "#60A5FA"]
+AVATAR_COLORS = ["#F4B942", "#5EE6B8", "#FF8A7A", "#9FB7FF", "#E9A6FF", "#7DD3FC"]
 
 
 def esc(value) -> str:
     return html.escape(str(value), quote=True)
-
-
-def trailer_url(item: dict) -> str:
-    if item.get("trailer_query"):
-        q = item["trailer_query"]
-    elif item["kind"] == "sports":
-        q = f"{item['title']} latest"
-    else:
-        q = f"{item['title']} official trailer"
-    return "https://www.youtube.com/results?search_query=" + quote_plus(q)
-
-
-def play_label(item: dict) -> str:
-    return {"sports": "▶ Highlights", "reality": "▶ Promos"}.get(item["kind"], "▶ Trailer")
-
-
-def poster_html(item: dict) -> str:
-    c1, c2 = item["colors"]
-    style = f"--c1:{c1};--c2:{c2};"
-    art = f'<span class="vs-emoji">{item["emoji"]}</span>'
-    if item.get("poster"):
-        style += f"background:url('{esc(item['poster'])}') center/cover;"
-        art = ""
-    status = item.get("status")
-    if status == "live":
-        badge = '<span class="vs-live"><i></i>LIVE</span>'
-    elif status:
-        badge = f'<span class="vs-status">{esc(status.upper())}</span>'
-    else:
-        badge = ""
-    tel = '<span class="vs-tel">తెలుగు</span>' if item.get("telugu") else ""
-    return (f'<div class="vs-poster" style="{style}"><span class="vs-kind">{KIND_TAG[item["kind"]]}</span>'
-            f'{badge}{tel}{art}</div>')
-
-
-def _meta(item: dict) -> str:
-    return esc(item.get("meta") or item.get("year", ""))
-
-
-def _body_html(item: dict) -> str:
-    tags = "".join(f'<span class="vs-tag">{esc(g)}</span>' for g in item["genres"][:3])
-    plats = " · ".join(esc(p) for p in item["platforms"])
-    return (f'<div class="vs-body"><div class="vs-title">{esc(item["title"])}</div>'
-            f'<div class="vs-meta">{_meta(item)}</div><div class="vs-tags">{tags}</div>'
-            f'<p class="vs-syn">{esc(item["synopsis"])}</p>'
-            f'<div class="vs-plat"><b>Watch on</b> {plats}</div>'
-            f'<a class="vs-play" href="{esc(trailer_url(item))}" target="_blank" rel="noopener noreferrer">'
-            f'{play_label(item)}</a></div>')
-
-
-def card_html(item: dict) -> str:
-    return f'<div class="vs-card">{poster_html(item)}{_body_html(item)}</div>'
-
-
-EMPTY = '<div class="vs-empty">Nothing matches. Try clearing the filters or a different search.</div>'
-
-
-def grid_html(items: list[dict]) -> str:
-    if not items:
-        return EMPTY
-    return '<div class="vs-grid">' + "".join(card_html(it) for it in items) + "</div>"
-
-
-def rail_html(items: list[dict]) -> str:
-    """One horizontally scrolling row (swipe on phones)."""
-    if not items:
-        return ""
-    return '<div class="vs-rail">' + "".join(card_html(it) for it in items) + "</div>"
-
-
-def wide_card_html(item: dict) -> str:
-    return f'<div class="vs-wide">{poster_html(item)}{_body_html(item)}</div>'
-
-
-def spotlight_html(item: dict) -> str:
-    return (f'<div class="vs-spotlight"><div class="vs-spot-label">🎲 YOUR PICK</div>'
-            f'<div class="vs-spot-inner">{poster_html(item)}{_body_html(item)}</div></div>')
-
-
-def confetti_html(n: int = 36, seed: int | None = None) -> str:
-    rng = random.Random(seed)
-    bits = []
-    for _ in range(n):
-        bits.append(
-            f'<i style="left:{rng.uniform(0, 100):.1f}%;background:{rng.choice(NEON)};'
-            f'animation-delay:{rng.uniform(0, .5):.2f}s;animation-duration:{rng.uniform(1.4, 2.2):.2f}s"></i>')
-    return '<div class="vs-confetti">' + "".join(bits) + "</div>"
 
 
 def section_html(icon: str, title: str, subtitle: str = "") -> str:
@@ -117,20 +28,9 @@ def section_html(icon: str, title: str, subtitle: str = "") -> str:
             f'{sub}</div>')
 
 
-def hello_html(greeting: str, name: str, boost: str) -> str:
-    who = f", {esc(name)}" if name else ""
-    return (f'<div class="vs-hello"><div><h2>{esc(greeting)}{who} 👋</h2>'
-            f'<div class="sub">What are we watching today?</div></div>'
-            f'<div class="vs-boost">{esc(boost)}</div></div>')
-
-
-def mood_banner_html(line: str) -> str:
-    return f'<div class="vs-moodline">{esc(line)}</div>'
-
-
 # ───────────────────────── Lounge ─────────────────────────
 def _color_for(name: str) -> str:
-    return NEON[int(hashlib.md5(name.encode()).hexdigest(), 16) % len(NEON)]
+    return AVATAR_COLORS[int(hashlib.md5(name.encode()).hexdigest(), 16) % len(AVATAR_COLORS)]
 
 
 def _clock(ts: float) -> str:
@@ -204,20 +104,20 @@ def members_html(online: list[str], members: list[str], host: str) -> str:
     return f'<div class="vs-members"><div class="vs-online">{len(online)} online</div>' + "".join(chips) + "</div>"
 
 
-def countdown_component_html(title: str, start_at: float) -> str:
+def countdown_component_html(title: str, start_at: float, pal: dict) -> str:
     """Self-contained page for st.components.v1.html. Counts down client-side from an absolute timestamp."""
     t = esc(title)
     return f"""<!doctype html><html><head><style>
-body{{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:transparent;color:#EEF0FA}}
-.box{{border:1px solid rgba(124,92,255,.5);border-radius:16px;padding:14px 16px;text-align:center;
-background:#151827}}
-.t{{font-size:13px;letter-spacing:.12em;color:#9AA0B8;text-transform:uppercase}}
-.n{{font-size:44px;font-weight:800;margin:4px 0;color:#22D3EE}}
+body{{margin:0;font-family:system-ui,sans-serif;background:transparent;color:{pal['text']}}}
+.box{{border-radius:18px;padding:14px 16px;text-align:center;background:{pal['s1']};border:1px solid {pal['line']}}}
+.t{{font-size:13px;color:{pal['muted']}}}
+.n{{font-size:46px;font-weight:800;margin:2px 0;color:{pal['accent']};transition:transform .2s}}
 .s{{font-size:15px}}
-</style></head><body><div class="box"><div class="t">Sync watch</div><div class="n" id="n">…</div>
+</style></head><body><div class="box"><div class="t">Sync watch starts in</div><div class="n" id="n">…</div>
 <div class="s">{t}</div></div><script>
 const start={start_at * 1000:.0f};
 function tick(){{const left=Math.ceil((start-Date.now())/1000);const n=document.getElementById('n');
-if(left>0){{n.textContent=left;}}else if(left>-900){{n.textContent='▶ PLAY NOW';n.style.color='#34D399';}}else{{n.textContent='Done';}}}}
+if(left>0){{if(n.textContent!==String(left)){{n.textContent=left;n.style.transform='scale(1.15)';setTimeout(()=>n.style.transform='',150);}}}}
+else if(left>-900){{n.textContent='Press play';}}else{{n.textContent='Done';}}}}
 tick();setInterval(tick,250);
 </script></body></html>"""
