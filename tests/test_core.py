@@ -118,6 +118,9 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(offers("hanuman"), {"zee5", "hotstar"})
         self.assertEqual(offers("doraemon-sky-utopia"), set())
         self.assertIn("netflix.com/title/82006666", dict(data.BY_ID["pushpa2"]["offers"])["netflix"])
+        self.assertEqual(dict(data.BY_ID["magadheera"]["offers"]), {"aha": "https://www.aha.video/movie/magadheera"})
+        self.assertEqual(data.PROVIDERS["aha"]["pkg"], "ahaflix.tv")
+        self.assertGreaterEqual(len(data.CATALOG), 80)
 
     def test_payload_is_json(self):
         import json

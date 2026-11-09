@@ -23,3 +23,4 @@ android/local.properties
 *.jks
 *.keystore
 components/discover/catalog.json
+.streamlit/secrets.toml

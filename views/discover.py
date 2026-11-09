@@ -7,7 +7,10 @@ instead of waiting on a Python rerun.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
+
+import streamlit as st
 
 import streamlit.components.v1 as components
 
@@ -28,7 +31,16 @@ def _write_catalog(payload: dict) -> None:
         pass
 
 
+def tmdb_key() -> str:
+    """Free TMDB API key from Streamlit secrets (or the TMDB_API_KEY env var). Empty = hand-picked library only."""
+    try:
+        key = st.secrets.get("TMDB_API_KEY", "")
+    except Exception:                       # no secrets file configured
+        key = ""
+    return str(key or os.environ.get("TMDB_API_KEY", "")).strip()
+
+
 def render(theme: str) -> dict | None:
     payload = catalog_payload()
     _write_catalog(payload)
-    return _component(catalog=payload, theme=theme, key="discover", default=None)
+    return _component(catalog=payload, theme=theme, tmdbKey=tmdb_key(), key="discover", default=None)

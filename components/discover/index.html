@@ -134,6 +134,13 @@ img{display:block}
 .heart svg{width:15px;height:15px;fill:#fff}
 .ct{font-weight:600;font-size:15px;line-height:1.2;margin:8px 2px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cm{font-size:13px;color:var(--muted);margin:0 2px}
+.sk .pw{animation:skp 1.2s ease-in-out infinite}.sk-t{height:13px;width:72%;border-radius:6px;background:var(--s2);margin:9px 2px 0;animation:skp 1.2s ease-in-out infinite}
+@keyframes skp{50%{opacity:.45}}
+.live-sub{display:inline-flex;align-items:center;gap:6px}.live-sub i{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.plogo{width:34px;height:34px;border-radius:9px;object-fit:cover;background:var(--s1)}
+.checking{display:flex;align-items:center;gap:10px;padding:14px;border-radius:14px;background:var(--s2);color:var(--muted);font-size:15px}
+.checking i{width:10px;height:10px;border-radius:50%;background:var(--accent);animation:skp 1s infinite}
+#platbox{margin-top:4px}
 .empty{padding:34px 18px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:16px;font-size:15px}
 
 /* ── Sheet ── */
@@ -286,12 +293,17 @@ const ICON = {
   info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v5M12 8h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>'
 };
 
-function posterURL(it, size) { return it.poster ? `https://images.justwatch.com/poster/${it.poster.id}/${size}/${it.poster.slug}.jpg` : ""; }
+const TMDB_SIZE = {s166: "w185", s332: "w342", s592: "w500"};
+const hasPoster = it => !!(it.poster || it.tmdbPoster);
+function posterURL(it, size) {
+  if (it.tmdbPoster) return `https://image.tmdb.org/t/p/${TMDB_SIZE[size] || "w342"}${it.tmdbPoster}`;
+  return it.poster ? `https://images.justwatch.com/poster/${it.poster.id}/${size}/${it.poster.slug}.jpg` : "";
+}
 function art(it, label) {
   return `<div class="art" style="--c1:${it.colors[0]};--c2:${it.colors[1]}"><span>${it.emoji}</span>${label ? `<em>${esc(it.title)}</em>` : ""}</div>`;
 }
 function poster(it, size = "s332", extra = "") {
-  const img = it.poster
+  const img = hasPoster(it)
     ? `<img src="${posterURL(it, size)}" data-alt="${posterURL(it, "s166")}" alt="${esc(it.title)} poster" loading="lazy" decoding="async" referrerpolicy="no-referrer">`
     : "";
   return `<div class="pw">${art(it, false)}${img}${extra}</div>`;
@@ -326,8 +338,9 @@ function card(it) {
   if (favs.has(it.id)) over += `<span class="heart saved">${ICON.heart}</span>`;
   if (it.offers.length && it.kind !== "sports") {
     over += `<span class="provs">${it.offers.slice(0, 4).map(o => `<i class="pd" style="background:${D.providers[o.p].color}" title="${esc(D.providers[o.p].name)}"></i>`).join("")}</span>`;
-  } else if (!it.offers.length) over += `<span class="ns">Not streaming in India</span>`;
-  const meta = [it.imdb ? `★ ${it.imdb.toFixed(1)}` : "", it.kind === "sports" ? it.meta : it.year].filter(Boolean).join("  ·  ");
+  } else if (!it.offers.length && !it.tmdb) over += `<span class="ns">Not streaming in India</span>`;
+  const sc = it.imdb || it.score;
+  const meta = [sc ? `★ ${sc.toFixed(1)}` : "", it.kind === "sports" ? it.meta : it.year].filter(Boolean).join("  ·  ");
   return `<button class="card" data-open="${it.id}" aria-label="${esc(it.title)}">${poster(it, "s332", over)}
     <div class="ct">${esc(it.title)}</div><div class="cm">${esc(meta)}</div></button>`;
 }
@@ -369,15 +382,15 @@ function panelHTML(tab) {
     const top = D.items.filter(i => i.imdb && i.offers.length).sort((a, b) => b.imdb - a.imdb).slice(0, 10).map(i => i.id);
     const telugu = D.items.filter(i => i.telugu && i.offers.length).map(i => i.id);
     const free = D.items.filter(i => i.offers.some(o => o.p === "hotstar") && i.kind !== "sports").map(i => i.id);
-    return section("Top rated right now", "IMDb") + row(top) + section("Telugu picks") + row(telugu)
-      + section("Also on JioHotstar") + row(free);
+    return liveRowsHTML("foryou") + section("Top rated right now", "IMDb") + row(top) + section("Telugu picks") + row(telugu)
+      + section("Also on JioHotstar") + row(free) + platformsHTML();
   }
   if (tab === "saved") {
     const items = [...favs].map(id => BY[id]).filter(Boolean);
     return items.length ? section("Saved", `${items.length} title${items.length > 1 ? "s" : ""}`) + grid(items)
       : `<div class="sec"><h2>Saved</h2></div><div class="empty">Tap ♡ Save on any title and it lands here.</div>`;
   }
-  return (D.rows[tab] || []).map(([t, ids]) => section(t, `${ids.length} titles`) + row(ids)).join("");
+  return (D.rows[tab] || []).map(([t, ids]) => section(t, `${ids.length} titles`) + row(ids)).join("") + liveRowsHTML(tab);
 }
 function moveInk() {
   const sel = document.querySelector('.tab[aria-selected="true"]'), ink = $("#ink");
@@ -394,6 +407,7 @@ function setTab(tab) {
   p.style.setProperty("--dir", dir);
   p.classList.remove("panel"); void p.offsetWidth; p.classList.add("panel");
   p.innerHTML = panelHTML(tab);
+  fillLive(p);
   moveInk();
   const sel = document.querySelector(`.tab[data-tab="${tab}"]`);
   if (sel) sel.scrollIntoView({inline: "center", block: "nearest", behavior: "smooth"});
@@ -432,6 +446,7 @@ function trackerHTML(id) {
     ${links ? `<div class="links">${links}</div>` : ""}</div>`;
 }
 function sheetHTML(it) {
+  if (it.tmdb) return tmdbSheetHTML(it);
   const facts = [stars(it) ? `${stars(it)} <span>IMDb</span>` : "", esc(it.meta), it.kind === "sports" ? "" : esc(it.year), esc(kindLabel(it))].filter(Boolean).join("<span>·</span>");
   const offers = it.offers.length
     ? `<div class="offers">${it.offers.map(o => { const p = D.providers[o.p]; return `<a class="offer" href="${esc(linkFor(o.url, o.p))}" target="_blank" rel="noopener">
@@ -450,7 +465,10 @@ function sheetHTML(it) {
 }
 let openId = null;
 function openSheet(id, from) {
-  const it = BY[id]; if (!it) return;
+  let it = BY[id]; if (!it) return;
+  const twin = it.tmdb && curatedTwin(it);
+  if (twin) { it = twin; id = twin.id; }          // we have hand-checked exact links for this one
+  if (it.tmdb) loadDetails(it);
   openId = id; lastFocus = from || document.activeElement;
   const sh = $("#sheet");
   sh.innerHTML = sheetHTML(it);
@@ -482,6 +500,8 @@ function toggleFav(id, btn) {
   toast(favs.has(id) ? "Saved" : "Removed from Saved");
   refreshSheet();
   const b = $(`#sheet [data-fav="${id}"] svg`); if (b) { b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); }
+  const it = BY[id];
+  if (it && it.tmdb) { const m = store.get("favMeta", {}); if (favs.has(id)) m[id] = slim(it); else delete m[id]; store.set("favMeta", m); }
   if (state.tab === "saved") setTab("saved");
   buzz();
 }
@@ -501,12 +521,15 @@ function renderSearch(q) {
   const items = !q ? D.items.filter(i => i.offers.length).slice(0, 12) : D.items.filter(i =>
     (i.title + " " + i.genres.join(" ") + " " + i.offers.map(o => D.providers[o.p].name).join(" ") + " " + kindLabel(i)).toLowerCase().includes(q));
   $("#sres").innerHTML = (q ? section(`${items.length} result${items.length === 1 ? "" : "s"}`) : section("Popular")) +
-    (items.length ? grid(items) : `<div class="empty">No match for “${esc(q)}”. Try a genre like “anime” or a platform like “Netflix”.</div>`);
+    (items.length ? grid(items) : (T.key && q ? "" : `<div class="empty">No match for “${esc(q)}”. Try a genre like “anime” or a platform like “Netflix”.</div>`)) +
+    (T.key && q.length > 1 ? `<div id="tsearch">${section("More titles", "")}<div class="checking"><i></i>Searching TMDB…</div></div>` : "");
+  if (T.key && q.length > 1) searchTmdb(q, items.map(i => i.id));
 }
 
 /* ───────────── surprise ───────────── */
 function surprise() {
-  const pool = (favs.size ? [...favs].map(id => BY[id]) : D.items).filter(i => i && i.offers.length);
+  let pool = (favs.size ? [...favs].map(id => BY[id]) : D.items).filter(i => i && i.offers.length);
+  if (!pool.length) pool = D.items.filter(i => i.offers.length);
   const pick = pool[Math.floor(Math.random() * pool.length)];
   const filler = D.items.filter(i => i.poster).sort(() => Math.random() - .5).slice(0, 14);
   const strip = $("#strip");
@@ -573,6 +596,7 @@ document.addEventListener("click", e => {
   if (t.dataset.open) { e.preventDefault(); openSheet(t.dataset.open, t); return; }
   if (t.dataset.tab) { setTab(t.dataset.tab); buzz(); return; }
   if (t.dataset.mood) { setMood(t.dataset.mood); buzz(); return; }
+  if (t.dataset.plat) { showPlatform(t.dataset.plat); buzz(); return; }
   if (t.dataset.dot) { showSlide(+t.dataset.dot); startHero(); return; }
   if (t.hasAttribute("data-close")) { closeSheet(); return; }
   if (t.dataset.fav) { toggleFav(t.dataset.fav, t); return; }
@@ -618,18 +642,245 @@ document.addEventListener("keydown", e => {
 document.addEventListener("visibilitychange", () => document.hidden ? clearInterval(heroTimer) : startHero());
 window.addEventListener("resize", () => requestAnimationFrame(moveInk));
 
+/* ───────────── TMDB live library (only when a key is configured) ─────────────
+   Thousands of titles, posters and India streaming data, fetched straight from the browser.
+   Curated titles keep their hand-checked exact links; live ones open a search inside the app. */
+const T = {key: "", base: "https://api.themoviedb.org/3", cache: new Map(), provIds: {}, failed: false};
+const STREAM = {watch_region: "IN", with_watch_monetization_types: "flatrate|free|ads", sort_by: "popularity.desc"};
+const LIVE = {
+  foryou: [["Trending this week", "/trending/all/week", {}],
+           ["Telugu movies streaming now", "/discover/movie", Object.assign({with_original_language: "te"}, STREAM)],
+           ["Popular anime right now", "/discover/tv", {with_genres: "16", with_original_language: "ja", sort_by: "popularity.desc"}]],
+  anime: [["More anime series", "/discover/tv", {with_genres: "16", with_original_language: "ja", sort_by: "popularity.desc"}],
+          ["More anime movies", "/discover/movie", {with_genres: "16", with_original_language: "ja", sort_by: "popularity.desc"}]],
+  movie: [["More Telugu movies", "/discover/movie", Object.assign({with_original_language: "te"}, STREAM)],
+          ["Tamil movies", "/discover/movie", Object.assign({with_original_language: "ta"}, STREAM)],
+          ["Hindi movies", "/discover/movie", Object.assign({with_original_language: "hi"}, STREAM)],
+          ["Malayalam movies", "/discover/movie", Object.assign({with_original_language: "ml"}, STREAM)],
+          ["Hollywood on Indian OTT", "/discover/movie", Object.assign({with_original_language: "en"}, STREAM)]],
+  series: [["More Indian series", "/discover/tv", Object.assign({with_origin_country: "IN"}, STREAM)],
+           ["International series", "/discover/tv", Object.assign({with_original_language: "en"}, STREAM)],
+           ["K-dramas", "/discover/tv", Object.assign({with_original_language: "ko"}, STREAM)]],
+  reality: [["More reality shows", "/discover/tv", {with_genres: "10764", with_origin_country: "IN", sort_by: "popularity.desc"}]],
+};
+const PLATS = ["netflix", "prime", "hotstar", "crunchyroll", "sonyliv", "zee5", "aha"];
+const PROV_RX = [[/amazon channel/i, "prime"], [/netflix/i, "netflix"], [/prime video|amazon video/i, "prime"], [/hotstar/i, "hotstar"],
+                 [/crunchyroll/i, "crunchyroll"], [/sony ?liv/i, "sonyliv"], [/zee ?5/i, "zee5"], [/^aha/i, "aha"], [/fancode/i, "fancode"]];
+const provKey = name => { for (const [rx, k] of PROV_RX) if (rx.test(name)) return k; return null; };
+const enc = encodeURIComponent;
+const FIND = {   // in-app search where the site supports it; otherwise open the app
+  netflix: t => `https://www.netflix.com/search?q=${enc(t)}`,
+  prime: t => `https://www.primevideo.com/search/ref=atv_nb_sr?phrase=${enc(t)}`,
+  crunchyroll: t => `https://www.crunchyroll.com/search?q=${enc(t)}`,
+  zee5: t => `https://www.zee5.com/search?q=${enc(t)}`,
+};
+const HOME = {hotstar: "https://www.hotstar.com/in", sonyliv: "https://www.sonyliv.com", aha: "https://www.aha.video", fancode: "https://www.fancode.com"};
+const norm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+async function tget(path, params) {
+  const u = new URL(T.base + path);
+  u.searchParams.set("api_key", T.key); u.searchParams.set("language", "en-IN");
+  Object.entries(params || {}).forEach(([k, v]) => u.searchParams.set(k, v));
+  const key = u.toString();
+  if (T.cache.has(key)) return T.cache.get(key);
+  const r = await fetch(key);
+  if (!r.ok) throw new Error("TMDB " + r.status);
+  const j = await r.json(); T.cache.set(key, j); return j;
+}
+function tmdbFail() {
+  if (!T.failed) { T.failed = true; toast("Couldn't reach TMDB. Showing the hand-picked library."); }
+  document.querySelectorAll("[data-livebox]").forEach(b => b.remove());
+}
+
+function fromTmdb(r, typeHint) {
+  const type = r.media_type || typeHint;
+  if ((type !== "movie" && type !== "tv") || !r.poster_path) return null;
+  const g = r.genre_ids || [];
+  const kind = g.includes(16) && r.original_language === "ja" ? "anime" : g.includes(10764) ? "reality" : type === "tv" ? "series" : "movie";
+  const title = r.title || r.name || "";
+  const year = (r.release_date || r.first_air_date || "").slice(0, 4);
+  const it = {id: `tmdb:${type}:${r.id}`, tmdb: {type, id: r.id}, title, kind, year, meta: "", genres: [], synopsis: r.overview || "",
+    moods: [], telugu: r.original_language === "te", imdb: null, score: r.vote_average ? Math.round(r.vote_average * 10) / 10 : null,
+    poster: null, tmdbPoster: r.poster_path, status: null, note: "", emoji: "🎬", colors: ["#3F2A3A", "#1B1220"], offers: [],
+    trailer: "https://www.youtube.com/results?search_query=" + enc(`${title} ${year} trailer`)};
+  const twin = curatedTwin(it);
+  if (twin) return twin;                                 // prefer our hand-checked version
+  if (!BY[it.id]) BY[it.id] = it;
+  return BY[it.id];
+}
+function curatedTwin(it) {
+  const n = norm(it.title);
+  return D.items.find(c => norm(c.title) === n && (!it.year || !c.year || Math.abs(+c.year - +it.year) <= 1)) || null;
+}
+const slim = it => ({id: it.id, tmdb: it.tmdb, title: it.title, kind: it.kind, year: it.year, score: it.score, tmdbPoster: it.tmdbPoster,
+  synopsis: it.synopsis, telugu: it.telugu, trailer: it.trailer});
+function rehydrate(m) {
+  return Object.assign({meta: "", genres: [], moods: [], imdb: null, poster: null, status: null, note: "", emoji: "🎬",
+    colors: ["#3F2A3A", "#1B1220"], offers: []}, m);
+}
+
+/* live rows */
+const liveState = {};
+function liveDef(key) {
+  const [a, b, c] = key.split("|");
+  if (a === "plat") {
+    const ids = (T.provIds[b] || []).join("|");
+    return {title: `${c === "movie" ? "Movies" : "Series"} on ${D.providers[b].name}`, path: `/discover/${c}`,
+            params: Object.assign({with_watch_providers: ids}, STREAM), type: c};
+  }
+  const [title, path, params] = LIVE[a][+b];
+  return {title, path, params, type: path.includes("/tv") ? "tv" : "movie"};
+}
+const skeleton = n => Array.from({length: n}, () => `<div class="card sk" aria-hidden="true"><div class="pw"></div><div class="sk-t"></div></div>`).join("");
+function liveRowHTML(key) {
+  return `<div data-livebox><div class="sec"><h2>${esc(liveDef(key).title)}</h2><p class="live-sub"><i></i>Live</p></div>` +
+         `<div class="row live" data-live="${esc(key)}">${skeleton(6)}</div></div>`;
+}
+function liveRowsHTML(tab) {
+  if (!T.key || T.failed || !LIVE[tab]) return "";
+  return LIVE[tab].map((_, i) => liveRowHTML(`${tab}|${i}`)).join("");
+}
+function platformsHTML() {
+  if (!T.key || T.failed) return "";
+  return section("Browse by platform", "") + `<div class="chips" role="group" aria-label="Platforms">${PLATS.map(k =>
+    `<button class="chip" data-plat="${k}" aria-pressed="false"><i class="pd" style="background:${D.providers[k].color}"></i>${esc(D.providers[k].name)}</button>`).join("")}</div><div id="platbox"></div>`;
+}
+async function showPlatform(k) {
+  document.querySelectorAll("[data-plat]").forEach(c => c.setAttribute("aria-pressed", c.dataset.plat === k));
+  await ensureProviders();
+  const box = $("#platbox"); if (!box) return;
+  if (!(T.provIds[k] || []).length) { box.innerHTML = `<div class="empty">No catalogue data for ${esc(D.providers[k].name)} right now.</div>`; return; }
+  box.innerHTML = liveRowHTML(`plat|${k}|movie`) + liveRowHTML(`plat|${k}|tv`);
+  fillLive(box);
+}
+function fillLive(root) {
+  if (!T.key || T.failed) return;
+  root.querySelectorAll("[data-live]").forEach(el => {
+    const st = liveState[el.dataset.live];
+    if (st && st.ids.length) el.innerHTML = st.ids.map(id => BY[id]).filter(Boolean).map(card).join("");
+    else loadLive(el.dataset.live);
+  });
+}
+async function loadLive(key) {
+  const st = liveState[key] || (liveState[key] = {ids: [], page: 0, total: 1, busy: false});
+  if (st.busy || st.page >= st.total || st.page >= 20) return;
+  st.busy = true;
+  try {
+    if (key.startsWith("plat|")) await ensureProviders();
+    const def = liveDef(key);
+    const j = await tget(def.path, Object.assign({page: st.page + 1}, def.params));
+    st.page = j.page || st.page + 1; st.total = j.total_pages || 1;
+    const seen = new Set(st.ids);
+    const fresh = (j.results || []).map(r => fromTmdb(r, def.type)).filter(it => it && !seen.has(it.id) && (seen.add(it.id), true));
+    fresh.forEach(it => st.ids.push(it.id));
+    const el = document.querySelector(`[data-live="${CSS.escape(key)}"]`);
+    if (el) {
+      if (st.page === 1) el.innerHTML = fresh.map(card).join("") || `<div class="empty">Nothing here yet.</div>`;
+      else el.insertAdjacentHTML("beforeend", fresh.map(card).join(""));
+    }
+  } catch (e) { tmdbFail(); }
+  st.busy = false;
+}
+// endless rows: fetch the next page as a live row nears its end
+document.addEventListener("scroll", e => {
+  const el = e.target;
+  if (!el.dataset || !el.dataset.live) return;
+  if (el.scrollLeft + el.clientWidth > el.scrollWidth - 500) loadLive(el.dataset.live);
+}, true);
+
+function ensureProviders() {
+  if (T.provReady) return T.provReady;
+  T.provReady = Promise.all(["movie", "tv"].map(t => tget(`/watch/providers/${t}`, {watch_region: "IN"}))).then(rs => {
+    rs.forEach(r => (r.results || []).forEach(p => {
+      const k = provKey(p.provider_name);
+      if (!k || /channel|with ads/i.test(p.provider_name)) return;
+      T.provIds[k] = T.provIds[k] || [];
+      if (!T.provIds[k].includes(p.provider_id)) T.provIds[k].push(p.provider_id);
+    }));
+  }).catch(() => {});
+  return T.provReady;
+}
+
+/* detail sheet for live titles */
+const details = {};
+async function loadDetails(it) {
+  if (details[it.id]) return;
+  try {
+    const d = await tget(`/${it.tmdb.type}/${it.tmdb.id}`, {append_to_response: "watch/providers"});
+    const ind = (d["watch/providers"] && d["watch/providers"].results && d["watch/providers"].results.IN) || {};
+    const seen = new Set(), provs = [];
+    ["flatrate", "free", "ads"].forEach(kind => (ind[kind] || []).forEach(p => {
+      if (seen.has(p.provider_id)) return; seen.add(p.provider_id);
+      provs.push({name: p.provider_name, logo: p.logo_path, key: provKey(p.provider_name), kind});
+    }));
+    const byKey = new Map(), other = [];          // one button per app
+    provs.forEach(p => { if (!p.key) other.push(p); else if (!byKey.has(p.key)) byKey.set(p.key, p); });
+    details[it.id] = {genres: (d.genres || []).map(g => g.name).slice(0, 4),
+      len: d.runtime ? `${Math.floor(d.runtime / 60)}h ${d.runtime % 60}m` : d.number_of_seasons ? `${d.number_of_seasons} season${d.number_of_seasons > 1 ? "s" : ""}` : "",
+      apps: [...byKey.values()], other, link: ind.link || ""};
+  } catch (e) { details[it.id] = {genres: [], len: "", apps: [], other: [], link: "", error: true}; }
+  if (openId === it.id) refreshSheet();
+}
+function tmdbSheetHTML(it) {
+  const d = details[it.id];
+  const facts = [it.score ? `<span class="star">★ ${it.score.toFixed(1)}</span> <span>TMDB</span>` : "", esc(it.year), d ? esc(d.len) : "", esc(kindLabel(it))].filter(Boolean).join("<span>·</span>");
+  const logo = p => p.logo ? `<img class="plogo" src="https://image.tmdb.org/t/p/w92${p.logo}" alt="">`
+                           : `<span class="logo" style="background:${p.key ? D.providers[p.key].color : "#555"}">${esc(p.name[0])}</span>`;
+  let where;
+  if (!d) where = `<div class="checking"><i></i>Checking where it streams in India…</div>`;
+  else if (d.error) where = `<div class="note">Couldn't load streaming info. Try again in a moment.</div>`;
+  else if (!d.apps.length && !d.other.length) where = `<div class="note">Not streaming in India right now.</div>`;
+  else where = `<div class="offers">` + d.apps.map(p => {
+      const url = FIND[p.key] ? FIND[p.key](it.title) : HOME[p.key];
+      const sub = FIND[p.key] ? "Opens the app and searches this title" : "Opens the app";
+      return `<a class="offer" href="${esc(linkFor(url, p.key))}" target="_blank" rel="noopener">${logo(p)}
+        <span><b>${esc(D.providers[p.key].name)}</b><small>${sub}</small></span><span class="go">Open</span></a>`;
+    }).join("") + d.other.map(p => `<a class="offer" href="${esc(d.link || it.trailer)}" target="_blank" rel="noopener">${logo(p)}
+        <span><b>${esc(p.name)}</b><small>See watch options</small></span><span class="go">View</span></a>`).join("") + `</div>`;
+  const saved = favs.has(it.id);
+  return `<div class="grab" data-grab><i></i></div><button class="icon x" data-close aria-label="Close">${ICON.close}</button>
+    <div class="sbody"><div class="shead">${poster(it, "s592")}<div><h2 class="stitle">${esc(it.title)}</h2><div class="facts">${facts}</div></div></div>
+    <div class="tags">${it.telugu ? `<span class="tag tel">Telugu</span>` : ""}${(d ? d.genres : []).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
+    <p class="syn">${esc(it.synopsis || "No description yet.")}</p>
+    <div class="h3">Where to watch in India</div>${where}
+    <div class="acts"><a class="btn primary" href="${esc(ytLink(it))}" target="_blank" rel="noopener">${ICON.play}Trailer</a>
+    <button class="btn soft ${saved ? "saved" : ""}" data-fav="${it.id}" aria-pressed="${saved}">${ICON.heart}<span>${saved ? "Saved" : "Save"}</span></button></div>
+    <p class="foot">Live data from TMDB and JustWatch. Line-ups change, so the app may differ slightly.</p></div>`;
+}
+
+/* search */
+let searchT = null;
+function searchTmdb(q, have) {
+  clearTimeout(searchT);
+  searchT = setTimeout(async () => {
+    let items = [];
+    try {
+      const j = await tget("/search/multi", {query: q, include_adult: "false"});
+      const skip = new Set(have);
+      items = (j.results || []).map(r => fromTmdb(r)).filter(it => it && !skip.has(it.id)).slice(0, 24);
+    } catch (e) { /* offline or bad key: local results only */ }
+    const box = $("#tsearch"), input = $("#q");
+    if (!box || !input || input.value.trim().toLowerCase() !== q) return;
+    box.innerHTML = items.length ? section("More titles", "Live from TMDB") + grid(items) : "";
+  }, 350);
+}
+
 /* ───────────── boot ───────────── */
 function boot(data) {
   if (D) return;
   D = data; D.items.forEach(i => BY[i.id] = i);
+  T.key = (args.tmdbKey || new URLSearchParams(location.search).get("tmdb") || "").trim();
+  Object.values(store.get("favMeta", {})).forEach(m => { if (!BY[m.id]) BY[m.id] = rehydrate(m); });
   applyTheme(store.get("theme", args.theme || "cinema"), true);
-  render(); fitHeight();
+  render(); fillLive(document); fitHeight();
+  if (T.key) ensureProviders();
 }
 window.addEventListener("message", e => {
   const m = e.data;
   if (!m || m.type !== "streamlit:render") return;
   args = m.args || {};
   if (args.catalog) boot(args.catalog);
+  if (D && args.tmdbKey && !T.key) { T.key = args.tmdbKey.trim(); setTab(state.tab); }
   else if (!D) fetch("catalog.json").then(r => r.json()).then(boot).catch(() => {});
   fitHeight();
 });

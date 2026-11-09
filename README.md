@@ -5,7 +5,15 @@ Pick something to watch in seconds, then jump straight into it.
 - **Discover.** Real posters, a featured carousel, a mood picker, category tabs (For you, Anime, Movies, Series, Reality TV, Sports, Saved), search and a Surprise Me roll. Tap any poster for details: IMDb rating, where it streams in India, and buttons that open that exact title in Netflix, Prime Video, JioHotstar, Crunchyroll, Sony LIV, ZEE5 or FanCode. Bigg Boss Telugu and BB Jodi have a built-in episode tracker. There are four looks to pick from (Cinema hall, Daylight, Late show, Poster black). Favourites, tracker notes and your look are saved on your device.
 - **Lounge.** Shared rooms with a code or link: live chat with `:emoji:` codes and badges, floating reactions, a watch poll and a synced countdown.
 
-Availability, deep links, posters and ratings were checked on JustWatch India (Nov 2026). Platforms change, so re-check on justwatch.com/in and edit `core/data.py`.
+**Library.** 80 hand-checked titles (exact links, verified on JustWatch India, Nov 2026) plus an optional **live library of thousands** from TMDB: trending lists, Telugu/Tamil/Hindi/Malayalam movies on Indian OTT, anime, Indian and international series, K-dramas, reality shows, browse-by-platform, endless rows and full search. Live titles show where they stream in India and open the app with that title searched.
+
+To switch the live library on, get a free API key at themoviedb.org (Settings → API), then on share.streamlit.io open your app's **⋮ → Settings → Secrets** and add:
+
+```toml
+TMDB_API_KEY = "your-key"
+```
+
+Running locally? Put the same line in `.streamlit/secrets.toml` (git-ignored). This product uses the TMDB API but is not endorsed or certified by TMDB.
 
 Built with **Python + Streamlit**. Discover is a custom Streamlit component (plain HTML/CSS/JS in `components/discover/`) that runs in the browser, so every tap is instant. It's responsive for laptop (Asus TUF F15) and phone (Realme P1 5G).
 
