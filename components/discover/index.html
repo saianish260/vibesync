@@ -3650,7 +3650,8 @@ async function findTop(theme, mode) {
 }
 function ytMode(mode) {
   if (!YTS.theme || !YT_MODES[mode]) return;
-  YTS.mode = YTS.mode === mode ? "official" : mode; store.set("ytmode", YTS.mode);
+  YTS.mode = YTS.mode === mode ? "official" : mode;
+  if (!isTvKind(YTS.theme)) store.set("ytmode", YTS.mode);      // a movie's choice carries to the next movie
   toast(YTS.mode === "official" ? `Back to the official theme of ${YTS.theme.title}` : `Playing ${YT_MODES[mode].toast} of ${YTS.theme.title}`);
   ytPlay(YTS.theme, AU.tok);
 }
@@ -3678,6 +3679,14 @@ function ytCard(state) {
   const th = YTS.theme && YTS.theme.poster; box.querySelector(".yt-disc").style.backgroundImage = th ? `url('${th}')` : "";
 }
 async function ytPlay(theme, tok) {
+  // a new title picks its starting track: series and anime open on their intro (IN🔥); movies keep the
+  // last choice made on a movie. Switching modes on the same title (VB🔥 / VS🔥 / IN🔥) still works.
+  const key = theme && (theme.id || theme.title);
+  if (key && key !== YTS.forTitle) {
+    YTS.forTitle = key;
+    if (isTvKind(theme)) YTS.mode = "intro";
+    else { const m = store.get("ytmode", "official"); YTS.mode = m === "intro" ? "official" : m; }
+  }
   YTS.theme = theme; YTS.i = 0; YTS.collapsed = false; YTS.list = [];
   ytCard("searching");
   const [list, YT] = await Promise.all([YT_MODES[YTS.mode] ? findTop(theme, YTS.mode) : findBgm(theme), ytLoadApi()]);
