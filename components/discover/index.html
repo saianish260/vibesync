@@ -1301,6 +1301,7 @@ function render() {
   const boost = D.boosts[Math.floor(Math.random() * D.boosts.length)];
   $("#app").innerHTML = `
     <header class="top" id="top"><div class="mark">Vibe<i>Sync</i></div><div class="tools">
+      <button class="icon" data-sound hidden aria-label="Theme sound"></button>
       <button class="icon" data-search aria-label="Search">${ICON.search}</button>
       <button class="icon" data-theme-btn aria-label="Change look" aria-haspopup="menu">${ICON.palette}</button></div></header>
     ${heroHTML()}
@@ -1383,11 +1384,12 @@ document.addEventListener("click", e => {
   if (t.hasAttribute("data-surprise")) { surprise(); return; }
   if (t.hasAttribute("data-theme-btn")) { openThemer(); buzz(); return; }
   if (t.hasAttribute("data-closethemer")) { closeThemer(); return; }
-  if (t.dataset.themeit) { e.preventDefault(); themeFrom(BY[t.dataset.themeit], t); buzz(); return; }
+  if (t.dataset.themeit) { e.preventDefault(); unlockAudio(); themeFrom(BY[t.dataset.themeit], t); buzz(); return; }
+  if (t.hasAttribute("data-sound")) { setSound(!AU.on); buzz(); toast(AU.on ? "Theme sound on 🔊" : "Theme sound off"); return; }
   if (t.hasAttribute("data-tdefault")) { TT.cur = null; store.set("titleTheme", null); applyTitle(null, true); renderThemer($("#tq").value); toast("Back to the default look"); return; }
   if (t.dataset.trecent) {
     const th = store.get("themeRecent", []).find(x => x.id === t.dataset.trecent);
-    if (th) { TT.cur = th; store.set("titleTheme", th); applyTitle(th, true); closeThemer(); toast(`VibeSync is now ${th.title} ✨`); }
+    if (th) { unlockAudio(); TT.cur = th; store.set("titleTheme", th); applyTitle(th, true); closeThemer(); toast(`VibeSync is now ${th.title} ✨`); }
     return;
   }
   if (t.dataset.theme && t.classList.contains("sw")) { applyTheme(t.dataset.theme, true); buzz(); setTimeout(() => $("#themes").classList.remove("on"), 180); return; }
@@ -1867,7 +1869,7 @@ async function themeFrom(it, srcEl) {
   if (!it || TT.busy) return;
   TT.busy = true;
   const flash = themeFlash(it, srcEl);
-  let genres = (it.genres || []).slice(), backs = [], tposter = it.tmdbPoster || "", keywords = [], overview = it.synopsis || "";
+  let genres = (it.genres || []).slice(), backs = [], tposter = it.tmdbPoster || "", keywords = [], overview = it.synopsis || "", indian = !!it.telugu;
   const ref = await tmdbRef(it);
   if (ref) {
     try {
@@ -1877,6 +1879,7 @@ async function themeFrom(it, srcEl) {
       genres = (det.genres || []).map(g => g.name).concat(genres);
       overview = det.overview || overview;
       keywords = (kw.keywords || kw.results || []).map(k => k.name);
+      indian = /^(te|hi|ta|ml|kn|mr|bn)$/.test(det.original_language || "") || indian;
       backs = (imgs.backdrops || []).filter(b => b.width >= 1000).sort((a, b) => (a.iso_639_1 ? 1 : 0) - (b.iso_639_1 ? 1 : 0) || b.vote_average - a.vote_average)
         .slice(0, 3).map(b => b.file_path);
       if (!backs.length && det.backdrop_path) backs = [det.backdrop_path];
@@ -1894,7 +1897,7 @@ async function themeFrom(it, srcEl) {
   if (!base) { const [h] = rgb2hsl(...[1, 3, 5].map(i => parseInt(tintOf(it).slice(i, i + 2), 16) / 255 || .5)); base = {bgH: h, bgS: .3, accH: h, accS: .75, acc2H: (h + 40) % 360}; }
   const pal = makePalette(base, pack.hint);
   const theme = {v: 2, id: it.id, title: it.title, year: it.year || "", poster: tposter ? img(tposter, "w185") : hasPoster(it) ? posterURL(it, "s166") : "",
-                 far, near, pal, world, at: Date.now()};
+                 far, near, pal, world, indian, at: Date.now()};
   TT.cur = theme; store.set("titleTheme", theme);
   const rec = store.get("themeRecent", []).filter(t => t.id !== theme.id);
   store.set("themeRecent", [theme].concat(rec).slice(0, 10));
@@ -1918,7 +1921,7 @@ function applyTitle(theme, tell) {
   const root = document.documentElement;
   root.className = root.className.split(" ").filter(c => c && !c.startsWith("pk-") && c !== "titled" && c !== "has-font").join(" ");
   VARS.forEach(v => root.style.removeProperty(v));
-  stopWorld(); stopCritters();
+  stopWorld(); stopCritters(); stopSound(); AU.world = null;
   $("#piles").innerHTML = "";
   if (!theme) {
     $("#wfar").style.backgroundImage = $("#wnear").style.backgroundImage = "";
@@ -1936,8 +1939,9 @@ function applyTitle(theme, tell) {
       return `<i style="${x};${y};--r:${r}deg;--d:${i * .7}s">${g}</i>`; }).join("");
     startWorld(pack, p);
     startCritters(Object.assign({}, theme, {world}));
+    startSound(Object.assign({}, theme, {world}));
   }
-  themeBtn();
+  themeBtn(); soundBtn();
   if (tell) {
     const p = theme && theme.pal;
     send("streamlit:setComponentValue", {value: {theme: "cinema", n: Date.now(), palette: p ? {bg: p.bg, s1: p.s1, s2: p.s2, text: p.text, muted: p.muted,
@@ -2061,7 +2065,8 @@ function startCritters(theme) {
   const start = c => {                                       // begin a habit
     const t = onScreenTargets(); if (!t.length) { c.timer = 120; return; }
     c.target = t[Math.floor(Math.random() * t.length)]; c.state = "approach"; c.act = 0;
-    if (c.d.move === "walk") { c.hidden = false; c.el.style.opacity = 1; c.dir = Math.random() < .5 ? 1 : -1; c.x = c.dir > 0 ? -60 : innerWidth + 60;
+    if (c.d.move === "walk") { sfx(["rv", "car"].includes(c.kind) ? "engine" : ["horse", "bull", "tiger", "wolf", "dog"].includes(c.kind) ? "gallop" : "none", {x: innerWidth / 2});
+      c.hidden = false; c.el.style.opacity = 1; c.dir = Math.random() < .5 ? 1 : -1; c.x = c.dir > 0 ? -60 : innerWidth + 60;
       c.y = innerHeight - 104 - c.size * .35; c.state = "cross"; }
     if (c.d.move === "jump") { const r = c.target.getBoundingClientRect(); c.hidden = false; c.el.style.opacity = 1; c.x = r.left + r.width / 2 + R(-60, 60);
       c.y = innerHeight - 90; c.vy = -R(13, 17); c.vx = R(-2.5, 2.5); c.state = "airborne"; }
@@ -2071,7 +2076,11 @@ function startCritters(theme) {
   };
   const finish = c => { c.state = "wander"; c.target = null; c.timer = R(...c.d.every) * 60; pickWander(c); };
   const doHabit = c => {                                     // the moment of contact
-    const el = c.target, h = c.d.habit, r = el.getBoundingClientRect();
+    const el = c.target, h = c.d.habit, r = el.getBoundingClientRect(), at = {x: c.x};
+    const SND = {flip: ["squeak", "flap"], web: ["thwip"], abduct: ["hum"], phase: ["ghost"], swallow: ["rumble"], bite: ["snap"],
+                 squash: [c.kind === "ball" ? "thump" : "ribbit"], land: [c.kind === "fly" ? "buzz" : c.kind === "bat" ? "squeak" : "flap"]}[h];
+    if (SND) SND.forEach(n => sfx(n, at));
+    if (h === "fire") sfx("sizzle", at);
     if (h === "fire") { effect(el, "vs-burn", 2600, "vs-charred"); setTimeout(() => puff(el.getBoundingClientRect(), "smoke", 18), 2600); }
     else if (h === "flip") effect(el, "vs-flip", 3600);
     else if (h === "web") effect(el, "vs-web", 5200);
@@ -2117,7 +2126,7 @@ function startCritters(theme) {
       if (c.state === "airborne") {                          // fish / dolphins leap out of the bottom edge
         c.vy += .45 * dt; c.x += c.vx * dt; c.y += c.vy * dt;
         if (c.vy > 0 && !c.didAct) { c.didAct = true; }
-        if (c.y > innerHeight - 60 && c.vy > 0) { c.hidden = true; c.el.style.opacity = 0; c.didAct = false;
+        if (c.y > innerHeight - 60 && c.vy > 0) { sfx("splash", {x: c.x}); c.hidden = true; c.el.style.opacity = 0; c.didAct = false;
           for (let i = 0; i < 12; i++) Z.fx.push({x: c.x, y: innerHeight - 70, vx: R(-2.5, 2.5), vy: R(-5, -1.5), life: 1, r: R(2, 4), k: "drop"}); finish(c); }
         c.el.style.transform = `translate3d(${c.x - c.size / 2}px,${c.y - c.size / 2}px,0) rotate(${Math.atan2(c.vy, Math.abs(c.vx) + 3) * 57 * (c.vx < 0 ? -1 : 1)}deg) scaleX(${c.vx > 0 ? -1 : 1})`;
         continue;
@@ -2169,9 +2178,10 @@ function startCritters(theme) {
         if (c.state === "approach" && dist < 22) { c.state = "act"; c.act = {fire: 75, land: 200, letter: 40, abduct: 160, phase: 120, flip: 40}[d.habit] || 50; if (d.habit !== "fire") doHabit(c); }
         if (c.state === "act") {
           c.act -= dt;
-          if (d.habit === "fire") { c.face = cx > c.x ? 1 : -1; fire(c.x + c.face * c.size * .42, c.y + c.size * .05, cx, cy, 2); if (c.act <= 30 && !c.burned) { c.burned = true; doHabit(c); } }
+          if (d.habit === "fire") { if (!c.roared) { c.roared = true; sfx("roar", {x: c.x}); sfx("fire", {x: c.x}); }
+            c.face = cx > c.x ? 1 : -1; fire(c.x + c.face * c.size * .42, c.y + c.size * .05, cx, cy, 2); if (c.act <= 30 && !c.burned) { c.burned = true; doHabit(c); } }
           if (d.habit === "abduct") Z.fx.push({x: c.x, y: c.y + c.size * .3, x2: cx, w: r.width * .6, y2: r.top + r.height * .5, life: .06, k: "beam"});
-          if (c.act <= 0) { c.burned = false; c.side = 0; finish(c); }
+          if (c.act <= 0) { c.burned = false; c.roared = false; c.side = 0; finish(c); }
         }
       }
       if (c.state === "follow") {                            // swarm members circle the leader's target
@@ -2351,7 +2361,7 @@ function startWorld(pack, pal) {
     const p = {x: R(-w * .1, w), y: born ? R(0, h) : -40 * dpr, z, t: R(0, 6.3), rot: R(-.6, .6), vr: R(-.02, .02),
                c: f.color || cols[Math.random() < .65 ? 0 : Math.random() < .5 ? 1 : 2], py: 0};
     if (f.t === "emoji") {
-      p.g = sprite(f.g[Math.floor(Math.random() * f.g.length)]); p.size = R(...f.s) * dpr * (.6 + z * .5);
+      p.glyph = f.g[Math.floor(Math.random() * f.g.length)]; p.g = sprite(p.glyph); p.size = R(...f.s) * dpr * (.6 + z * .5);
       if (f.m === "rise") p.y = born ? R(0, h) : h + 40 * dpr;
       if (f.m === "fly") { p.dir = Math.random() < .5 ? 1 : -1; p.x = p.dir > 0 ? -80 * dpr : w + 80 * dpr; p.y = R(h * .05, h * .6); if (born) p.x = R(0, w); }
       if (f.m === "float") { p.vx = R(-.25, .25) * dpr; p.vy = R(-.2, .2) * dpr; }
@@ -2412,6 +2422,7 @@ function startWorld(pack, pal) {
         if ((f.next -= dt) <= 0) {
           f.next = R(...f.every) * 60; f.flash = 1;
           let x = R(w * .15, w * .85), y = 0; f.bolt = [[x, y]]; f.branch = [];
+          sfx("thunder", {close: Math.random(), x: x / dpr});                                // thunder rolls in after the flash
           while (y < h * R(.4, .7)) { x += R(-40, 40) * dpr; y += R(18, 46) * dpr; f.bolt.push([x, y]); if (Math.random() < .25) f.branch.push([x, y, R(-1, 1)]); }
         }
         if (f.flash > 0) {
@@ -2466,7 +2477,8 @@ function startWorld(pack, pal) {
                    if (p.x < -60 * dpr) p.x = w + 50 * dpr; if (p.x > w + 60 * dpr) p.x = -50 * dpr; if (p.y < -60 * dpr) p.y = h + 50 * dpr; if (p.y > h + 60 * dpr) p.y = -50 * dpr; }
             if (f.hits && p.z > .6 && !p.landed) {
               const s = hitSurface(p.x, y0 + p.size * .3, p.y + p.size * .3);
-              if (s) { p.on = s; p.dx = p.x - s.l * dpr; p.rest = R(90, 220); p.landed = true; p.rot = R(-.25, .25); }
+              if (s) { p.on = s; p.dx = p.x - s.l * dpr; p.rest = R(90, 220); p.landed = true; p.rot = R(-.25, .25);
+                       if (/💵|💸|🪙|💰/.test(p.glyph)) sfx("coin", {x: p.x / dpr}); }
             }
             out = p.y > h + 70 * dpr || p.y < -90 * dpr || p.x < -120 * dpr || p.x > w + 120 * dpr;
           }
@@ -2614,6 +2626,367 @@ function startWorld(pack, pal) {
   W.raf = requestAnimationFrame(step);
 }
 addEventListener("resize", () => { if (W.raf && W.refit) { W.refit(); SURF.dirty = true; } });
+
+/* ───────────── Sound ─────────────
+   Everything is synthesised live with the Web Audio API: no files to download, works offline, and no
+   copyrighted soundtracks. Each world gets an ambience (rain, wind, fire, sea, crowd, bells...) and an
+   original generative score in the style of its title, plus sound effects tied to what happens on screen
+   (thunder after lightning, dragon fire, bat squeaks, splashes...). */
+const AU = {ctx: null, on: store.get("sound", true), style: null, amb: [], timer: 0, step: 0, next: 0, last: {}, unlocked: false, world: null};
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+const SCALES = {minor: [0, 2, 3, 5, 7, 8, 10], dorian: [0, 2, 3, 5, 7, 9, 10], major: [0, 2, 4, 5, 7, 9, 11], harm: [0, 2, 3, 5, 7, 8, 11],
+  phryd: [0, 1, 4, 5, 7, 8, 10], pent: [0, 2, 4, 7, 9], mpent: [0, 3, 5, 7, 10], bhairav: [0, 1, 4, 5, 7, 8, 11], kafi: [0, 2, 3, 5, 7, 9, 10]};
+function audio() {
+  if (AU.ctx) return AU.ctx;
+  const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
+  const c = AU.ctx = new C({latencyHint: "playback"});
+  const comp = c.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 3; comp.connect(c.destination);
+  AU.master = c.createGain(); AU.master.gain.value = 0; AU.master.connect(comp);
+  AU.an = c.createAnalyser(); AU.an.fftSize = 2048; AU.master.connect(AU.an);
+  const bus = v => { const g = c.createGain(); g.gain.value = v; g.connect(AU.master); return g; };
+  AU.music = bus(.42); AU.ambBus = bus(.6); AU.sfx = bus(.55);
+  // reverb from a generated impulse response
+  const len = c.sampleRate * 3, ir = c.createBuffer(2, len, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6); }
+  AU.verb = c.createConvolver(); AU.verb.buffer = ir; const vg = c.createGain(); vg.gain.value = .5; AU.verb.connect(vg); vg.connect(AU.master);
+  // tempo-free echo for plucks
+  AU.delay = c.createDelay(1.5); AU.delay.delayTime.value = .36; const fb = c.createGain(); fb.gain.value = .32; const dl = c.createBiquadFilter(); dl.type = "lowpass"; dl.frequency.value = 2600;
+  AU.delay.connect(dl); dl.connect(fb); fb.connect(AU.delay); const dg = c.createGain(); dg.gain.value = .35; dl.connect(dg); dg.connect(AU.music);
+  // noise buffers
+  const nb = kind => { const b = c.createBuffer(1, c.sampleRate * 3, c.sampleRate), d = b.getChannelData(0); let l = 0, b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < d.length; i++) { const w = Math.random() * 2 - 1;
+      if (kind === "brown") { l = (l + .02 * w) / 1.02; d[i] = l * 3.5; }
+      else if (kind === "pink") { b0 = .99765 * b0 + w * .099; b1 = .963 * b1 + w * .2965; b2 = .57 * b2 + w * 1.0526; d[i] = (b0 + b1 + b2 + w * .1848) * .2; }
+      else d[i] = w; }
+    return b; };
+  AU.noise = {white: nb("white"), pink: nb("pink"), brown: nb("brown")};
+  return c;
+}
+function unlockAudio() {                                     // must run inside a tap
+  const c = audio(); if (!c) return;
+  if (c.state === "suspended") c.resume();
+  AU.unlocked = true;
+  if (AU.on && AU.world && !AU.style) startSound(AU.world);
+}
+["pointerdown", "keydown"].forEach(ev => addEventListener(ev, () => { if (!AU.unlocked && TT.cur) unlockAudio(); }, {capture: true, passive: true}));
+document.addEventListener("visibilitychange", () => { if (!AU.ctx) return; document.hidden ? AU.ctx.suspend() : (AU.on && AU.style && AU.ctx.resume()); });
+
+/* ── instruments ── */
+function env(g, t, a, peak, d, sus = 0, r = .3, dur = 0) {
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + a);
+  if (dur) { g.gain.setTargetAtTime(peak * sus, t + a, d); g.gain.setTargetAtTime(0, t + dur, r); } else g.gain.setTargetAtTime(0, t + a, d);
+}
+function voice(t, f, dur, o = {}) {
+  const c = AU.ctx, g = c.createGain(), out = o.dest || AU.music;
+  const oscs = (o.detunes || [0]).map(dt => { const s = c.createOscillator(); s.type = o.type || "sine"; s.frequency.setValueAtTime(f, t); s.detune.value = dt; return s; });
+  if (o.slide) oscs.forEach(s => s.frequency.exponentialRampToValueAtTime(f * o.slide, t + (o.slideT || .15)));
+  let node = g;
+  if (o.cutoff) { const fl = c.createBiquadFilter(); fl.type = o.ftype || "lowpass"; fl.frequency.setValueAtTime(o.cutoff, t); fl.Q.value = o.q || .7;
+    if (o.fenv) fl.frequency.setTargetAtTime(o.cutoff * o.fenv, t + .005, o.fdecay || .2); oscs.forEach(s => s.connect(fl)); fl.connect(g); }
+  else oscs.forEach(s => s.connect(g));
+  if (o.vib) { const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = o.vib; lg.gain.value = o.vibAmt || 6; l.connect(lg); oscs.forEach(s => lg.connect(s.detune)); l.start(t); l.stop(t + dur + 2); }
+  if (o.pan != null && c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = o.pan; g.connect(p); node = p; }
+  node.connect(out); if (o.verb) { const s = c.createGain(); s.gain.value = o.verb; node.connect(s); s.connect(AU.verb); }
+  if (o.echo) { const s = c.createGain(); s.gain.value = o.echo; node.connect(s); s.connect(AU.delay); }
+  env(g, t, o.a ?? .005, (o.vol ?? .2) / Math.sqrt(oscs.length), o.d ?? .25, o.sus ?? 0, o.r ?? .3, o.hold ? dur : 0);
+  oscs.forEach(s => { s.start(t); s.stop(t + dur + (o.r ?? .3) * 6 + 1); });
+}
+function noiseHit(t, o = {}) {
+  const c = AU.ctx, s = c.createBufferSource(), g = c.createGain(), f = c.createBiquadFilter();
+  s.buffer = AU.noise[o.kind || "white"]; s.playbackRate.value = o.rate || 1;
+  f.type = o.ftype || "bandpass"; f.frequency.setValueAtTime(o.freq || 2000, t); f.Q.value = o.q ?? 1;
+  if (o.sweep) f.frequency.exponentialRampToValueAtTime(o.sweep, t + (o.sweepT || o.dur || .3));
+  s.connect(f); f.connect(g);
+  let node = g; if (o.pan != null && c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = o.pan; g.connect(p); node = p; }
+  node.connect(o.dest || AU.sfx); if (o.verb) { const v = c.createGain(); v.gain.value = o.verb; node.connect(v); v.connect(AU.verb); }
+  env(g, t, o.a ?? .002, o.vol ?? .3, o.d ?? .05, o.sus ?? 0, o.r ?? .1, o.hold ? o.dur : 0);
+  s.start(t, Math.random() * 2); s.stop(t + (o.dur || .3) + (o.r ?? .1) * 6 + .2);
+}
+const INST = {
+  kick: t => voice(t, 140, .3, {slide: .32, slideT: .12, vol: .55, d: .16}),
+  snare: t => { noiseHit(t, {freq: 1900, q: .6, vol: .28, d: .07, dest: AU.music}); voice(t, 190, .12, {vol: .12, d: .05}); },
+  hat: (t, open) => noiseHit(t, {ftype: "highpass", freq: 7000, vol: open ? .12 : .07, d: open ? .12 : .03, dest: AU.music}),
+  brush: t => noiseHit(t, {freq: 4500, q: .5, vol: .06, a: .02, d: .09, dest: AU.music}),
+  taiko: (t, v = 1) => { voice(t, 72, .9, {slide: .55, slideT: .3, vol: .6 * v, d: .35, verb: .35}); noiseHit(t, {freq: 300, q: .8, vol: .18 * v, d: .08, dest: AU.music}); },
+  tabla: (t, f, v = 1) => voice(t, f, .4, {slide: 1.25, slideT: .06, vol: .26 * v, d: .14, type: "sine", verb: .15}),
+  pad: (t, notes, dur, o = {}) => notes.forEach((m, i) => voice(t, mtof(m), dur, Object.assign({type: "sawtooth", detunes: [-9, 7], cutoff: o.cutoff || 900, a: o.a || 1.2,
+    sus: .85, d: .8, r: o.r || 1.4, hold: true, vol: (o.vol || .07), verb: .55, pan: (i - 1) * .3}, o))),
+  pluck: (t, m, o = {}) => voice(t, mtof(m), .5, Object.assign({type: "triangle", cutoff: 3200, fenv: .25, fdecay: .12, d: .28, vol: .16, echo: .5, verb: .2}, o)),
+  harpsi: (t, m, o = {}) => voice(t, mtof(m), .4, Object.assign({type: "square", detunes: [-4, 4], cutoff: 2600, fenv: .4, fdecay: .08, d: .22, vol: .07, verb: .3}, o)),
+  cello: (t, m, dur, o = {}) => voice(t, mtof(m), dur, Object.assign({type: "sawtooth", detunes: [-5, 5], cutoff: 1100, a: .35, d: .6, sus: .8, r: .9, hold: true, vol: .09, vib: 5, vibAmt: 9, verb: .5}, o)),
+  bass: (t, m, dur, o = {}) => voice(t, mtof(m), dur, Object.assign({type: "sawtooth", cutoff: 420, fenv: 1.8, fdecay: .08, d: .25, sus: .5, r: .12, hold: true, vol: .2}, o)),
+  bell: (t, m, o = {}) => { voice(t, mtof(m), 3, Object.assign({d: 1.4, vol: .1, verb: .7}, o)); voice(t, mtof(m) * 2.76, 2, {d: .6, vol: .035, verb: .7}); },
+  piano: (t, m, o = {}) => { voice(t, mtof(m), 2, Object.assign({type: "triangle", d: .9, vol: .13, verb: .4, cutoff: 2400, fenv: .4, fdecay: .6}, o)); voice(t, mtof(m) * 2, 1, {d: .35, vol: .03, verb: .4}); },
+  epiano: (t, m, o = {}) => { voice(t, mtof(m), 2, Object.assign({d: 1.1, vol: .12, verb: .35, vib: 4.5, vibAmt: 5}, o)); voice(t, mtof(m) * 3.01, .6, {d: .15, vol: .03}); },
+  flute: (t, m, dur, o = {}) => { voice(t, mtof(m), dur, Object.assign({a: .08, d: .5, sus: .8, r: .25, hold: true, vol: .13, vib: 5.5, vibAmt: 14, verb: .5, echo: .2}, o));
+    noiseHit(t, {freq: mtof(m) * 2, q: 3, vol: .025, a: .05, d: .2, dur, hold: true, sus: .6, dest: AU.music}); },
+  tanpura: (t, m) => voice(t, mtof(m), 3.2, {type: "sawtooth", detunes: [-3, 3], cutoff: 1800, q: 4, fenv: .45, fdecay: 1.2, d: 1.5, vol: .07, verb: .6}),
+  twang: (t, m, o = {}) => voice(t, mtof(m) * 1.02, 1.2, Object.assign({type: "sawtooth", cutoff: 2400, fenv: .2, fdecay: .25, slide: .98, slideT: .3, d: .5, vol: .1, echo: .6, verb: .45}, o)),
+  box: (t, m, o = {}) => { voice(t, mtof(m), 1.4, Object.assign({d: .5, vol: .1, verb: .5, echo: .3}, o)); voice(t, mtof(m) * 4.02, .5, {d: .08, vol: .04}); },
+  marimba: (t, m, o = {}) => { voice(t, mtof(m), .5, Object.assign({d: .14, vol: .15, verb: .2}, o)); voice(t, mtof(m) * 4, .2, {d: .03, vol: .05}); },
+  accord: (t, notes, dur) => notes.forEach(m => voice(t, mtof(m), dur, {type: "square", detunes: [-8, 8], cutoff: 1500, a: .04, sus: .9, d: .3, r: .12, hold: true, vol: .035, vib: 6, vibAmt: 4}))
+};
+
+/* ── original generative scores, one per style ── */
+const R2 = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+function chordOf(S, deg, oct = 0) { const sc = SCALES[S.scale], n = sc.length;
+  return [0, 2, 4].map(k => { const i = deg + k; return S.root + oct * 12 + sc[((i % n) + n) % n] + 12 * Math.floor(i / n); }); }
+function noteOf(S, deg, oct = 0) { const sc = SCALES[S.scale], n = sc.length; return S.root + oct * 12 + sc[((deg % n) + n) % n] + 12 * Math.floor(deg / n); }
+const STYLES = {
+  synth80s: {bpm: 88, steps: 16, root: 45, scale: "minor", prog: [0, 5, 3, 4], play(s, t, S) {
+    const ch = chordOf(S, S.prog[S.bar % 4]), arp = [ch[0] + 12, ch[1] + 12, ch[2] + 12, ch[1] + 24, ch[2] + 12, ch[1] + 12];
+    INST.pluck(t, arp[s % arp.length], {type: "sawtooth", cutoff: 1900, fenv: .3, vol: .07, echo: .55});
+    if (s % 4 === 0) INST.bass(t, ch[0] - 12, S.dt * 3.5, {vol: .16});
+    if (s === 0) INST.pad(t, ch.map(m => m + 12), S.dt * 16, {cutoff: 700, vol: .05});
+    if (s % 8 === 4 && S.bar > 1) INST.snare(t);
+    if (s % 8 === 0 && S.bar > 1) INST.kick(t);
+  }},
+  gothic: {bpm: 96, steps: 12, root: 50, scale: "harm", prog: [0, 3, 4, 0, 5, 3, 4, 4], play(s, t, S) {     // a minor waltz
+    const ch = chordOf(S, S.prog[S.bar % 8]);
+    if (s === 0) { INST.cello(t, ch[0] - 12, S.dt * 11); INST.harpsi(t, ch[0]); }
+    if (s === 4 || s === 8) INST.harpsi(t, ch[1] + 12, {vol: .05}), INST.harpsi(t, ch[2] + 12, {vol: .05});
+    if (s % 2 === 0 && Math.random() < .55) INST.harpsi(t, noteOf(S, S.prog[S.bar % 8] + pick([0, 1, 2, 4, 6, 7]), 2), {vol: .045, echo: .3});
+    if (S.bar % 8 === 7 && s === 0) INST.bell(t, ch[0] + 12, {vol: .05});
+  }},
+  desert: {bpm: 70, steps: 8, root: 40, scale: "phryd", prog: [0, 1, 0, 6], play(s, t, S) {
+    const ch = chordOf(S, S.prog[S.bar % 4]);
+    if (s === 0) { INST.twang(t, ch[0]); INST.pad(t, [ch[0] - 12], S.dt * 8, {cutoff: 500, vol: .06}); }
+    if (s === 3 || s === 6) INST.twang(t, pick(ch) + 12, {vol: .07});
+    if (Math.random() < .18) INST.twang(t, noteOf(S, pick([0, 1, 2, 4, 5]), 1) + 12, {vol: .05});
+    if (s === 4) INST.tabla(t, 90, .6);
+  }},
+  heist: {bpm: 112, steps: 16, root: 48, scale: "minor", prog: [0, 0, 5, 4], play(s, t, S) {
+    const ch = chordOf(S, S.prog[S.bar % 4]);
+    if (s % 2 === 0) INST.bass(t, ch[0] - 12, S.dt * .8, {vol: .17, cutoff: 600});
+    INST.hat(t, s % 8 === 6);
+    if (s % 4 === 2) voice(t, mtof(ch[s % 3] + 12), .12, {type: "sawtooth", cutoff: 1800, d: .06, vol: .05});
+    if (s === 0) INST.kick(t); if (s === 8) INST.snare(t);
+    if (s % 4 === 0) voice(t, 2200, .03, {d: .01, vol: .03, dest: AU.music});                                   // ticking clock
+  }},
+  epicnorth: {bpm: 72, steps: 8, root: 38, scale: "minor", prog: [0, 5, 2, 6], play(s, t, S) {
+    const ch = chordOf(S, S.prog[S.bar % 4]);
+    if (s === 0) { INST.cello(t, ch[0] - 12, S.dt * 8, {vol: .1}); INST.pad(t, ch, S.dt * 8, {cutoff: 650, vol: .05}); }
+    if (s === 0 || s === 3 || s === 6) INST.taiko(t, s === 0 ? 1 : .6);
+    if (S.bar % 2 === 1 && (s === 0 || s === 2 || s === 4)) INST.cello(t, noteOf(S, S.prog[S.bar % 4] + [4, 3, 2][s / 2], 1), S.dt * 2.2, {vol: .07});
+  }},
+  indianepic: {bpm: 84, steps: 8, root: 50, scale: "bhairav", prog: [0, 0, 3, 4], play(s, t, S) {          // tanpura, flute, mridangam-style drums
+    if (s === 0) { INST.tanpura(t, S.root - 12 + 7); }
+    if (s === 2) INST.tanpura(t, S.root); if (s === 4) INST.tanpura(t, S.root); if (s === 6) INST.tanpura(t, S.root - 12);
+    const bol = [1, 0, .6, .4, 1, 0, .7, .5][s]; if (bol) INST.tabla(t, s % 4 === 0 ? 85 : 210, bol);
+    if (S.bar > 0 && s % 2 === 0 && Math.random() < .5) INST.flute(t, noteOf(S, S.phr = (S.phr ?? 4) + pick([-1, 1, 1, -2, 2, 0]), 1), S.dt * pick([1.5, 2, 3]));
+    if ((S.phr ?? 4) > 9 || (S.phr ?? 4) < 0) S.phr = 4;
+    if (s === 0 && S.bar % 4 === 0) INST.taiko(t, .5);
+  }},
+  space: {bpm: 60, steps: 8, root: 45, scale: "major", prog: [0, 3, 5, 4], play(s, t, S) {
+    const ch = chordOf(S, S.prog[S.bar % 4]);
+    if (s === 0) INST.pad(t, [ch[0], ch[2], ch[1] + 12], S.dt * 9, {cutoff: 1300, a: 2.5, vol: .055, type: "triangle"});
+    if (Math.random() < .28) INST.bell(t, pick(ch) + 24, {vol: .035});
+  }},
+  anime: {bpm: 100, steps: 16, root: 52, scale: "pent", prog: [0, 3, 4, 2], play(s, t, S) {
+    const ch = chordOf(S, S.prog[S.bar % 4]);
+    if (s % 2 === 0 && Math.random() < .7) INST.pluck(t, noteOf(S, pick([0, 1, 2, 3, 4, 5]), 1), {vol: .09});
+    if (s === 0) INST.pad(t, ch, S.dt * 16, {cutoff: 1400, vol: .04, type: "triangle"});
+    if (s % 4 === 0) INST.bass(t, ch[0] - 12, S.dt * 2, {vol: .12, type: "triangle", cutoff: 800});
+    if (s % 8 === 0) INST.kick(t); if (s % 8 === 4) INST.snare(t); if (s % 2 === 1) INST.hat(t);
+  }},
+  animeDark: {bpm: 92, steps: 16, root: 47, scale: "harm", prog: [0, 5, 3, 4], play(s, t, S) {
+    const ch = chordOf(S, S.prog[S.bar % 4]);
+    if (s % 2 === 0) INST.pluck(t, [ch[0], ch[2], ch[1] + 12, ch[2]][s / 2 % 4] + 12, {vol: .07, type: "square", cutoff: 1500});
+    if (s === 0) INST.cello(t, ch[0] - 12, S.dt * 15);
+    if (s % 8 === 0) INST.taiko(t, .6); if (s % 8 === 4) INST.snare(t);
+  }},
+  romance: {bpm: 68, steps: 8, root: 53, scale: "major", prog: [0, 4, 5, 3], play(s, t, S) {
+    const ch = chordOf(S, S.prog[S.bar % 4]);
+    if (s === 0) INST.piano(t, ch[0] - 12, {vol: .2}); if (s === 2 || s === 6) INST.piano(t, ch[1], {vol: .12}); if (s === 4) INST.piano(t, ch[2], {vol: .12});
+    if (s % 2 === 0 && Math.random() < .45) INST.piano(t, noteOf(S, S.prog[S.bar % 4] + pick([0, 2, 4, 5, 7]), 1), {vol: .14});
+    if (s === 0) INST.pad(t, ch, S.dt * 8, {type: "triangle", cutoff: 1100, vol: .035});
+  }},
+  horror: {bpm: 50, steps: 8, root: 38, scale: "minor", prog: [0, 1], play(s, t, S) {
+    if (s === 0) { voice(t, mtof(S.root - 12), S.dt * 8, {type: "sawtooth", detunes: [-14, 11], cutoff: 300, a: 2, sus: .9, hold: true, r: 2, vol: .08, verb: .6});
+      voice(t, mtof(S.root + 1), S.dt * 8, {a: 3, sus: .6, hold: true, r: 2, vol: .025, vib: .3, vibAmt: 40, verb: .8}); }
+    if (s === 0 || s === 1) voice(t, 55, .3, {slide: .7, vol: s ? .22 : .32, d: .12});                        // heartbeat
+    if (Math.random() < .08) voice(t, mtof(S.root + 36 + pick([1, 6, 11])), 2, {d: 1.2, vol: .03, verb: .9, vib: 7, vibAmt: 25});
+  }},
+  sports: {bpm: 124, steps: 16, root: 45, scale: "dorian", prog: [0, 0, 3, 4], play(s, t, S) {
+    const ch = chordOf(S, S.prog[S.bar % 4]);
+    if (s % 4 === 0) INST.kick(t); if (s % 8 === 4) INST.snare(t); INST.hat(t, s % 4 === 2);
+    if (s % 2 === 0) INST.bass(t, ch[0] - 12 + (s % 8 === 6 ? 12 : 0), S.dt, {vol: .15});
+    if (s === 0 || s === 6 || s === 10) voice(t, mtof(ch[1] + 12), .2, {type: "sawtooth", detunes: [-8, 8], cutoff: 2500, d: .12, vol: .06, verb: .2});
+  }},
+  shanty: {bpm: 104, steps: 12, root: 50, scale: "dorian", prog: [0, 0, 6, 4, 0, 3, 4, 0], play(s, t, S) {
+    const ch = chordOf(S, S.prog[S.bar % 8]);
+    if (s === 0) INST.bass(t, ch[0] - 12, S.dt * 2, {type: "triangle", vol: .14});
+    if (s === 6) INST.bass(t, ch[2] - 12, S.dt * 2, {type: "triangle", vol: .12});
+    if (s === 2 || s === 8) INST.accord(t, ch, S.dt * 2.5);
+    if (s % 2 === 0 && Math.random() < .6) INST.pluck(t, noteOf(S, S.prog[S.bar % 8] + pick([0, 1, 2, 4, 3]), 1), {vol: .07, echo: .2});
+    if (s === 0 || s === 6) INST.tabla(t, 70, .5);
+  }},
+  noir: {bpm: 70, steps: 12, root: 50, scale: "dorian", prog: [0, 3, 1, 4], play(s, t, S) {
+    const ch = chordOf(S, S.prog[S.bar % 4]), seventh = noteOf(S, S.prog[S.bar % 4] + 6);
+    if (s === 0) [...ch, seventh].forEach(m => INST.epiano(t, m, {vol: .05}));
+    if (s % 3 === 0) INST.bass(t, ch[s / 3 % 3] - 24 + 12, S.dt * 2.5, {type: "triangle", cutoff: 500, vol: .14});
+    if (s % 3 === 2) INST.brush(t);
+    if (Math.random() < .12) INST.epiano(t, noteOf(S, pick([2, 4, 5, 6, 8]), 1), {vol: .05});
+  }},
+  office: {bpm: 104, steps: 16, root: 57, scale: "major", prog: [0, 3, 4, 0], play(s, t, S) {
+    const ch = chordOf(S, S.prog[S.bar % 4]);
+    if ([0, 3, 6, 8, 11, 14].includes(s)) INST.marimba(t, [ch[0], ch[1], ch[2], ch[1] + 12][s % 4]);
+    if (s % 8 === 0) INST.marimba(t, ch[0] - 12, {vol: .12});
+  }},
+  toybox: {bpm: 92, steps: 8, root: 64, scale: "major", prog: [0, 4, 3, 4], play(s, t, S) {
+    const ch = chordOf(S, S.prog[S.bar % 4]);
+    INST.box(t, [ch[0], ch[1], ch[2], ch[1]][s % 4] + (s > 3 ? 12 : 0), {detunes: [0, 18], vol: .07});            // a little out of tune: unsettling
+  }},
+  magic: {bpm: 80, steps: 8, root: 57, scale: "major", prog: [0, 5, 3, 4], play(s, t, S) {
+    const ch = chordOf(S, S.prog[S.bar % 4]);
+    INST.box(t, [ch[0] + 12, ch[2] + 12, ch[1] + 24, ch[2] + 12][s % 4], {vol: .06});
+    if (s === 0) INST.pad(t, ch, S.dt * 8, {type: "triangle", cutoff: 1600, vol: .045});
+  }},
+  lofi: {bpm: 78, steps: 8, root: 51, scale: "major", prog: [1, 4, 0, 5], play(s, t, S) {
+    const ch = chordOf(S, S.prog[S.bar % 4]), seventh = noteOf(S, S.prog[S.bar % 4] + 6);
+    if (s === 0) [...ch, seventh].forEach(m => INST.epiano(t, m, {vol: .045}));
+    if (s === 0 || s === 5) INST.kick(t); if (s === 4) INST.snare(t); INST.hat(t);
+  }}
+};
+const WORLD_SOUND = {
+  upside: ["synth80s", ["drone", "whisper"]], wednesday: ["gothic", ["rain", "bells"]], breakingbad: ["desert", ["wind"]], heist: ["heist", ["hum"]],
+  stocks: ["heist", ["office"]], squid: ["toybox", ["hum"]], got: ["epicnorth", ["wind", "fire2"]], dragon: ["epicnorth", ["fire", "wind2"]],
+  spores: ["horror", ["wind2", "whisper"]], space: ["space", ["rumble"]], neon: ["synth80s", ["hum"]], ocean: ["shanty", ["sea"]],
+  leaves: ["anime", ["wind2", "birds"]], slayer: ["animeDark", ["wind2"]], cursed: ["animeDark", ["whisper"]], royal: ["epicnorth", ["wind2"]],
+  fire: ["epicnorth", ["fire"]], war: ["epicnorth", ["wind", "fire2"]], office: ["office", ["office"]], football: ["sports", ["crowd"]],
+  cricket: ["sports", ["crowd"]], racing: ["sports", ["crowd2"]], comet: ["space", ["wind2"]], cute: ["magic", ["birds"]], school: ["office", ["office"]],
+  hearts: ["romance", ["birds2"]], music: ["anime", ["crowd2"]], ghost: ["horror", ["wind", "whisper"]], magic: ["magic", ["wind2"]],
+  stage: ["sports", ["crowd"]], desert: ["desert", ["wind"]], rain: ["noir", ["rain"]], smoke: ["noir", ["rain2", "fire2"]], sparks: ["sports", []], glow: ["lofi", []]
+};
+const INDIAN = /baahubali|bahubali|rrr|pushpa|kantara|magadheera|salaar|kgf|kalki|devara|hanuman|mirai|og|eega|sita ramam|arjun reddy|bigg boss|panchayat/i;
+function soundFor(theme) {
+  let [style, amb] = WORLD_SOUND[theme.world] || WORLD_SOUND.glow;
+  const indian = theme.indian || INDIAN.test(theme.title);
+  if (indian && ["epicnorth", "animeDark", "sports", "heist", "lofi"].includes(style) && theme.world !== "stage") style = "indianepic";
+  return {style, amb};
+}
+
+/* ── ambiences ── */
+function loopNoise(kind, filters, vol, dest) {
+  const c = AU.ctx, s = c.createBufferSource(); s.buffer = AU.noise[kind]; s.loop = true;
+  let n = s; const fl = filters.map(([type, f, q]) => { const b = c.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q ?? .7; n.connect(b); n = b; return b; });
+  const g = c.createGain(); g.gain.value = 0; n.connect(g); g.connect(dest || AU.ambBus); g.gain.setTargetAtTime(vol, c.currentTime, 1.2);
+  s.start(c.currentTime, Math.random() * 2);
+  return {s, g, fl, stop: () => { g.gain.setTargetAtTime(0, c.currentTime, .6); s.stop(c.currentTime + 3); }};
+}
+function lfo(param, rate, depth, base) {
+  const c = AU.ctx, o = c.createOscillator(), g = c.createGain(); o.frequency.value = rate; g.gain.value = depth; o.connect(g); g.connect(param);
+  if (base != null) param.value = base; o.start(); return o;
+}
+const AMB = {
+  rain: (v = 1) => { const a = loopNoise("pink", [["highpass", 500], ["lowpass", 7500]], .34 * v), b = loopNoise("brown", [["lowpass", 600]], .4 * v);
+    lfo(a.g.gain, .07, .08 * v); return {stops: [a.stop, b.stop], tick: (t, dt) => {             // individual heavy drops
+      const n = Math.round(R2(2, 5) * v); for (let i = 0; i < n; i++) noiseHit(t + Math.random() * dt, {freq: R2(1800, 5200), q: 2, vol: R2(.02, .07) * v, d: .012, dest: AU.ambBus, pan: R2(-.9, .9)}); }}; },
+  rain2: () => AMB.rain(.6),
+  wind: (v = 1) => { const a = loopNoise("pink", [["bandpass", 500, 1.4]], .32 * v); lfo(a.fl[0].frequency, .09, 260, 520); lfo(a.g.gain, .05, .14 * v); return {stops: [a.stop]}; },
+  wind2: () => AMB.wind(.5),
+  fire: (v = 1) => { const a = loopNoise("brown", [["lowpass", 320]], .32 * v); lfo(a.g.gain, .3, .06 * v);
+    return {stops: [a.stop], tick: (t, dt) => { if (Math.random() < .6) noiseHit(t + Math.random() * dt, {ftype: "highpass", freq: R2(1500, 4000), vol: R2(.03, .12) * v, d: R2(.004, .02), dest: AU.ambBus, pan: R2(-.6, .6)}); }}; },
+  fire2: () => AMB.fire(.45),
+  sea: () => { const a = loopNoise("brown", [["lowpass", 700]], .45); lfo(a.fl[0].frequency, .12, 500, 800); lfo(a.g.gain, .12, .22);
+    return {stops: [a.stop], tick: t => { if (Math.random() < .004) [0, .18, .4].forEach(d => voice(t + d, R2(1900, 2400), .2, {slide: .7, slideT: .15, vol: .025, d: .08, dest: AU.ambBus, verb: .4})); }}; },
+  crowd: (v = 1) => { const a = loopNoise("pink", [["bandpass", 800, .8]], .22 * v); lfo(a.g.gain, .15, .06 * v);
+    return {stops: [a.stop], tick: t => { if (Math.random() < .004) noiseHit(t, {kind: "pink", freq: 1100, q: .6, vol: .25 * v, a: .6, d: 1.4, dur: 2.5, hold: true, sus: .7, dest: AU.ambBus}); }}; },
+  crowd2: () => AMB.crowd(.5),
+  birds: (v = 1) => ({stops: [], tick: t => { if (Math.random() < .02 * v) { const f = R2(2600, 4200), n = Math.floor(R2(2, 5));
+    for (let i = 0; i < n; i++) voice(t + i * R2(.07, .12), f * R2(.9, 1.15), .1, {slide: R2(.75, 1.3), slideT: .06, vol: .025, d: .04, dest: AU.ambBus, pan: R2(-.8, .8), verb: .3}); } }}),
+  birds2: () => AMB.birds(.5),
+  bells: () => ({stops: [], tick: t => { if (Math.random() < .0025) INST.bell(t, pick([38, 41, 45]), {vol: .09, dest: AU.ambBus}); }}),
+  whisper: () => { const a = loopNoise("white", [["bandpass", 2600, 3]], .02); lfo(a.g.gain, .9, .02); lfo(a.fl[0].frequency, .2, 900, 2600); return {stops: [a.stop]}; },
+  drone: () => { const c = AU.ctx, o = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain(); o.type = "sawtooth"; o.frequency.value = 55;
+    f.type = "lowpass"; f.frequency.value = 220; o.connect(f); f.connect(g); g.connect(AU.ambBus); g.gain.value = 0; g.gain.setTargetAtTime(.09, c.currentTime, 2); o.start();
+    lfo(f.frequency, .05, 120, 260); return {stops: [() => { g.gain.setTargetAtTime(0, c.currentTime, .6); o.stop(c.currentTime + 3); }]}; },
+  hum: () => { const a = loopNoise("brown", [["lowpass", 160]], .12); return {stops: [a.stop]}; },
+  rumble: () => { const a = loopNoise("brown", [["lowpass", 90]], .25); lfo(a.g.gain, .04, .08); return {stops: [a.stop]}; },
+  office: () => ({stops: [loopNoise("brown", [["lowpass", 140]], .06).stop], tick: (t, dt) => { if (Math.random() < .12) for (let i = 0; i < Math.floor(R2(1, 5)); i++)
+    noiseHit(t + i * R2(.06, .14), {ftype: "highpass", freq: 3000, vol: .03, d: .008, dest: AU.ambBus, pan: R2(-.5, .5)}); }})
+};
+
+/* ── start / stop ── */
+function stopSound(fade = .6) {
+  clearInterval(AU.timer); AU.timer = 0; AU.style = null;
+  AU.amb.forEach(a => a.stops.forEach(s => s())); AU.amb = [];
+  if (AU.ctx && AU.master) AU.master.gain.setTargetAtTime(0, AU.ctx.currentTime, fade / 3);
+}
+function startSound(theme) {
+  AU.world = theme;
+  if (!AU.on || !theme) return;
+  const c = audio(); if (!c) return;
+  if (c.state === "suspended") { if (!AU.unlocked) return; c.resume(); }
+  clearInterval(AU.timer); AU.amb.forEach(a => a.stops.forEach(s => s())); AU.amb = [];
+  const {style, amb} = soundFor(theme), def = STYLES[style];
+  const S = AU.style = Object.assign({}, def, {bar: 0, name: style});
+  S.dt = 60 / def.bpm / (def.steps === 8 ? 2 : 4);                                     // 8 = eighths, 16 = sixteenths, 12 = a 3/4 bar of sixteenths
+  AU.amb = amb.map(k => AMB[k] ? AMB[k]() : null).filter(Boolean);
+  AU.master.gain.cancelScheduledValues(c.currentTime); AU.master.gain.setTargetAtTime(.9, c.currentTime, .8);
+  AU.step = 0; AU.next = c.currentTime + .15;
+  AU.timer = setInterval(() => {                                                       // look-ahead scheduler
+    const now = c.currentTime, ahead = .14;
+    while (AU.next < now + ahead) {
+      try { S.play(AU.step, AU.next, S); } catch (e) { /* one bad note never stops the music */ }
+      AU.step++; if (AU.step >= def.steps) { AU.step = 0; S.bar++; }
+      AU.next += S.dt;
+    }
+    AU.amb.forEach(a => a.tick && a.tick(now + .05, .025));
+  }, 25);
+}
+function setSound(on) {
+  AU.on = on; store.set("sound", on);
+  if (on) { unlockAudio(); startSound(TT.cur); } else stopSound();
+  soundBtn();
+}
+function soundBtn() {
+  const b = $("[data-sound]"); if (!b) return;
+  b.hidden = !TT.cur;
+  b.innerHTML = AU.on ? '<svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12"/></svg>'
+                      : '<svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>';
+  b.setAttribute("aria-label", AU.on ? "Mute theme sound" : "Turn on theme sound");
+}
+
+/* ── sound effects tied to what happens on screen ── */
+function sfx(name, o = {}) {
+  if (!AU.on || !AU.ctx || AU.ctx.state !== "running") return;
+  const t = AU.ctx.currentTime + (o.delay || 0), now = performance.now();
+  const gap = {thunder: 1500, roar: 2500, coin: 220, squeak: 400, splash: 300}[name] || 150;
+  if (AU.last[name] && now - AU.last[name] < gap) return; AU.last[name] = now;
+  const pan = o.x != null ? clamp(o.x / innerWidth * 2 - 1, -1, 1) * .8 : 0;
+  switch (name) {
+    case "thunder": {                                                                  // crack, then a long rolling rumble
+      const close = o.close ?? Math.random(), d = .25 + (1 - close) * 1.4;
+      if (close > .6) noiseHit(t + d, {freq: 2400, q: .4, vol: .5, d: .12, pan, verb: .5});
+      noiseHit(t + d, {kind: "brown", ftype: "lowpass", freq: 900, sweep: 70, sweepT: 2.4, vol: .9, a: .08, d: 1.6, dur: 3.6, hold: true, sus: .7, r: 1.6, pan, verb: .6, rate: .8});
+      voice(t + d, 38, 3, {a: .2, d: 1.5, sus: .6, hold: true, r: 1.2, vol: .25, dest: AU.sfx}); break; }
+    case "roar": voice(t, 95, 1.3, {type: "sawtooth", detunes: [-20, 15, 0], slide: .55, slideT: 1.1, cutoff: 700, a: .08, d: .8, vol: .22, vib: 9, vibAmt: 40, verb: .5, dest: AU.sfx, pan});
+      noiseHit(t, {kind: "pink", freq: 500, q: .8, vol: .2, a: .1, d: .7, dur: 1.1, hold: true, sus: .6, pan}); break;
+    case "fire": noiseHit(t, {kind: "pink", freq: 400, sweep: 2200, sweepT: .6, q: .9, vol: .5, a: .05, d: .5, dur: 1.2, hold: true, sus: .8, r: .4, pan, verb: .3}); break;
+    case "sizzle": for (let i = 0; i < 26; i++) noiseHit(t + i * .06 + Math.random() * .05, {ftype: "highpass", freq: R2(2500, 6000), vol: R2(.04, .12), d: .015, pan}); break;
+    case "squeak": for (let i = 0; i < 4; i++) voice(t + i * R2(.05, .1), R2(3800, 5200), .06, {slide: R2(.7, 1.3), slideT: .04, vol: .05, d: .025, dest: AU.sfx, pan: pan + R2(-.2, .2)}); break;
+    case "thwip": noiseHit(t, {freq: 800, sweep: 5000, sweepT: .12, q: 2, vol: .18, d: .08, pan}); break;
+    case "ding": INST.bell(t, 88, {dest: AU.sfx, vol: .12}); INST.bell(t + .12, 93, {dest: AU.sfx, vol: .08}); break;
+    case "splash": noiseHit(t, {kind: "pink", freq: 1200, q: .5, vol: .35, a: .005, d: .25, pan}); for (let i = 0; i < 5; i++) voice(t + .05 + i * .05, R2(500, 1400), .06, {slide: 1.8, slideT: .04, vol: .04, d: .03, dest: AU.sfx}); break;
+    case "hum": voice(t, 120, 2.4, {type: "sawtooth", cutoff: 500, a: .3, d: 1, sus: .8, hold: true, r: .6, vol: .1, vib: 3, vibAmt: 60, dest: AU.sfx, pan});
+      voice(t, 880, 2.4, {a: .5, sus: .6, hold: true, r: .6, vol: .025, vib: 8, vibAmt: 200, dest: AU.sfx}); break;
+    case "ghost": voice(t, 300, 1.8, {slide: 1.7, slideT: .8, a: .4, d: 1, vol: .08, vib: 5, vibAmt: 30, verb: .9, dest: AU.sfx, pan}); break;
+    case "ribbit": [0, .13].forEach(d => voice(t + d, 190, .08, {type: "square", cutoff: 900, slide: 1.4, slideT: .05, vol: .08, d: .05, dest: AU.sfx, pan})); break;
+    case "thump": voice(t, 160, .2, {slide: .4, slideT: .08, vol: .3, d: .07, dest: AU.sfx, pan}); break;
+    case "gallop": for (let i = 0; i < 10; i++) voice(t + i * .16 + (i % 3) * .05, 90, .12, {slide: .6, slideT: .05, vol: .12, d: .05, dest: AU.sfx, pan}); break;
+    case "rumble": noiseHit(t, {kind: "brown", ftype: "lowpass", freq: 200, vol: .6, a: .3, d: .8, dur: 1.8, hold: true, sus: .8, r: .6, pan}); break;
+    case "snap": noiseHit(t, {freq: 1800, q: .5, vol: .3, d: .03, pan}); voice(t, 110, .2, {slide: .5, vol: .2, d: .06, dest: AU.sfx}); break;
+    case "coin": [2093, 3136].forEach((f, i) => voice(t + i * .06, f, .4, {d: .18, vol: .05, dest: AU.sfx, verb: .2, pan})); break;
+    case "flap": for (let i = 0; i < 3; i++) noiseHit(t + i * .22, {kind: "pink", freq: 350, q: .6, vol: .14, a: .04, d: .08, pan}); break;
+    case "buzz": voice(t, 210, .6, {type: "sawtooth", cutoff: 1200, a: .05, sus: .8, hold: true, d: .2, r: .1, vol: .03, vib: 30, vibAmt: 60, dest: AU.sfx, pan}); break;
+    case "engine": voice(t, 70, 1.4, {type: "sawtooth", slide: 2.5, slideT: 1.2, cutoff: 900, a: .1, sus: .8, hold: true, d: .4, r: .4, vol: .09, dest: AU.sfx, pan}); break;
+    case "cheer": noiseHit(t, {kind: "pink", freq: 1000, q: .5, vol: .3, a: .3, d: 1, dur: 1.6, hold: true, sus: .7}); break;
+  }
+}
+
+if (/[?&]vsdebug/.test(location.search)) window.__vs = {AU, level: () => { if (!AU.an) return 0; const d = new Float32Array(2048); AU.an.getFloatTimeDomainData(d); return Math.sqrt(d.reduce((a, v) => a + v * v, 0) / d.length); }};
 
 /* ───────────── TMDB live library (only when a key is configured) ─────────────
    Thousands of titles, posters and India streaming data, fetched straight from the browser.
