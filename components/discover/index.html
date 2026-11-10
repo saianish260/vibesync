@@ -829,6 +829,21 @@ img{display:block}
 .plan.mine{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--pcol) 70%,transparent)}
 .chip.sub .pc{width:20px;height:20px;border-radius:6px;background:var(--pcol);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800;font-style:normal}
 
+.bookbtn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;margin-top:12px;padding:14px 14px 14px 16px;border-radius:18px;
+  background:linear-gradient(120deg,#E5343F,#7B3FE4);color:#fff;box-shadow:0 12px 30px rgba(229,52,63,.3);transition:transform .45s var(--spring)}
+.bookbtn:active{transform:scale(.97)}
+.bookbtn .bk-i{font-size:28px}.bookbtn>span:nth-child(2){flex:1}.bookbtn b{display:block;font-size:16.5px}.bookbtn small{display:block;font-size:12.5px;opacity:.88}
+.bookbtn .go svg{width:22px;height:22px}
+.bk{position:fixed;inset:0;z-index:36;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
+.bk.on{opacity:1;pointer-events:auto}
+.bk-in{width:min(560px,100%);max-height:88vh;overflow-y:auto;background:var(--s1);border-radius:26px 26px 0 0;padding:18px 18px calc(28px + env(safe-area-inset-bottom))}
+@media (min-width:700px){.bk{align-items:center}.bk-in{border-radius:26px}}
+.bk-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.bk-h small{font-weight:800;text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--muted)}.bk-h b{display:block;font-size:24px;font-weight:900;letter-spacing:-.02em}
+.bk-h .icon{background:var(--s2)}
+.bk .chips{margin:0 -18px}
+.dform[hidden]{display:none}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -862,6 +877,7 @@ img{display:block}
 <div class="mixer" id="mixer" role="dialog" aria-label="Genre mixer"></div>
 <div class="xp" id="xp" role="dialog" aria-label="Explore"></div>
 <div class="trv" id="trv" role="dialog" aria-label="Trailer"></div>
+<div class="bk" id="bk" role="dialog" aria-label="Book tickets"></div>
 <div class="search themer" id="themer" role="dialog" aria-label="Themes"></div>
 <div class="reel" id="reel" aria-hidden="true"><div class="reel-in"><div class="reel-win"><div class="frame"></div><div class="reel-strip" id="strip"></div></div>
   <div class="reel-cap" id="reelcap">Rolling…</div><div class="reel-sub" id="reelsub"></div></div></div>
@@ -1217,7 +1233,7 @@ function sheetHTML(it) {
     : `<div class="note">Not streaming in India right now. Watch the trailer, or check back later.</div>`;
   const body = `<div class="tags">${it.telugu ? `<span class="tag tel">Telugu audio</span>` : ""}${it.status === "live" ? `<span class="live"><i></i>Live now</span>` : ""}${it.genres.filter(g => !(it.telugu && /^telugu$/i.test(g))).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
     <p class="syn">${esc(it.synopsis)}</p>
-    <div class="h3">${it.kind === "sports" ? "Where to watch live" : "Where to watch in India"}</div>${offers}${it.kind === "sports" ? "" : comingHTML(it)}
+    <div class="h3">${it.kind === "sports" ? "Where to watch live" : "Where to watch in India"}</div>${offers}${it.kind === "sports" ? "" : bookHTML(it) + comingHTML(it)}
     ${it.note ? `<div class="note">${esc(it.note)}</div>` : ""}
     <div class="acts">${it.kind === "sports" || it.kind === "reality" ? `<a class="btn tint" href="${esc(ytLink(it))}" target="_blank" rel="noopener">${ICON.play}${it.kind === "sports" ? "Highlights" : "Latest promos"}</a>`
       : `<button class="btn tint" data-trailer="${esc(it.id)}">${ICON.play}Trailer</button>`}${saveBtn(it)}</div>
@@ -2581,7 +2597,7 @@ function stopWorld() {
   cancelAnimationFrame(W.raf); W.raf = 0;
   ["#wfx", "#ffx"].forEach(s => { const cv = $(s); if (cv) cv.getContext("2d").clearRect(0, 0, cv.width, cv.height); });
 }
-function overlayOpen() { return ["#search", "#mixer", "#themer", "#xp", "#trv"].some(s => { const e = $(s); return e && e.classList.contains("on"); }); }
+function overlayOpen() { return ["#search", "#mixer", "#themer", "#xp", "#trv", "#bk"].some(s => { const e = $(s); return e && e.classList.contains("on"); }); }
 function startWorld(pack, pal) {
   stopWorld();
   const cv = $("#wfx"), fv = $("#ffx"); if (!cv || !fv) return;
@@ -3767,7 +3783,7 @@ function tmdbSheetHTML(it) {
         <span><b>${esc(p.name)}</b><small>${exact ? "Opens this exact title" : "See watch options"}</small></span><span class="go">${exact ? ICON.play + "Watch" : "View"}</span></a>`; }).join("") + `</div>`;
   const body = `<div class="tags">${it.telugu ? `<span class="tag tel">Telugu</span>` : ""}${(d ? d.genres : []).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
     <p class="syn">${esc(it.synopsis || "No description yet.")}</p>
-    <div class="h3">Where to watch in India</div>${where}${comingHTML(it)}
+    <div class="h3">Where to watch in India</div>${where}${bookHTML(it)}${comingHTML(it)}
     <div class="acts"><button class="btn tint" data-trailer="${esc(it.id)}">${ICON.play}Trailer</button>${saveBtn(it)}</div>
     <p class="foot2">Streaming data from JustWatch via TMDB. Line-ups change, so the app may differ slightly.</p>`;
   return sheetShell(it, [fact(it.score ? `★ ${it.score.toFixed(1)} TMDB` : "", "sc"), fact(esc(it.year)), d ? fact(esc(d.len)) : "", fact(esc(kindLabel(it)))], body);
@@ -4261,6 +4277,7 @@ async function loadExtras(it) {
                lang: d.original_language || "", gids: (d.genres || []).map(g => g.id),
                ott: ref.type === "movie" ? ottFrom(d.release_dates) : null, network: (d.networks || []).map(n => n.name).slice(0, 2),
                premiere: ref.type === "tv" ? d.first_air_date || "" : "", theatre: ref.type === "movie" ? theatreFrom(d.release_dates) : ""};
+    if (ref.type === "movie") await loadNowPlaying();
     if (!it.gids) it.gids = x.gids;
     if (!it.lang) it.lang = x.lang;
     if (runtime) { X.rt[it.id] = runtime; store.set("rt", X.rt); }
@@ -4293,6 +4310,69 @@ function theatreFrom(rd) {
 }
 const appName = n => { const k = provKey(n || ""); return k && D.providers[k] ? D.providers[k].name : n; };
 const shortDate = s => new Date(s.slice(0, 10) + "T12:00:00").toLocaleDateString("en-IN", {day: "numeric", month: "short", year: new Date(s).getFullYear() !== new Date().getFullYear() ? "numeric" : undefined});
+/* ───────────── Book tickets for movies running in theatres ───────────── */
+const NOWPLAY = {ids: new Set(), ready: null};
+function loadNowPlaying() {
+  if (NOWPLAY.ready || !T.key || T.failed) return NOWPLAY.ready || Promise.resolve();
+  NOWPLAY.ready = Promise.all([1, 2, 3].map(p => tget("/movie/now_playing", {region: "IN", page: p}).catch(() => ({}))))
+    .then(rs => rs.forEach(j => (j.results || []).forEach(r => NOWPLAY.ids.add(r.id))));
+  return NOWPLAY.ready;
+}
+function theatreState(it) {
+  const x = XD[it.id]; if (!x || !x.ref || x.ref.type !== "movie") return "";
+  const today = new Date(new Date().toDateString()), t = x.theatre ? new Date(x.theatre + "T12:00:00") : null;
+  if (NOWPLAY.ids.has(x.ref.id)) return t && t > today ? "soon" : "now";
+  if (t && t > today && t - today <= 21 * dayMs) return "soon";                     // advance booking
+  const det = details[it.id], streaming = (it.offers && it.offers.length) || (det && det.apps.length);
+  if (t && t <= today && today - t <= 45 * dayMs && !streaming) return "now";
+  return "";
+}
+function bookHTML(it) {
+  const st = theatreState(it); if (!st) return "";
+  return `<button class="bookbtn" data-book="${esc(it.id)}"><span class="bk-i" aria-hidden="true">🎟️</span>
+    <span><b>${st === "soon" ? "Pre-book tickets" : "Book tickets"}</b><small>${st === "soon" ? "Opening in theatres soon" : "Running in theatres now"} · BookMyShow, District & more</small></span><span class="go">${ICON.arrow}</span></button>`;
+}
+const BOOK_APPS = [["BookMyShow", "in.bookmyshow.com", "#E5343F", "B"], ["District", "district.in", "#7B3FE4", "D"],
+                   ["PVR INOX", "pvrcinemas.com", "#F2B31B", "P"], ["Cinépolis", "cinepolisindia.com", "#1C4FA0", "C"]];
+const CITIES = ["Hyderabad", "Bengaluru", "Chennai", "Mumbai", "Delhi NCR", "Kolkata", "Pune", "Kochi", "Vijayawada", "Visakhapatnam", "Ahmedabad", "Warangal", "Tirupati", "Coimbatore"];
+function bookLink(it, host) {
+  const name = String(it.title).split(":")[0].trim(), city = store.get("city", "");
+  // DuckDuckGo's "first result" (\) search, pinned to the ticketing site; VibeSync's Android app looks it up
+  // itself and opens the movie straight in the ticketing app
+  const q = `\\ site:${host} ${name} ${it.year || ""} ${city}`.replace(/\s+/g, " ").trim();
+  return `https://duckduckgo.com/?q=${encodeURIComponent(q)}&vs_book=${host}&vs_t=${encodeURIComponent(name)}`;
+}
+function openBook(id) {
+  const it = BY[id]; if (!it) return;
+  const v = $("#bk"), city = store.get("city", "");
+  v.dataset.id = id;
+  v.innerHTML = `<div class="bk-in" role="document"><div class="bk-h"><div><small>Book tickets</small><b>${esc(it.title)}</b></div>
+      <button class="icon" data-bkclose aria-label="Close">${ICON.close}</button></div>
+    <div class="h3">Your city</div><div class="chips">${CITIES.map(c => `<button class="chip" data-city="${esc(c)}" aria-pressed="${c === city}">${esc(c)}</button>`).join("")}
+      <button class="chip" data-city="__other" aria-pressed="${!!city && !CITIES.includes(city)}">${city && !CITIES.includes(city) ? esc(city) : "Other…"}</button></div>
+    <form class="dform" id="bkcity" hidden><label class="sr" for="bkc">Your city</label><input id="bkc" name="c" placeholder="Type your city" autocomplete="address-level2"><button class="btn tint" type="submit">Set</button></form>
+    <div class="h3">Book with</div><div class="offers">${BOOK_APPS.map(([n, host, col, l]) =>
+      `<a class="offer" style="--pcol:${col}" href="${esc(bookLink(it, host))}" target="_blank" rel="noopener" data-bkgo>
+        <span class="logo">${l}</span><span><b>${esc(n)}</b><small>Opens ${esc(it.title.split(":")[0])}${city ? ` in ${esc(city)}` : ""}</small></span><span class="go">🎟️ Book</span></a>`).join("")}</div>
+    <p class="fnote">${city ? "" : "Pick your city first so the app opens with your cinemas. "}VibeSync finds the movie's page on each site; prices and seats are on their side.</p></div>`;
+  v.classList.add("on");
+  if (!REDUCED) v.querySelector(".bk-in").animate([{transform: "translate3d(0,40px,0)", opacity: 0}, {transform: "none", opacity: 1}], {duration: 520, easing: FLUID.glide});
+  buzz();
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-book],[data-bkclose],[data-city],#bk"); if (!t) return;
+  if (t.dataset.book) { openBook(t.dataset.book); return; }
+  if (t.hasAttribute("data-bkclose") || (t.id === "bk" && e.target === t)) { $("#bk").classList.remove("on"); return; }
+  if (t.dataset.city) {
+    let c = t.dataset.city;
+    if (c === "__other") { const f = $("#bkcity"); f.hidden = false; f.querySelector("input").focus(); return; }
+    store.set("city", c); openBook($("#bk").dataset.id); return;
+  }
+});
+document.addEventListener("submit", e => {
+  if (e.target.id !== "bkcity") return;
+  e.preventDefault(); const c = e.target.c.value.trim(); if (c) { store.set("city", c); openBook($("#bk").dataset.id); }
+});
 // "Coming to OTT" line on a title's sheet: when, and on which app
 function comingHTML(it) {
   const x = XD[it.id]; if (!x || x.busy || x.none) return "";
