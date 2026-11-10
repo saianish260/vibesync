@@ -710,7 +710,7 @@ img{display:block}
 <div class="ytcard" id="ytcard" role="region" aria-label="Official soundtrack">
   <div class="yt-v"><div id="ytp"></div></div>
   <div class="yt-h"><span class="yt-k"><span class="yt-disc" aria-hidden="true"></span><span class="yt-kt">Official theme</span></span><span class="yt-t"></span><span class="yt-by"></span>
-    <div class="yt-btns"><button class="yt-b" data-ytmode="viral" aria-label="Play the most viral BGM of this title">🔥 Viral</button><button class="yt-b" data-ytmode="song" aria-label="Play the most viral song of this title">🎵 Song</button><button class="yt-b" data-ytmin aria-label="Hide (pauses) or play the soundtrack">Hide</button><button class="yt-b" data-ytnext aria-label="Next track">⏭</button>
+    <div class="yt-btns"><button class="yt-b" data-ytmode="viral" aria-label="Viral BGM: play the most viral BGM of this title">VB🔥</button><button class="yt-b" data-ytmode="song" aria-label="Viral song: play the most viral song of this title">VS🔥</button><button class="yt-b" data-ytmin aria-label="Hide (pauses) or play the soundtrack">Hide</button><button class="yt-b" data-ytnext aria-label="Next track">⏭</button>
     <button class="yt-b" data-ytclose aria-label="Use the VibeSync score instead">✕</button></div></div></div>
   <div class="yt-h"><button class="yt-disc" data-ytmin aria-label="Collapse (pauses) or play the soundtrack"></button><span class="yt-t"></span>
     <button class="yt-b" data-ytnext aria-label="Try another official track">⏭</button><button class="yt-b" data-ytmin aria-label="Collapse and pause">–</button>
@@ -3252,8 +3252,8 @@ async function findBgm(theme) {
   return list;
 }
 /* "Viral" BGM and "Song": whatever YouTube ranks first for "<title> viral bgm" / "<title> viral song", in YouTube's own order */
-const YT_MODES = {viral: {q: "viral bgm", label: "🔥 Viral BGM", btn: "🔥 Viral", toast: "the most viral BGM"},
-                  song: {q: "viral song", label: "🎵 Viral song", btn: "🎵 Song", toast: "the most viral song"}};
+const YT_MODES = {viral: {q: "viral bgm", label: "VB🔥 Viral BGM", btn: "VB🔥", toast: "the most viral BGM"},
+                  song: {q: "viral song", label: "VS🔥 Viral song", btn: "VS🔥", toast: "the most viral song"}};
 async function findTop(theme, mode) {
   if (theme[mode] && theme[mode].length) return theme[mode];
   const name = String(theme.title).split(":")[0].trim(), seen = new Set();
@@ -3287,7 +3287,7 @@ function ytCard(state) {
   box.querySelector("[data-ytmin]").textContent = YTS.collapsed ? "▶ Play" : "Hide";
   const m = YT_MODES[YTS.mode];
   box.querySelector(".yt-kt").textContent = m ? m.label : "Official theme";
-  box.querySelectorAll("[data-ytmode]").forEach(b => { const on = b.dataset.ytmode === YTS.mode; b.setAttribute("aria-pressed", on); b.textContent = on ? "🎬 Official" : YT_MODES[b.dataset.ytmode].btn; });
+  box.querySelectorAll("[data-ytmode]").forEach(b => { const on = b.dataset.ytmode === YTS.mode; b.setAttribute("aria-pressed", on); b.textContent = YT_MODES[b.dataset.ytmode].btn; /* lit while playing; tap again for the official theme */ });
   box.querySelector(".yt-t").textContent = state === "searching" ? (m ? `Finding ${m.toast}…` : "Finding the official soundtrack…") : (v.name || "Soundtrack");
   const th = YTS.theme && YTS.theme.poster; box.querySelector(".yt-disc").style.backgroundImage = th ? `url('${th}')` : "";
 }
