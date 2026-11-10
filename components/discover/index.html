@@ -426,6 +426,32 @@ img{display:block}
 .lowfx .critter{filter:none}.lowfx .titled .pw,.lowfx.titled .pw{box-shadow:0 0 0 1px var(--line)!important}
 #piles{position:fixed;inset:0;z-index:14;pointer-events:none}
 #ffx{position:fixed;inset:0;width:100%;height:100%;z-index:13;pointer-events:none}
+/* ── Sound panel + official soundtrack card ── */
+.sndp{position:fixed;z-index:29;top:58px;right:10px;width:min(330px,calc(100vw - 20px));background:var(--s1);border-radius:22px;padding:14px;
+  box-shadow:0 24px 60px rgba(0,0,0,.5),inset 0 0 0 1px var(--line);transform-origin:top right;transform:scale(.92);opacity:0;pointer-events:none;transition:transform .3s var(--spring),opacity .2s}
+.sndp.on{transform:none;opacity:1;pointer-events:auto}
+.sp-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.sp-h b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp-mute{flex:0 0 auto;height:34px;padding:0 14px;border-radius:99px;background:var(--tint);color:var(--on-tint);font-weight:800;font-size:13px}
+.sp-mute.off{background:var(--s3);color:var(--text)}
+.sp-srcs{display:grid;gap:6px;margin-bottom:12px}
+.sp-src{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:var(--s2);text-align:left}
+.sp-src b{font-size:14px}.sp-src small{font-size:12px;color:var(--muted);text-align:right}
+.sp-src[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--tint);background:color-mix(in srgb,var(--tint) 16%,var(--s2))}
+.sp-sl{display:grid;grid-template-columns:78px 1fr;align-items:center;gap:10px;margin:8px 2px;font-size:13px;font-weight:650;color:var(--muted)}
+.sp-sl input{width:100%;accent-color:var(--tint);height:28px}
+.ytcard{position:fixed;z-index:16;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));width:min(380px,calc(100vw - 20px));translate:-50% 0;
+  border-radius:20px;overflow:hidden;background:#000;box-shadow:0 20px 50px rgba(0,0,0,.55),0 0 0 1px var(--line);
+  opacity:0;pointer-events:none;transform:translateY(20px) scale(.96);transition:transform .45s var(--spring),opacity .25s}
+.ytcard.on{opacity:1;pointer-events:auto;transform:none}
+.yt-h{display:flex;align-items:center;gap:8px;height:42px;padding:0 6px 0 12px;background:var(--s1);color:var(--text)}
+.yt-i{font-size:16px}.yt-t{flex:1;min-width:0;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.yt-b{flex:0 0 auto;min-width:34px;height:32px;padding:0 10px;border-radius:99px;background:var(--s2);font-size:13px;font-weight:800}
+.yt-v{position:relative;aspect-ratio:16/9;min-height:200px}
+.yt-v iframe,#ytp{position:absolute;inset:0;width:100%;height:100%;border:0}
+.ytcard.min .yt-v{display:none}
+.cloud .ytcard{bottom:calc(150px + env(safe-area-inset-bottom))}
+
 /* ── Creatures and what they do to the app ── */
 #cfx{position:fixed;inset:0;width:100%;height:100%;z-index:14;pointer-events:none}
 #critters{position:fixed;inset:0;z-index:14;pointer-events:none;overflow:hidden}
@@ -659,6 +685,10 @@ img{display:block}
 <div class="reel" id="reel" aria-hidden="true"><div class="reel-in"><div class="reel-win"><div class="frame"></div><div class="reel-strip" id="strip"></div></div>
   <div class="reel-cap" id="reelcap">Rolling…</div><div class="reel-sub" id="reelsub"></div></div></div>
 <div class="pop-menu" id="themes" role="menu"></div>
+<div class="sndp" id="sndp" role="dialog" aria-label="Sound"></div>
+<div class="ytcard" id="ytcard" role="region" aria-label="Official soundtrack"><div class="yt-h"><span class="yt-i">🎬</span><span class="yt-t"></span>
+  <button class="yt-b" data-ytmin aria-label="Collapse and pause the soundtrack">▾</button><button class="yt-b" data-ytclose aria-label="Use the VibeSync score instead">✕</button></div>
+  <div class="yt-v"><div id="ytp"></div></div></div>
 <nav class="bnav" id="bnav" aria-label="Main"></nav>
 <div class="toast" id="toast" role="status"></div>
 
@@ -1344,6 +1374,7 @@ document.addEventListener("scroll", e => { if (e.target.id === "app" && !ticking
 document.addEventListener("click", e => {
   const t = e.target.closest("button,a,[data-dot]");
   if (!t || !t.closest("#themes,[data-theme-btn]")) $("#themes").classList.remove("on");
+  if (!e.target.closest("#sndp,[data-sound]")) $("#sndp").classList.remove("on");
   if (!t) return;
   if (t.dataset.open) { e.preventDefault(); openSheet(t.dataset.open, t); return; }
   if (t.dataset.tab) { setTab(t.dataset.tab); buzz(); return; }
@@ -1385,7 +1416,11 @@ document.addEventListener("click", e => {
   if (t.hasAttribute("data-theme-btn")) { openThemer(); buzz(); return; }
   if (t.hasAttribute("data-closethemer")) { closeThemer(); return; }
   if (t.dataset.themeit) { e.preventDefault(); unlockAudio(); themeFrom(BY[t.dataset.themeit], t); buzz(); return; }
-  if (t.hasAttribute("data-sound")) { setSound(!AU.on); buzz(); toast(AU.on ? "Theme sound on 🔊" : "Theme sound off"); return; }
+  if (t.hasAttribute("data-sound")) { unlockAudio(); $("#sndp").classList.contains("on") ? $("#sndp").classList.remove("on") : soundPanel(); buzz(); return; }
+  if (t.dataset.sndsrc) { AU.src = t.dataset.sndsrc; store.set("sndsrc", AU.src); AU.scoreKey = ""; unlockAudio(); startSound(TT.cur); soundPanel(); buzz(); return; }
+  if (t.hasAttribute("data-sndmute")) { setSound(!AU.on); soundPanel(); buzz(); return; }
+  if (t.hasAttribute("data-ytmin")) { ytToggle(); return; }
+  if (t.hasAttribute("data-ytclose")) { AU.src = "score"; store.set("sndsrc", "score"); AU.scoreKey = ""; startSound(TT.cur); toast("Playing the VibeSync score. Switch back any time from 🔊"); return; }
   if (t.hasAttribute("data-tdefault")) { TT.cur = null; store.set("titleTheme", null); applyTitle(null, true); renderThemer($("#tq").value); toast("Back to the default look"); return; }
   if (t.dataset.trecent) {
     const th = store.get("themeRecent", []).find(x => x.id === t.dataset.trecent);
@@ -1408,7 +1443,8 @@ document.addEventListener("change", e => { const o = e.target.dataset && e.targe
 $("#veil").addEventListener("click", closeSheet);
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
-  if ($("#themes").classList.contains("on")) $("#themes").classList.remove("on");
+  if ($("#sndp").classList.contains("on")) $("#sndp").classList.remove("on");
+  else if ($("#themes").classList.contains("on")) $("#themes").classList.remove("on");
   else if (openId) closeSheet();
   else if ($("#themer").classList.contains("on")) closeThemer();
   else if ($("#mixer").classList.contains("on")) closeMixer();
@@ -1869,13 +1905,18 @@ async function themeFrom(it, srcEl) {
   if (!it || TT.busy) return;
   TT.busy = true;
   const flash = themeFlash(it, srcEl);
-  let genres = (it.genres || []).slice(), backs = [], tposter = it.tmdbPoster || "", keywords = [], overview = it.synopsis || "", indian = !!it.telugu;
+  let genres = (it.genres || []).slice(), backs = [], tposter = it.tmdbPoster || "", keywords = [], overview = it.synopsis || "", indian = !!it.telugu, yt = [];
   const ref = await tmdbRef(it);
   if (ref) {
     try {
-      const [det, imgs, kw] = await Promise.all([tget(`/${ref.type}/${ref.id}`, {}),
+      const [det, imgs, kw, vids] = await Promise.all([tget(`/${ref.type}/${ref.id}`, {}),
         tget(`/${ref.type}/${ref.id}/images`, {include_image_language: "null,en"}).catch(() => ({})),
-        tget(`/${ref.type}/${ref.id}/keywords`, {}).catch(() => ({}))]);
+        tget(`/${ref.type}/${ref.id}/keywords`, {}).catch(() => ({})),
+        tget(`/${ref.type}/${ref.id}/videos`, {include_video_language: "en,null,te,hi,ta,ml,ja,ko"}).catch(() => ({}))]);
+      const ORDER = ["Opening Credits", "Trailer", "Teaser", "Clip", "Featurette"];      // the real theme first, then the official trailer
+      yt = (vids.results || []).filter(v => v.site === "YouTube" && v.key && ORDER.includes(v.type))
+        .sort((a, b) => ORDER.indexOf(a.type) - ORDER.indexOf(b.type) || (b.official ? 1 : 0) - (a.official ? 1 : 0) || (b.size || 0) - (a.size || 0))
+        .slice(0, 6).map(v => ({key: v.key, name: v.name, type: v.type}));
       genres = (det.genres || []).map(g => g.name).concat(genres);
       overview = det.overview || overview;
       keywords = (kw.keywords || kw.results || []).map(k => k.name);
@@ -1897,7 +1938,7 @@ async function themeFrom(it, srcEl) {
   if (!base) { const [h] = rgb2hsl(...[1, 3, 5].map(i => parseInt(tintOf(it).slice(i, i + 2), 16) / 255 || .5)); base = {bgH: h, bgS: .3, accH: h, accS: .75, acc2H: (h + 40) % 360}; }
   const pal = makePalette(base, pack.hint);
   const theme = {v: 2, id: it.id, title: it.title, year: it.year || "", poster: tposter ? img(tposter, "w185") : hasPoster(it) ? posterURL(it, "s166") : "",
-                 far, near, pal, world, indian, at: Date.now()};
+                 far, near, pal, world, indian, yt, at: Date.now()};
   TT.cur = theme; store.set("titleTheme", theme);
   const rec = store.get("themeRecent", []).filter(t => t.id !== theme.id);
   store.set("themeRecent", [theme].concat(rec).slice(0, 10));
@@ -1921,9 +1962,10 @@ function applyTitle(theme, tell) {
   const root = document.documentElement;
   root.className = root.className.split(" ").filter(c => c && !c.startsWith("pk-") && c !== "titled" && c !== "has-font").join(" ");
   VARS.forEach(v => root.style.removeProperty(v));
-  stopWorld(); stopCritters(); stopSound(); AU.world = null;
+  stopWorld(); stopCritters();                               // sound is not stopped here: startSound crossfades
   $("#piles").innerHTML = "";
   if (!theme) {
+    stopSound(); AU.world = null; AU.ambKey = AU.scoreKey = "";
     $("#wfar").style.backgroundImage = $("#wnear").style.backgroundImage = "";
   } else {
     const p = theme.pal, world = PACKS[theme.world] ? theme.world : chooseWorld(theme.title, [], "", theme.genres || []), pack = PACKS[world];
@@ -2632,45 +2674,11 @@ addEventListener("resize", () => { if (W.raf && W.refit) { W.refit(); SURF.dirty
    copyrighted soundtracks. Each world gets an ambience (rain, wind, fire, sea, crowd, bells...) and an
    original generative score in the style of its title, plus sound effects tied to what happens on screen
    (thunder after lightning, dragon fire, bat squeaks, splashes...). */
-const AU = {ctx: null, on: store.get("sound", true), style: null, amb: [], timer: 0, step: 0, next: 0, last: {}, unlocked: false, world: null};
+const AU = {ctx: null, on: store.get("sound", true), src: store.get("sndsrc", "official"), vol: Object.assign({master: .5, music: .55, amb: .6, sfx: .5}, store.get("vol", {})),
+  last: {}, unlocked: false, world: null, tok: 0, cache: new Map(), style: null};
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const SCALES = {minor: [0, 2, 3, 5, 7, 8, 10], dorian: [0, 2, 3, 5, 7, 9, 10], major: [0, 2, 4, 5, 7, 9, 11], harm: [0, 2, 3, 5, 7, 8, 11],
   phryd: [0, 1, 4, 5, 7, 8, 10], pent: [0, 2, 4, 7, 9], mpent: [0, 3, 5, 7, 10], bhairav: [0, 1, 4, 5, 7, 8, 11], kafi: [0, 2, 3, 5, 7, 9, 10]};
-function audio() {
-  if (AU.ctx) return AU.ctx;
-  const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
-  const c = AU.ctx = new C({latencyHint: "playback"});
-  const comp = c.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 3; comp.connect(c.destination);
-  AU.master = c.createGain(); AU.master.gain.value = 0; AU.master.connect(comp);
-  AU.an = c.createAnalyser(); AU.an.fftSize = 2048; AU.master.connect(AU.an);
-  const bus = v => { const g = c.createGain(); g.gain.value = v; g.connect(AU.master); return g; };
-  AU.music = bus(.42); AU.ambBus = bus(.6); AU.sfx = bus(.55);
-  // reverb from a generated impulse response
-  const len = c.sampleRate * 3, ir = c.createBuffer(2, len, c.sampleRate);
-  for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6); }
-  AU.verb = c.createConvolver(); AU.verb.buffer = ir; const vg = c.createGain(); vg.gain.value = .5; AU.verb.connect(vg); vg.connect(AU.master);
-  // tempo-free echo for plucks
-  AU.delay = c.createDelay(1.5); AU.delay.delayTime.value = .36; const fb = c.createGain(); fb.gain.value = .32; const dl = c.createBiquadFilter(); dl.type = "lowpass"; dl.frequency.value = 2600;
-  AU.delay.connect(dl); dl.connect(fb); fb.connect(AU.delay); const dg = c.createGain(); dg.gain.value = .35; dl.connect(dg); dg.connect(AU.music);
-  // noise buffers
-  const nb = kind => { const b = c.createBuffer(1, c.sampleRate * 3, c.sampleRate), d = b.getChannelData(0); let l = 0, b0 = 0, b1 = 0, b2 = 0;
-    for (let i = 0; i < d.length; i++) { const w = Math.random() * 2 - 1;
-      if (kind === "brown") { l = (l + .02 * w) / 1.02; d[i] = l * 3.5; }
-      else if (kind === "pink") { b0 = .99765 * b0 + w * .099; b1 = .963 * b1 + w * .2965; b2 = .57 * b2 + w * 1.0526; d[i] = (b0 + b1 + b2 + w * .1848) * .2; }
-      else d[i] = w; }
-    return b; };
-  AU.noise = {white: nb("white"), pink: nb("pink"), brown: nb("brown")};
-  return c;
-}
-function unlockAudio() {                                     // must run inside a tap
-  const c = audio(); if (!c) return;
-  if (c.state === "suspended") c.resume();
-  AU.unlocked = true;
-  if (AU.on && AU.world && !AU.style) startSound(AU.world);
-}
-["pointerdown", "keydown"].forEach(ev => addEventListener(ev, () => { if (!AU.unlocked && TT.cur) unlockAudio(); }, {capture: true, passive: true}));
-document.addEventListener("visibilitychange", () => { if (!AU.ctx) return; document.hidden ? AU.ctx.suspend() : (AU.on && AU.style && AU.ctx.resume()); });
-
 /* ── instruments ── */
 function env(g, t, a, peak, d, sus = 0, r = .3, dur = 0) {
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + a);
@@ -2692,6 +2700,7 @@ function voice(t, f, dur, o = {}) {
   oscs.forEach(s => { s.start(t); s.stop(t + dur + (o.r ?? .3) * 6 + 1); });
 }
 function noiseHit(t, o = {}) {
+  if (AU.collect && (o.dest === AU.ambBus || o.dest === undefined)) { AU.collect.push([t, o]); return; }   // batch-synthesised later (fast)
   const c = AU.ctx, s = c.createBufferSource(), g = c.createGain(), f = c.createBiquadFilter();
   s.buffer = AU.noise[o.kind || "white"]; s.playbackRate.value = o.rate || 1;
   f.type = o.ftype || "bandpass"; f.frequency.setValueAtTime(o.freq || 2000, t); f.Q.value = o.q ?? 1;
@@ -2859,7 +2868,7 @@ const WORLD_SOUND = {
   hearts: ["romance", ["birds2"]], music: ["anime", ["crowd2"]], ghost: ["horror", ["wind", "whisper"]], magic: ["magic", ["wind2"]],
   stage: ["sports", ["crowd"]], desert: ["desert", ["wind"]], rain: ["noir", ["rain"]], smoke: ["noir", ["rain2", "fire2"]], sparks: ["sports", []], glow: ["lofi", []]
 };
-const INDIAN = /baahubali|bahubali|rrr|pushpa|kantara|magadheera|salaar|kgf|kalki|devara|hanuman|mirai|og|eega|sita ramam|arjun reddy|bigg boss|panchayat/i;
+const INDIAN = /baahubali|bahubali|rrr|pushpa|kantara|magadheera|salaar|kgf|kalki|devara|hanuman|mirai|\bog\b|eega|sita ramam|arjun reddy|bigg boss|panchayat/i;
 function soundFor(theme) {
   let [style, amb] = WORLD_SOUND[theme.world] || WORLD_SOUND.glow;
   const indian = theme.indian || INDIAN.test(theme.title);
@@ -2882,7 +2891,7 @@ function lfo(param, rate, depth, base) {
 const AMB = {
   rain: (v = 1) => { const a = loopNoise("pink", [["highpass", 500], ["lowpass", 7500]], .34 * v), b = loopNoise("brown", [["lowpass", 600]], .4 * v);
     lfo(a.g.gain, .07, .08 * v); return {stops: [a.stop, b.stop], tick: (t, dt) => {             // individual heavy drops
-      const n = Math.round(R2(2, 5) * v); for (let i = 0; i < n; i++) noiseHit(t + Math.random() * dt, {freq: R2(1800, 5200), q: 2, vol: R2(.02, .07) * v, d: .012, dest: AU.ambBus, pan: R2(-.9, .9)}); }}; },
+      const n = Math.round(R2(1, 3.4) * v); for (let i = 0; i < n; i++) noiseHit(t + Math.random() * dt, {freq: R2(1800, 5200), q: 2, vol: R2(.02, .07) * v, d: .012, dest: AU.ambBus, pan: R2(-.9, .9)}); }}; },
   rain2: () => AMB.rain(.6),
   wind: (v = 1) => { const a = loopNoise("pink", [["bandpass", 500, 1.4]], .32 * v); lfo(a.fl[0].frequency, .09, 260, 520); lfo(a.g.gain, .05, .14 * v); return {stops: [a.stop]}; },
   wind2: () => AMB.wind(.5),
@@ -2907,47 +2916,6 @@ const AMB = {
   office: () => ({stops: [loopNoise("brown", [["lowpass", 140]], .06).stop], tick: (t, dt) => { if (Math.random() < .12) for (let i = 0; i < Math.floor(R2(1, 5)); i++)
     noiseHit(t + i * R2(.06, .14), {ftype: "highpass", freq: 3000, vol: .03, d: .008, dest: AU.ambBus, pan: R2(-.5, .5)}); }})
 };
-
-/* ── start / stop ── */
-function stopSound(fade = .6) {
-  clearInterval(AU.timer); AU.timer = 0; AU.style = null;
-  AU.amb.forEach(a => a.stops.forEach(s => s())); AU.amb = [];
-  if (AU.ctx && AU.master) AU.master.gain.setTargetAtTime(0, AU.ctx.currentTime, fade / 3);
-}
-function startSound(theme) {
-  AU.world = theme;
-  if (!AU.on || !theme) return;
-  const c = audio(); if (!c) return;
-  if (c.state === "suspended") { if (!AU.unlocked) return; c.resume(); }
-  clearInterval(AU.timer); AU.amb.forEach(a => a.stops.forEach(s => s())); AU.amb = [];
-  const {style, amb} = soundFor(theme), def = STYLES[style];
-  const S = AU.style = Object.assign({}, def, {bar: 0, name: style});
-  S.dt = 60 / def.bpm / (def.steps === 8 ? 2 : 4);                                     // 8 = eighths, 16 = sixteenths, 12 = a 3/4 bar of sixteenths
-  AU.amb = amb.map(k => AMB[k] ? AMB[k]() : null).filter(Boolean);
-  AU.master.gain.cancelScheduledValues(c.currentTime); AU.master.gain.setTargetAtTime(.9, c.currentTime, .8);
-  AU.step = 0; AU.next = c.currentTime + .15;
-  AU.timer = setInterval(() => {                                                       // look-ahead scheduler
-    const now = c.currentTime, ahead = .14;
-    while (AU.next < now + ahead) {
-      try { S.play(AU.step, AU.next, S); } catch (e) { /* one bad note never stops the music */ }
-      AU.step++; if (AU.step >= def.steps) { AU.step = 0; S.bar++; }
-      AU.next += S.dt;
-    }
-    AU.amb.forEach(a => a.tick && a.tick(now + .05, .025));
-  }, 25);
-}
-function setSound(on) {
-  AU.on = on; store.set("sound", on);
-  if (on) { unlockAudio(); startSound(TT.cur); } else stopSound();
-  soundBtn();
-}
-function soundBtn() {
-  const b = $("[data-sound]"); if (!b) return;
-  b.hidden = !TT.cur;
-  b.innerHTML = AU.on ? '<svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12"/></svg>'
-                      : '<svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>';
-  b.setAttribute("aria-label", AU.on ? "Mute theme sound" : "Turn on theme sound");
-}
 
 /* ── sound effects tied to what happens on screen ── */
 function sfx(name, o = {}) {
@@ -2986,7 +2954,246 @@ function sfx(name, o = {}) {
   }
 }
 
-if (/[?&]vsdebug/.test(location.search)) window.__vs = {AU, level: () => { if (!AU.an) return 0; const d = new Float32Array(2048); AU.an.getFloatTimeDomainData(d); return Math.sqrt(d.reduce((a, v) => a + v * v, 0) / d.length); }};
+
+/* ── playback: pre-rendered seamless loops ──
+   Music and ambience are rendered once per world in an OfflineAudioContext (off the main thread),
+   folded into a seamless loop and played as a single looping buffer. Nothing is synthesised while you
+   scroll, so the sound can't stutter or drop out, and switching worlds crossfades instead of cutting. */
+function buildGraph(c) {                                     // the buses every instrument writes into
+  const g = {ctx: c, out: c.createGain()};
+  ["music", "ambBus", "sfx"].forEach(k => { g[k] = c.createGain(); g[k].connect(g.out); });
+  const len = Math.floor(c.sampleRate * 2.6), ir = c.createBuffer(2, len, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8); }
+  g.verb = c.createConvolver(); g.verb.buffer = ir; const vg = c.createGain(); vg.gain.value = .45; g.verb.connect(vg); vg.connect(g.out);
+  g.delay = c.createDelay(1.5); g.delay.delayTime.value = .36; const fb = c.createGain(); fb.gain.value = .3; const dl = c.createBiquadFilter(); dl.type = "lowpass"; dl.frequency.value = 2600;
+  g.delay.connect(dl); dl.connect(fb); fb.connect(g.delay); const dg = c.createGain(); dg.gain.value = .32; dl.connect(dg); dg.connect(g.music);
+  const nb = kind => { const b = c.createBuffer(1, c.sampleRate * 3, c.sampleRate), d = b.getChannelData(0); let l = 0, b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < d.length; i++) { const w = Math.random() * 2 - 1;
+      if (kind === "brown") { l = (l + .02 * w) / 1.02; d[i] = l * 3.5; }
+      else if (kind === "pink") { b0 = .99765 * b0 + w * .099; b1 = .963 * b1 + w * .2965; b2 = .57 * b2 + w * 1.0526; d[i] = (b0 + b1 + b2 + w * .1848) * .2; }
+      else d[i] = w; }
+    return b; };
+  g.noise = {white: nb("white"), pink: nb("pink"), brown: nb("brown")};
+  return g;
+}
+function useGraph(g) { Object.assign(AU, {ctx: g.ctx, music: g.music, ambBus: g.ambBus, sfx: g.sfx, verb: g.verb, delay: g.delay, noise: g.noise}); }
+function withGraph(g, fn) { const keep = AU.rt; useGraph(g); try { fn(); } finally { useGraph(keep); } }
+function audio() {
+  if (AU.rt) return AU.rt.ctx;
+  const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
+  const c = new C({latencyHint: "playback"});
+  const comp = c.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 3.5; comp.connect(c.destination);
+  AU.master = c.createGain(); AU.master.gain.value = 0; AU.master.connect(comp);
+  AU.an = c.createAnalyser(); AU.an.fftSize = 2048; AU.master.connect(AU.an);
+  AU.scoreGain = c.createGain(); AU.ambGain = c.createGain(); AU.scoreGain.connect(AU.master); AU.ambGain.connect(AU.master);
+  AU.rt = buildGraph(c); AU.rt.out.connect(AU.master);
+  useGraph(AU.rt); applyVolumes();
+  return c;
+}
+function applyVolumes() {
+  if (!AU.rt) return;
+  const c = AU.rt.ctx, v = AU.vol, now = c.currentTime;
+  AU.scoreGain.gain.setTargetAtTime(v.music * .8, now, .1); AU.ambGain.gain.setTargetAtTime(v.amb, now, .1);
+  AU.rt.sfx.gain.setTargetAtTime(v.sfx, now, .1);
+  if (AU.style) AU.master.gain.setTargetAtTime(AU.on ? v.master : 0, now, .25);
+  ytVolume();
+}
+function fold(buf, dur, extra, mode, pre = 0) {               // turn a render into a gapless loop
+  const sr = buf.sampleRate, n = Math.floor(dur * sr), x = Math.floor(extra * sr), p = Math.floor(pre * sr);
+  const out = AU.rt.ctx.createBuffer(2, n, sr);
+  for (let ch = 0; ch < 2; ch++) {
+    const a = buf.getChannelData(Math.min(ch, buf.numberOfChannels - 1)), o = out.getChannelData(ch);
+    for (let i = 0; i < n; i++) o[i] = a[p + i] || 0;
+    if (mode === "add") for (let i = 0; i < x && i < n; i++) o[i] += a[p + n + i] || 0;        // reverb tails wrap into the start
+    else for (let i = 0; i < x && i < n; i++) { const w = i / x; o[i] = (a[p + i] || 0) * w + (a[p + n + i] || 0) * (1 - w); }
+  }
+  return out;
+}
+const SR = 24000;
+/* Drops, crackles and clicks are synthesised straight into the buffer (one biquad per event in JS),
+   instead of building thousands of audio nodes: ~100x faster to render. */
+function biquad(type, f, q, sr) {
+  const w = 2 * Math.PI * Math.min(f, sr * .45) / sr, cs = Math.cos(w), al = Math.sin(w) / (2 * (q || .7));
+  let b0, b1, b2; const a0 = 1 + al, a1 = -2 * cs, a2 = 1 - al;
+  if (type === "highpass") { b0 = (1 + cs) / 2; b1 = -(1 + cs); b2 = b0; }
+  else if (type === "lowpass") { b0 = (1 - cs) / 2; b1 = 1 - cs; b2 = b0; }
+  else { b0 = al; b1 = 0; b2 = -al; }
+  return [b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0];
+}
+function mixEvents(buf, events) {
+  const sr = buf.sampleRate, L = buf.getChannelData(0), Rc = buf.getChannelData(1), N = L.length;
+  for (const [t, o] of events) {
+    const a = o.a ?? .002, d = Math.max(.002, o.d ?? .05), sus = o.sus ?? 0, r = o.r ?? .1, hold = o.hold ? (o.dur || .3) : 0, peak = (o.vol ?? .3) * 1.4;
+    const len = Math.min(N, Math.floor(((hold ? hold + r * 5 : a + d * 6)) * sr)), start = Math.floor(t * sr); if (start >= N) continue;
+    const [b0, b1, b2, a1, a2] = biquad(o.ftype || "bandpass", o.freq || 2000, o.q ?? 1, sr);
+    const pan = o.pan || 0, gl = Math.cos((pan + 1) * Math.PI / 4), gr = Math.sin((pan + 1) * Math.PI / 4);
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let i = 0; i < len && start + i < N; i++) {
+      const tt = i / sr;
+      let e = tt < a ? tt / a : hold && tt < hold ? sus + (1 - sus) * Math.exp(-(tt - a) / d) : (hold ? sus * Math.exp(-(tt - hold) / r) : Math.exp(-(tt - a) / d));
+      const x = Math.random() * 2 - 1, y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+      x2 = x1; x1 = x; y2 = y1; y1 = y;
+      const v = y * e * peak; L[start + i] += v * gl; Rc[start + i] += v * gr;
+    }
+  }
+}
+async function renderScore(name) {
+  const def = STYLES[name], dt = 60 / def.bpm / (def.steps === 8 ? 2 : 4), barS = dt * def.steps, plen = def.prog.length;
+  const bars = barS * plen < 9 ? plen * 2 : plen;                // one full progression (two if it's short): quick to render, loops seamlessly
+  const dur = bars * barS, tail = 3.5, off = new OfflineAudioContext(2, Math.ceil(SR * (dur + tail)), SR), g = buildGraph(off);
+  g.out.connect(off.destination);
+  const S = Object.assign({}, def, {bar: 0, dt, name});
+  withGraph(g, () => { let t = .02, step = 0; while (t < dur) { try { S.play(step, t, S); } catch (e) { /* skip a bad note */ } if (++step >= def.steps) { step = 0; S.bar++; } t += dt; } });
+  return fold(await off.startRendering(), dur, tail, "add");
+}
+async function renderAmb(names) {
+  if (!names.length) return null;
+  const pre = 4, dur = 14, xf = 3, off = new OfflineAudioContext(2, Math.ceil(SR * (pre + dur + xf)), SR), g = buildGraph(off);
+  g.out.connect(off.destination);
+  const events = [];
+  withGraph(g, () => { AU.collect = events; try { const ambs = names.map(k => AMB[k] && AMB[k]()).filter(Boolean);
+    for (let t = 0; t < pre + dur + xf; t += .025) ambs.forEach(a => a.tick && a.tick(t, .025)); } finally { AU.collect = null; } });
+  const buf = await off.startRendering();
+  mixEvents(buf, events);
+  return fold(buf, dur, xf, "xfade", pre);
+}
+function cached(key, make) {
+  if (AU.cache.has(key)) { const v = AU.cache.get(key); AU.cache.delete(key); AU.cache.set(key, v); return v; }
+  const p = make().catch(() => null); AU.cache.set(key, p);
+  while (AU.cache.size > 5) AU.cache.delete(AU.cache.keys().next().value);     // keep memory small
+  return p;
+}
+function playLoop(buf, dest, fade = 1.8) {
+  const c = AU.rt.ctx, s = c.createBufferSource(), g = c.createGain();
+  s.buffer = buf; s.loop = true; g.gain.value = 0; s.connect(g); g.connect(dest);
+  s.start(c.currentTime + .02); g.gain.setTargetAtTime(1, c.currentTime + .02, fade / 3);
+  return {s, g};
+}
+function fadeOut(L, fade = 1.4) {
+  if (!L || !AU.rt) return; const c = AU.rt.ctx;
+  L.g.gain.cancelScheduledValues(c.currentTime); L.g.gain.setTargetAtTime(0, c.currentTime, fade / 3);
+  try { L.s.stop(c.currentTime + fade * 2); } catch (e) { /* already stopped */ }
+}
+function unlockAudio() {                                     // must run inside a tap
+  const c = audio(); if (!c) return;
+  if (c.state === "suspended") c.resume();
+  AU.unlocked = true;
+  ytLoadApi();
+  if (AU.on && AU.world && !AU.style) startSound(AU.world);
+}
+["pointerdown", "keydown"].forEach(ev => addEventListener(ev, () => { if (!AU.unlocked && TT.cur) unlockAudio(); }, {capture: true, passive: true}));
+document.addEventListener("visibilitychange", () => {
+  if (!AU.rt) return;
+  if (document.hidden) { AU.rt.ctx.suspend(); ytPause(); } else if (AU.on && AU.style) { AU.rt.ctx.resume(); ytResume(); }
+});
+function stopSound() {
+  AU.tok++; AU.style = null;
+  fadeOut(AU.scoreL); fadeOut(AU.ambL); AU.scoreL = AU.ambL = null;
+  ytStop();
+  if (AU.rt) AU.master.gain.setTargetAtTime(0, AU.rt.ctx.currentTime, .4);
+}
+function startSound(theme) {
+  AU.world = theme;
+  if (!AU.on || !theme) return;
+  const c = audio(); if (!c) return;
+  if (c.state === "suspended") { if (!AU.unlocked) return; c.resume(); }
+  const tok = ++AU.tok, {style, amb} = soundFor(theme);
+  AU.style = {name: style};
+  AU.master.gain.cancelScheduledValues(c.currentTime); AU.master.gain.setTargetAtTime(AU.vol.master, c.currentTime, .6);
+  const ambKey = "amb:" + amb.join(",");
+  if (AU.ambKey !== ambKey) {                                 // same ambience (e.g. two rainy titles) keeps playing untouched
+    AU.ambReady = cached(ambKey, () => renderAmb(amb)).then(b => { if (tok !== AU.tok) return; fadeOut(AU.ambL); AU.ambL = b ? playLoop(b, AU.ambGain) : null; AU.ambKey = ambKey; });
+  } else AU.ambReady = Promise.resolve();
+  const videos = theme.yt || [];
+  if (AU.src === "official" && videos.length) { fadeOut(AU.scoreL); AU.scoreL = null; AU.scoreKey = ""; ytPlay(theme); }
+  else {
+    ytStop();
+    if (AU.src === "off") { fadeOut(AU.scoreL); AU.scoreL = null; AU.scoreKey = ""; }
+    else if (AU.scoreKey !== "score:" + style) {
+      const key = "score:" + style;
+      (AU.cache.has(key) ? Promise.resolve() : AU.ambReady).then(() => cached(key, () => renderScore(style))).then(b => { if (tok !== AU.tok || !b) return; fadeOut(AU.scoreL); AU.scoreL = playLoop(b, AU.scoreGain); AU.scoreKey = "score:" + style; });
+    }
+  }
+  soundBtn();
+}
+function setSound(on) { AU.on = on; store.set("sound", on); if (on) { unlockAudio(); AU.ambKey = AU.scoreKey = ""; startSound(TT.cur); } else { stopSound(); AU.ambKey = AU.scoreKey = ""; } soundBtn(); }
+function soundBtn() {
+  const b = $("[data-sound]"); if (!b) return;
+  b.hidden = !TT.cur;
+  b.innerHTML = AU.on ? '<svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12"/></svg>'
+                      : '<svg viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>';
+  b.setAttribute("aria-label", "Sound settings");
+}
+
+/* ── sound panel ── */
+function soundPanel() {
+  const p = $("#sndp"), t = TT.cur;
+  const src = (k, label, sub) => `<button class="sp-src" data-sndsrc="${k}" aria-pressed="${AU.src === k}"><b>${label}</b><small>${sub}</small></button>`;
+  const slider = (k, label) => `<label class="sp-sl"><span>${label}</span><input type="range" min="0" max="100" value="${Math.round(AU.vol[k] * 100)}" data-vol="${k}" aria-label="${label} volume"></label>`;
+  p.innerHTML = `<div class="sp-h"><b>Sound${t ? ` · ${esc(t.title)}` : ""}</b>
+      <button class="sp-mute${AU.on ? "" : " off"}" data-sndmute>${AU.on ? "Sound on" : "Sound off"}</button></div>
+    <div class="sp-srcs">${src("official", "🎬 Official", (t && t.yt && t.yt.length) ? "The title's real theme / trailer" : "Not found for this title")}
+      ${src("score", "🎼 VibeSync score", "Original, offline")}${src("off", "🔇 No music", "Ambience only")}</div>
+    ${slider("master", "Volume")}${slider("music", "Music")}${slider("amb", "Ambience")}${slider("sfx", "Effects")}`;
+  p.classList.add("on");
+}
+document.addEventListener("input", e => {
+  const k = e.target.dataset && e.target.dataset.vol; if (!k) return;
+  AU.vol[k] = +e.target.value / 100; store.set("vol", AU.vol); applyVolumes();
+});
+
+/* ── the official soundtrack: the title's own YouTube video (opening credits / trailer), via TMDB ──
+   YouTube's rules require its player to stay visible while playing, so it lives in a small card;
+   collapsing the card pauses it. Rain, thunder and creature sounds keep playing on top. */
+const YTS = {api: null, player: null, list: [], i: 0, theme: null, collapsed: false};
+function ytLoadApi() {
+  if (YTS.api) return YTS.api;
+  YTS.api = new Promise(res => {
+    if (window.YT && window.YT.Player) return res(window.YT);
+    const prev = window.onYouTubeIframeAPIReady; window.onYouTubeIframeAPIReady = () => { if (prev) prev(); res(window.YT); };
+    const s = document.createElement("script"); s.src = "https://www.youtube.com/iframe_api"; s.async = true; s.onerror = () => res(null); document.head.appendChild(s);
+    setTimeout(() => res(window.YT && window.YT.Player ? window.YT : null), 9000);
+  });
+  return YTS.api;
+}
+function ytCard() {
+  const v = YTS.list[YTS.i] || {}, box = $("#ytcard");
+  box.className = "ytcard on" + (YTS.collapsed ? " min" : "");
+  box.querySelector(".yt-t").textContent = `${YTS.theme ? YTS.theme.title : ""} · ${v.name || "Soundtrack"}`;
+  box.querySelector("[data-ytmin]").setAttribute("aria-label", YTS.collapsed ? "Show and play the soundtrack" : "Collapse and pause the soundtrack");
+  box.querySelector("[data-ytmin]").textContent = YTS.collapsed ? "▶ Play" : "▾";
+}
+async function ytPlay(theme) {
+  YTS.theme = theme; YTS.list = theme.yt; YTS.i = 0; YTS.collapsed = false;
+  const box = $("#ytcard"); box.classList.add("on"); ytCard();
+  const YT = await ytLoadApi();
+  if (!YT || AU.world !== theme) { if (!YT) ytFallback(); return; }
+  ytLoad();
+}
+function ytLoad() {
+  const v = YTS.list[YTS.i]; if (!v) return ytFallback();
+  ytCard();
+  if (YTS.player && YTS.player.loadVideoById) { YTS.player.loadVideoById(v.key); ytVolume(); return; }
+  YTS.player = new window.YT.Player("ytp", {width: "100%", height: "100%", videoId: v.key,
+    playerVars: {autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1, controls: 1, loop: 1, playlist: v.key},
+    events: {onReady: e => { ytVolume(); e.target.playVideo(); },
+             onError: () => { YTS.i++; ytLoad(); },                                         // embedding off for this one: try the next official video
+             onStateChange: e => { if (e.data === 0) e.target.playVideo(); }}});
+}
+function ytFallback() {                                      // no playable official video: use the VibeSync score
+  ytStop(); if (!YTS.theme || AU.world !== YTS.theme) return;
+  const t = Object.assign({}, YTS.theme, {yt: []}); AU.scoreKey = ""; startSound(t); toast("No playable official soundtrack, playing the VibeSync score");
+}
+function ytVolume() { if (YTS.player && YTS.player.setVolume) try { YTS.player.setVolume(Math.round(AU.vol.music * AU.vol.master * 160)); } catch (e) {} }
+function ytPause() { if (YTS.player && YTS.player.pauseVideo) try { YTS.player.pauseVideo(); } catch (e) {} }
+function ytResume() { if (YTS.player && YTS.player.playVideo && !YTS.collapsed && $("#ytcard").classList.contains("on")) try { YTS.player.playVideo(); } catch (e) {} }
+function ytStop() {
+  if (YTS.player && YTS.player.stopVideo) try { YTS.player.stopVideo(); } catch (e) {}
+  const box = $("#ytcard"); if (box) box.classList.remove("on", "min");
+}
+function ytToggle() { YTS.collapsed = !YTS.collapsed; ytCard(); YTS.collapsed ? ytPause() : ytResume(); }
+
+if (/[?&]vsdebug/.test(location.search)) window.__vs = {AU, YTS, renderScore, renderAmb, audio, level: () => { if (!AU.an) return 0; const d = new Float32Array(2048); AU.an.getFloatTimeDomainData(d); return Math.sqrt(d.reduce((a, v) => a + v * v, 0) / d.length); }};
 
 /* ───────────── TMDB live library (only when a key is configured) ─────────────
    Thousands of titles, posters and India streaming data, fetched straight from the browser.
