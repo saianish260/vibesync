@@ -932,25 +932,6 @@ img{display:block}
 @media (prefers-reduced-motion:reduce){#slides{animation:none}}
 #slides .slide{will-change:auto}
 .slides{will-change:transform,opacity}
-
-/* ───────────── TV mode: big screen, read from the sofa, driven by a remote ───────────── */
-html.tv { font-size: 18px; }
-html.tv body { cursor: none; }
-/* TVs can crop the edges: keep content inside a safe area */
-html.tv #app { padding-left: 3vw; padding-right: 3vw; }
-html.tv .row, html.tv .top10 { scroll-padding-inline: 4vw; padding-top: 16px; padding-bottom: 20px; }
-html.tv .sec h2 { font-size: 1.6rem; }
-html.tv .ct { font-size: 1.05rem; }
-html.tv .cm { font-size: .95rem; }
-/* the focus highlight: bright ring, a gentle lift on posters */
-html.tv .tvf { outline: 4px solid #fff !important; outline-offset: 4px; box-shadow: 0 0 0 9px rgba(255,255,255,.18), 0 18px 44px rgba(0,0,0,.55) !important; }
-html.tv .card, html.tv .t10 { transition: transform .22s cubic-bezier(.16,1,.3,1), box-shadow .22s; }
-html.tv .card.tvf, html.tv .t10.tvf { transform: scale(1.08); z-index: 3; outline-offset: 6px; border-radius: 18px; }
-html.tv .chip.tvf, html.tv .tab.tvf, html.tv button.tvf { position: relative; z-index: 3; }
-html.tv :focus:not(.tvf) { outline: none; }
-/* touch-only bits that make no sense with a remote */
-html.tv [data-apk], html.tv .apk { display: none !important; }
-@media (prefers-reduced-motion: reduce) { html.tv .card.tvf, html.tv .t10.tvf { transform: none; } }
 </style>
 </head>
 <body>
@@ -1017,15 +998,6 @@ const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp
 const buzz = (ms = 8) => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
 const UA = navigator.userAgent || "";
 const IN_APP = /VibeSyncApp/.test(UA), ANDROID = /Android/i.test(UA);
-/* TV mode: the Android app on a TV (VibeSyncTV), TV browsers, or ?tv=1 (?tv=0 turns it off) */
-const TV = (() => {
-  let q = location.search; try { q += top.location.search; } catch (e) {}
-  if (/[?&]tv=0\b/.test(q)) { try { localStorage.setItem("vs.tv", "false"); } catch (e) {} return false; }
-  if (/[?&]tv=1\b/.test(q)) { try { localStorage.setItem("vs.tv", "true"); } catch (e) {} return true; }
-  if (/VibeSyncTV|Android TV|\bAFT[A-Z]|BRAVIA|SMART-TV|SmartTV|GoogleTV|Tizen|Web0S|HbbTV/i.test(UA)) return true;
-  try { return localStorage.getItem("vs.tv") === "true"; } catch (e) { return false; }
-})();
-if (TV) document.documentElement.classList.add("tv");
 const ON_CLOUD = !IN_APP && /(^|\.)streamlit\.app$/.test(location.hostname);
 if (ON_CLOUD) document.documentElement.classList.add("cloud");
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -4535,7 +4507,6 @@ function theatreState(it) {
   return "";
 }
 function bookHTML(it) {
-  if (TV) return "";                                  // no ticket booking on the TV
   const st = theatreState(it); if (!st) return "";
   return `<button class="bookbtn" data-book="${esc(it.id)}"><span class="bk-i" aria-hidden="true">🎟️</span>
     <span><b>${st === "soon" ? "Pre-book tickets" : "Book tickets"}</b><small>${st === "soon" ? "Opening in theatres soon" : "Running in theatres now"} · BookMyShow, District & more</small></span><span class="go">${ICON.arrow}</span></button>`;
@@ -4543,18 +4514,10 @@ function bookHTML(it) {
 const BOOK_APPS = [["BookMyShow", "in.bookmyshow.com", "#E5343F", "B"], ["District", "district.in", "#7B3FE4", "D"],
                    ["PVR INOX", "pvrcinemas.com", "#F2B31B", "P"], ["Cinépolis", "cinepolisindia.com", "#1C4FA0", "C"]];
 const CITIES = ["Hyderabad", "Bengaluru", "Chennai", "Mumbai", "Delhi NCR", "Kolkata", "Pune", "Kochi", "Vijayawada", "Visakhapatnam", "Ahmedabad", "Warangal", "Tirupati", "Coimbatore"];
-/* BookMyShow's city slugs where they differ from the plain name */
-const BMS_CITY = {"delhi ncr": "national-capital-region-ncr", "bengaluru": "bengaluru", "visakhapatnam": "vizag-visakhapatnam", "kochi": "kochi"};
-const BOOK_HOME = {"district.in": "https://www.district.in/movies/", "pvrcinemas.com": "https://www.pvrcinemas.com/", "cinepolisindia.com": "https://www.cinepolisindia.com/"};
-const bmsCity = c => BMS_CITY[c.toLowerCase()] || c.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 function bookLink(it, host) {
   const name = String(it.title).split(":")[0].trim(), city = store.get("city", "");
-  if (!IN_APP) {
-    // website: straight to the ticketing site (BookMyShow's movie list for your city), no search page
-    if (host === "in.bookmyshow.com") return city ? `https://in.bookmyshow.com/explore/movies-${bmsCity(city)}` : "https://in.bookmyshow.com/";
-    return BOOK_HOME[host] || `https://${host}/`;
-  }
-  // Android app: it looks the movie up itself and opens that exact title in the ticketing app
+  // DuckDuckGo's "first result" (\) search, pinned to the ticketing site; VibeSync's Android app looks it up
+  // itself and opens the movie straight in the ticketing app
   const q = `\\ site:${host} ${name} ${it.year || ""} ${city}`.replace(/\s+/g, " ").trim();
   return `https://duckduckgo.com/?q=${encodeURIComponent(q)}&vs_book=${host}&vs_t=${encodeURIComponent(name)}`;
 }
@@ -4569,8 +4532,8 @@ function openBook(id) {
     <form class="dform" id="bkcity" hidden><label class="sr" for="bkc">Your city</label><input id="bkc" name="c" placeholder="Type your city" autocomplete="address-level2"><button class="btn tint" type="submit">Set</button></form>
     <div class="h3">Book with</div><div class="offers">${BOOK_APPS.map(([n, host, col, l]) =>
       `<a class="offer" style="--pcol:${col}" href="${esc(bookLink(it, host))}" target="_blank" rel="noopener" data-bkgo>
-        <span class="logo">${l}</span><span><b>${esc(n)}</b><small>${IN_APP ? `Opens ${esc(it.title.split(":")[0])}` : host === "in.bookmyshow.com" ? "Opens movies showing" : "Opens the site"}${city ? ` in ${esc(city)}` : ""}</small></span><span class="go">🎟️ Book</span></a>`).join("")}</div>
-    <p class="fnote">${city ? "" : "Pick your city first so the app opens with your cinemas. "}${IN_APP ? "VibeSync finds the movie's page on each site" : "On the website, pick the movie on BookMyShow's list"}; prices and seats are on their side.</p></div>`;
+        <span class="logo">${l}</span><span><b>${esc(n)}</b><small>Opens ${esc(it.title.split(":")[0])}${city ? ` in ${esc(city)}` : ""}</small></span><span class="go">🎟️ Book</span></a>`).join("")}</div>
+    <p class="fnote">${city ? "" : "Pick your city first so the app opens with your cinemas. "}VibeSync finds the movie's page on each site; prices and seats are on their side.</p></div>`;
   v.classList.add("on");
   if (!REDUCED) v.querySelector(".bk-in").animate([{transform: "translate3d(0,40px,0)", opacity: 0}, {transform: "none", opacity: 1}], {duration: 520, easing: FLUID.glide});
   buzz();
@@ -5596,115 +5559,6 @@ document.addEventListener("click", e => {
   if (t.hasAttribute("data-acctsave")) { cloudSave().then(() => { toast("Saved to your account ☁️"); openAccount(); }); return; }
   if (t.hasAttribute("data-account")) { openAccount(); return; }
 });
-
-/* ───────────── TV mode: remote (D-pad) navigation ─────────────
-   Arrows move a clear focus highlight to the nearest thing in that direction, OK/Enter selects,
-   Back closes the top-most panel. Only runs when TV is on (see TV in the helpers). */
-const TVNAV = (() => {
-  if (!TV) return null;
-  // top-most open layer first; the sheet stacks above the explore panel
-  const LAYERS = [
-    ["#trv", () => $("#trv").classList.contains("on"), () => closeTrailer()],
-    ["#sndp", () => $("#sndp").classList.contains("on"), () => $("#sndp").classList.remove("on")],
-    ["#themes", () => $("#themes").classList.contains("on"), () => $("#themes").classList.remove("on")],
-    ["#sheet", () => !!openId, () => closeSheet()],
-    ["#xp", () => $("#xp").classList.contains("on"), () => closeXP()],
-    ["#themer", () => $("#themer").classList.contains("on"), () => closeThemer()],
-    ["#mixer", () => $("#mixer").classList.contains("on"), () => closeMixer()],
-    ["#search", () => $("#search").classList.contains("on"), () => closeSearch()],
-    ["#auth", () => !!$("#auth") && $("#auth").classList.contains("on"), null],
-  ];
-  const OVERLAYS = LAYERS.map(l => l[0]).concat(["#bk", "#veil", "#reel"]).join(",");
-  const top = () => LAYERS.find(l => { try { return l[1](); } catch (e) { return false; } });
-  const SEL = 'button,a[href],input:not([type="hidden"]),select,textarea,[tabindex]:not([tabindex="-1"])';
-  const vis = el => {
-    if (el.disabled || el.closest('[hidden],[aria-hidden="true"]')) return false;
-    const r = el.getBoundingClientRect();
-    if (r.width < 4 || r.height < 4) return false;
-    const cs = getComputedStyle(el);
-    return cs.visibility !== "hidden" && cs.display !== "none" && +cs.opacity !== 0;
-  };
-  const items = () => {
-    const l = top(), root = l ? $(l[0]) : document;
-    let all = $$(SEL, root).filter(vis);
-    if (!l) all = all.filter(el => !el.closest(OVERLAYS));
-    return all;
-  };
-  let last = null;
-  const mark = el => {
-    if (last && last !== el) last.classList.remove("tvf");
-    last = el; el.classList.add("tvf");
-    try { el.focus({preventScroll: true}); } catch (e) { el.focus(); }
-    el.scrollIntoView({block: "center", inline: "nearest", behavior: REDUCED ? "auto" : "smooth"});
-  };
-  const valid = el => el && el !== document.body && el.isConnected && items().includes(el);
-  function firstVisible(list) {
-    const H = innerHeight, W = innerWidth;
-    const onScreen = list.filter(el => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < H && r.right > 0 && r.left < W; });
-    const pool = onScreen.length ? onScreen : list;
-    return pool.sort((a, b) => { const A = a.getBoundingClientRect(), B = b.getBoundingClientRect(); return (A.top - B.top) || (A.left - B.left); })[0];
-  }
-  const gap = (a1, a2, b1, b2) => Math.max(0, Math.max(a1, b1) - Math.min(a2, b2));
-  function best(cur, dir, list) {
-    const c = cur.getBoundingClientRect(), cx = c.left + c.width / 2, cy = c.top + c.height / 2;
-    let win = null, ws = Infinity;
-    for (const el of list) {
-      if (el === cur || cur.contains(el) || el.contains(cur)) continue;
-      const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
-      let major, minor, off;
-      if (dir === "ArrowRight") { if (x <= cx + 1 || r.right <= c.right - 2) continue; major = Math.max(0, r.left - c.right); minor = gap(c.top, c.bottom, r.top, r.bottom); off = Math.abs(y - cy); }
-      else if (dir === "ArrowLeft") { if (x >= cx - 1 || r.left >= c.left + 2) continue; major = Math.max(0, c.left - r.right); minor = gap(c.top, c.bottom, r.top, r.bottom); off = Math.abs(y - cy); }
-      else if (dir === "ArrowDown") { if (y <= cy + 1 || r.bottom <= c.bottom - 2) continue; major = Math.max(0, r.top - c.bottom); minor = gap(c.left, c.right, r.left, r.right); off = Math.abs(x - cx); }
-      else { if (y >= cy - 1 || r.top >= c.top + 2) continue; major = Math.max(0, c.top - r.bottom); minor = gap(c.left, c.right, r.left, r.right); off = Math.abs(x - cx); }
-      const s = major + minor * 3 + off * 0.08;
-      if (s < ws) { ws = s; win = el; }
-    }
-    return win;
-  }
-  function move(dir) {
-    const list = items(); if (!list.length) return;
-    let cur = document.activeElement;
-    if (!valid(cur)) { mark(firstVisible(list)); return; }
-    // the spotlight: left / right with nothing further that way changes the title
-    const hero = cur.closest("#hero");
-    if (hero && (dir === "ArrowLeft" || dir === "ArrowRight")) {
-      const inHero = best(cur, dir, list.filter(el => hero.contains(el)));
-      if (inHero) { mark(inHero); return; }
-      if (typeof showSlide === "function") {
-        showSlide(state.slide + (dir === "ArrowRight" ? 1 : -1));
-        setTimeout(() => { const on = $$(SEL, $(".slide.on") || hero).filter(vis)[0]; if (on) mark(on); }, 60);
-      }
-      return;
-    }
-    // the top bar and bottom nav stay put on screen; rows come first, the bars only at the edges
-    const fx = el => { for (let n = el; n && n !== document.body; n = n.parentElement) if (/fixed|sticky/.test(getComputedStyle(n).position)) return true; return false; }, flow = list.filter(el => !fx(el)), bars = list.filter(fx);
-    const side = dir === "ArrowLeft" || dir === "ArrowRight";
-    const order = !fx(cur) ? [flow, bars] : side ? [bars, flow] : [flow, bars];
-    for (const group of order) { const nxt = best(cur, dir, group); if (nxt) { mark(nxt); return; } }
-  }
-  function back() {
-    const l = top();
-    if (l && l[2]) { l[2](); setTimeout(() => { const el = document.activeElement; if (!valid(el)) { const f = firstVisible(items()); if (f) mark(f); } }, 380); return true; }
-    if ($("#bk") && $("#bk").classList.contains("on")) { $("#bk").classList.remove("on"); return true; }
-    return false;
-  }
-  document.addEventListener("keydown", e => {
-    const t = e.target, typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA") && !/checkbox|radio|range/.test(t.type);
-    if (/^Arrow/.test(e.key)) {
-      if (typing && (e.key === "ArrowLeft" || e.key === "ArrowRight")) return;      // move the text cursor
-      e.preventDefault(); move(e.key);
-    } else if (e.key === "Enter" && t && t.matches && t.matches("[tabindex]:not(button):not(a):not(input)")) {
-      e.preventDefault(); t.click();
-    } else if (e.key === "GoBack" || e.key === "BrowserBack" || (e.key === "Backspace" && !typing)) {
-      if (back()) e.preventDefault();
-    }
-  }, true);
-  document.addEventListener("focusin", e => { if (e.target !== last && e.target.classList) { if (last) last.classList.remove("tvf"); last = e.target; last.classList.add("tvf"); } });
-  // the Android app calls these: Back from the remote, and putting focus inside the page on launch
-  window.vsBack = back;
-  window.vsFocus = () => { try { window.focus(); } catch (e) {} if (!valid(document.activeElement)) { const f = firstVisible(items()); if (f) mark(f); } };
-  return {move, back};
-})();
 
 /* ───────────── boot ───────────── */
 function boot(data) {
