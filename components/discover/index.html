@@ -4881,8 +4881,8 @@ async function applySync(replace) {
 /* ───────────── tonight's pick: the Android home-screen widget ───────────── */
 function pickTonight() {
   const day = new Date().toISOString().slice(0, 10), cur = store.get("tonight", null);
-  if (cur && cur.day === day && BY[cur.id] && !isWatched(cur.id)) return BY[cur.id];
-  const pool = surprisePool().filter(it => !isWatched(it.id) && (it.offers.length || it.tmdb));
+  if (cur && cur.day === day && BY[cur.id] && !isWatched(cur.id) && X.swiped[cur.id] !== -1) return BY[cur.id];
+  const pool = surprisePool().filter(it => !isWatched(it.id) && X.swiped[it.id] !== -1 && (it.offers.length || it.tmdb));
   if (!pool.length) return null;
   const ranked = pool.map(it => [tasteScore(it) + (favs.has(it.id) ? 3 : 0) + Math.random() * 4, it]).sort((a, b) => b[0] - a[0]);
   const it = ranked[Math.floor(Math.random() * Math.min(8, ranked.length))][1];
@@ -4899,7 +4899,7 @@ const widgetCard = it => {
 function pushWidget() {
   const b = window.VibeSyncApp; if (!b || typeof b.setPick !== "function") return;
   const first = pickTonight(); if (!first) return;
-  const pool = surprisePool().filter(it => it !== first && !isWatched(it.id) && (it.offers.length || it.tmdb));
+  const pool = surprisePool().filter(it => it !== first && !isWatched(it.id) && X.swiped[it.id] !== -1 && (it.offers.length || it.tmdb));
   const rest = pool.map(it => [tasteScore(it) + (favs.has(it.id) ? 3 : 0) + Math.random() * 5, it]).sort((a, b) => b[0] - a[0]).slice(0, 14).map(([, it]) => it);
   const queue = [first].concat(rest);
   const meta = {}; queue.forEach(it => { if (it.tmdb) meta[it.id] = slim(it); }); store.set("widgetMeta", meta);
@@ -4908,9 +4908,14 @@ function pushWidget() {
 // "Watched it" taps on the widget, made while VibeSync was closed
 function syncWidgetWatched() {
   const b = window.VibeSyncApp; if (!b || typeof b.takeWidgetWatched !== "function") return;
-  let ids = []; try { ids = JSON.parse(b.takeWidgetWatched() || "[]"); } catch (e) {}
-  if (!ids.length) return;
+  let ids = [], skipped = []; try { ids = JSON.parse(b.takeWidgetWatched() || "[]"); } catch (e) {}
+  try { if (typeof b.takeWidgetSkipped === "function") skipped = JSON.parse(b.takeWidgetSkipped() || "[]"); } catch (e) {}
   const meta = store.get("widgetMeta", {});
+  if (skipped.length) {            // skipped on the widget: not suggested again, and taste leans away a little
+    skipped.forEach(id => { if (!BY[id] && meta[id]) BY[id] = rehydrate(meta[id]); if (!(id in X.swiped)) { X.swiped[id] = -1; if (BY[id]) learn(BY[id], -1); } });
+    store.set("swiped", X.swiped);
+  }
+  if (!ids.length) return;
   ids.forEach(id => { if (!BY[id] && meta[id]) BY[id] = rehydrate(meta[id]); const it = BY[id];
     X.st[id] = {s: "watched", at: Date.now(), meta: it && it.tmdb ? slim(it) : null}; if (it) learn(it, 1); });
   store.set("status", X.st);
