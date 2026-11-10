@@ -1382,7 +1382,9 @@ function fromTmdb(r, typeHint) {
 }
 function curatedTwin(it) {
   const n = norm(it.title);
-  return D.items.find(c => norm(c.title) === n && (!it.year || !c.year || Math.abs(+c.year - +it.year) <= 1)) || null;
+  // "F1" on TMDB is our "F1: The Movie", so also compare the part before a colon
+  return D.items.find(c => c.kind !== "sports" && (norm(c.title) === n || norm(c.title.split(":")[0]) === n)
+    && (!it.year || !c.year || Math.abs(+c.year - +it.year) <= 1)) || null;
 }
 const slim = it => ({id: it.id, tmdb: it.tmdb, title: it.title, kind: it.kind, year: it.year, score: it.score, tmdbPoster: it.tmdbPoster,
   synopsis: it.synopsis, telugu: it.telugu, trailer: it.trailer});
@@ -1514,6 +1516,8 @@ function exactLink(d, name) {
   const k = Object.keys(map).find(k => k.length > 3 && (k.includes(n) || n.includes(k)));
   return k ? map[k] : null;
 }
+// In the Android app, tell it which app was tapped: it reads the watch page itself and jumps straight to the title.
+const viaApp = (link, name) => IN_APP ? link + (link.includes("?") ? "&" : "?") + "vs_app=" + encodeURIComponent(name) : link;
 function tmdbSheetHTML(it) {
   const d = details[it.id];
   const logo = p => p.logo ? `<img class="plogo" src="https://image.tmdb.org/t/p/w92${p.logo}" alt="">`
@@ -1526,13 +1530,14 @@ function tmdbSheetHTML(it) {
       // TMDB's watch page (powered by JustWatch) links to this exact title on each app.
       // Without it, fall back to searching inside the app.
       const direct = exactLink(d, p.name), pending = d.link && EMBED && !RESOLVED[d.link];
-      const url = direct ? linkFor(direct, p.key) : d.link ? d.link : FIND[p.key] ? linkFor(FIND[p.key](it.title), p.key) : linkFor(HOME[p.key], p.key);
-      const sub = direct ? "Opens this exact title" : pending ? "Finding the exact link…" : d.link ? `Tap ${D.providers[p.key].name} on the next screen to open this title` : FIND[p.key] ? "Opens the app and searches this title" : "Opens the app";
+      const url = direct ? linkFor(direct, p.key) : d.link ? viaApp(d.link, p.name) : FIND[p.key] ? linkFor(FIND[p.key](it.title), p.key) : linkFor(HOME[p.key], p.key);
+      const sub = direct || (IN_APP && d.link) ? "Opens this exact title" : pending ? "Finding the exact link…" : d.link ? `Tap ${D.providers[p.key].name} on the next screen to open this title` : FIND[p.key] ? "Opens the app and searches this title" : "Opens the app";
       return `<a class="offer" style="--pcol:${D.providers[p.key].color}" href="${esc(url)}" target="_blank" rel="noopener">${logo(p)}
         <span><b>${esc(D.providers[p.key].name)}</b><small>${sub}</small></span><span class="go">${ICON.play}Watch</span></a>`;
     }).join("") + d.other.map(p => { const direct = exactLink(d, p.name);
-      return `<a class="offer" href="${esc(direct || d.link || it.trailer)}" target="_blank" rel="noopener">${logo(p)}
-        <span><b>${esc(p.name)}</b><small>${direct ? "Opens this exact title" : "See watch options"}</small></span><span class="go">${direct ? ICON.play + "Watch" : "View"}</span></a>`; }).join("") + `</div>`;
+      const exact = direct || (IN_APP && d.link);
+      return `<a class="offer" href="${esc(direct || (d.link ? viaApp(d.link, p.name) : it.trailer))}" target="_blank" rel="noopener">${logo(p)}
+        <span><b>${esc(p.name)}</b><small>${exact ? "Opens this exact title" : "See watch options"}</small></span><span class="go">${exact ? ICON.play + "Watch" : "View"}</span></a>`; }).join("") + `</div>`;
   const body = `<div class="tags">${it.telugu ? `<span class="tag tel">Telugu</span>` : ""}${(d ? d.genres : []).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
     <p class="syn">${esc(it.synopsis || "No description yet.")}</p>
     <div class="h3">Where to watch in India</div>${where}
