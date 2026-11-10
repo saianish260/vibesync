@@ -821,6 +821,14 @@ img{display:block}
 .xp .acts{margin-top:10px}
 .lowfx .xp,.lowfx .dcard{transition:none}
 
+.coming{display:flex;gap:12px;align-items:center;margin-top:10px;padding:12px 14px;border-radius:16px;background:color-mix(in srgb,var(--st,var(--tint)) 16%,var(--s2))}
+.coming .cm-i{font-size:24px}.coming b{display:block;font-size:14.5px}.coming small{display:block;color:var(--muted);font-size:12.5px;line-height:1.4;margin-top:2px}
+.coming small b{display:inline;color:var(--text);font-size:12.5px}
+.planhave{padding:14px 16px;border-radius:20px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);margin-bottom:12px;display:grid;gap:2px}
+.planhave small{font-weight:800;text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--muted)}.planhave b{font-size:20px}.planhave span{font-size:13.5px;color:var(--muted)}
+.plan.mine{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--pcol) 70%,transparent)}
+.chip.sub .pc{width:20px;height:20px;border-radius:6px;background:var(--pcol);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800;font-style:normal}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -838,17 +846,7 @@ img{display:block}
 .ytcard.on{animation:ytin .7s var(--spring) both}
 /* rows far off screen skip rendering until you scroll near them: smoother scrolling, same pixels */
 #panel .row,#panel>.grid{content-visibility:auto;contain-intrinsic-size:auto 300px}
-/* water ripple on every tap */
-#ripples{position:fixed;inset:0;z-index:60;pointer-events:none;overflow:hidden;contain:strict}
-#ripples i{position:absolute;left:0;top:0;width:var(--s);height:var(--s);border-radius:50%;pointer-events:none;
-  background:radial-gradient(circle,rgba(255,255,255,.10) 0,rgba(255,255,255,.04) 44%,transparent 50%,rgba(255,255,255,.55) 60%,rgba(255,255,255,.16) 66%,transparent 72%);
-  animation:ripple 1s var(--glide) forwards;will-change:transform,opacity}
-#ripples i::after{content:"";position:absolute;inset:0;border-radius:50%;
-  background:radial-gradient(circle,transparent 54%,color-mix(in srgb,var(--tint) 60%,transparent) 63%,transparent 71%);animation:ripple2 1.15s .1s var(--glide) both}
-@keyframes ripple{0%{transform:translate3d(var(--x),var(--y),0) scale(.08);opacity:1}45%{opacity:.75}100%{transform:translate3d(var(--x),var(--y),0) scale(1);opacity:0}}
-@keyframes ripple2{0%{transform:scale(.05);opacity:1}50%{opacity:.7}100%{transform:scale(.8);opacity:0}}
-.lowfx #ripples i::after{display:none}
-@media (prefers-reduced-motion:reduce){#ripples{display:none}}
+
 </style>
 </head>
 <body>
@@ -1219,7 +1217,7 @@ function sheetHTML(it) {
     : `<div class="note">Not streaming in India right now. Watch the trailer, or check back later.</div>`;
   const body = `<div class="tags">${it.telugu ? `<span class="tag tel">Telugu audio</span>` : ""}${it.status === "live" ? `<span class="live"><i></i>Live now</span>` : ""}${it.genres.filter(g => !(it.telugu && /^telugu$/i.test(g))).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
     <p class="syn">${esc(it.synopsis)}</p>
-    <div class="h3">${it.kind === "sports" ? "Where to watch live" : "Where to watch in India"}</div>${offers}
+    <div class="h3">${it.kind === "sports" ? "Where to watch live" : "Where to watch in India"}</div>${offers}${it.kind === "sports" ? "" : comingHTML(it)}
     ${it.note ? `<div class="note">${esc(it.note)}</div>` : ""}
     <div class="acts">${it.kind === "sports" || it.kind === "reality" ? `<a class="btn tint" href="${esc(ytLink(it))}" target="_blank" rel="noopener">${ICON.play}${it.kind === "sports" ? "Highlights" : "Latest promos"}</a>`
       : `<button class="btn tint" data-trailer="${esc(it.id)}">${ICON.play}Trailer</button>`}${saveBtn(it)}</div>
@@ -3769,7 +3767,7 @@ function tmdbSheetHTML(it) {
         <span><b>${esc(p.name)}</b><small>${exact ? "Opens this exact title" : "See watch options"}</small></span><span class="go">${exact ? ICON.play + "Watch" : "View"}</span></a>`; }).join("") + `</div>`;
   const body = `<div class="tags">${it.telugu ? `<span class="tag tel">Telugu</span>` : ""}${(d ? d.genres : []).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
     <p class="syn">${esc(it.synopsis || "No description yet.")}</p>
-    <div class="h3">Where to watch in India</div>${where}
+    <div class="h3">Where to watch in India</div>${where}${comingHTML(it)}
     <div class="acts"><button class="btn tint" data-trailer="${esc(it.id)}">${ICON.play}Trailer</button>${saveBtn(it)}</div>
     <p class="foot2">Streaming data from JustWatch via TMDB. Line-ups change, so the app may differ slightly.</p>`;
   return sheetShell(it, [fact(it.score ? `★ ${it.score.toFixed(1)} TMDB` : "", "sc"), fact(esc(it.year)), d ? fact(esc(d.len)) : "", fact(esc(kindLabel(it)))], body);
@@ -4260,7 +4258,9 @@ async function loadExtras(it) {
     const x = {ref, runtime, score: d.vote_average, votes: d.vote_count, cast: crew.concat(cast), trailer: vids.map(v => v.key),
                cert: certOf(d, ref.type), next: d.next_episode_to_air || null, last: d.last_episode_to_air || null, tvstatus: d.status || "",
                seasons: (d.seasons || []).filter(s => s.season_number > 0), imdbId: (d.external_ids || {}).imdb_id || d.imdb_id || "",
-               lang: d.original_language || "", gids: (d.genres || []).map(g => g.id)};
+               lang: d.original_language || "", gids: (d.genres || []).map(g => g.id),
+               ott: ref.type === "movie" ? ottFrom(d.release_dates) : null, network: (d.networks || []).map(n => n.name).slice(0, 2),
+               premiere: ref.type === "tv" ? d.first_air_date || "" : "", theatre: ref.type === "movie" ? theatreFrom(d.release_dates) : ""};
     if (!it.gids) it.gids = x.gids;
     if (!it.lang) it.lang = x.lang;
     if (runtime) { X.rt[it.id] = runtime; store.set("rt", X.rt); }
@@ -4277,6 +4277,46 @@ async function loadExtras(it) {
   if (openId === it.id) refreshSheet();
 }
 const dayMs = 864e5;
+/* India's OTT (digital) release from TMDB release dates; the note usually names the app ("Netflix", "aha"…) */
+function ottFrom(rd) {
+  const r = ((rd || {}).results || []).find(x => x.iso_3166_1 === "IN"); if (!r) return null;
+  const dig = r.release_dates.filter(x => (x.type === 4 || x.type === 6) && x.release_date).sort((a, b) => a.release_date.localeCompare(b.release_date));
+  if (!dig.length) return null;
+  const today = new Date(new Date().toDateString());
+  const pick = dig.find(x => new Date(x.release_date) >= +today - 2 * dayMs) || dig[dig.length - 1];
+  return {date: pick.release_date.slice(0, 10), app: (pick.note || "").trim().slice(0, 40)};
+}
+function theatreFrom(rd) {
+  const r = ((rd || {}).results || []).find(x => x.iso_3166_1 === "IN");
+  const t = r && r.release_dates.filter(x => (x.type === 3 || x.type === 2) && x.release_date).sort((a, b) => a.release_date.localeCompare(b.release_date))[0];
+  return t ? t.release_date.slice(0, 10) : "";
+}
+const appName = n => { const k = provKey(n || ""); return k && D.providers[k] ? D.providers[k].name : n; };
+const shortDate = s => new Date(s.slice(0, 10) + "T12:00:00").toLocaleDateString("en-IN", {day: "numeric", month: "short", year: new Date(s).getFullYear() !== new Date().getFullYear() ? "numeric" : undefined});
+// "Coming to OTT" line on a title's sheet: when, and on which app
+function comingHTML(it) {
+  const x = XD[it.id]; if (!x || x.busy || x.none) return "";
+  const det = details[it.id];
+  const streaming = (it.offers && it.offers.length) || (det && (det.apps.length || det.other.length));
+  if (it.tmdb && !det) return "";
+  const today = new Date(new Date().toDateString());
+  const box = (icon, head, sub) => `<div class="coming"><span class="cm-i" aria-hidden="true">${icon}</span><span><b>${head}</b><small>${sub}</small></span></div>`;
+  if (x.ott && new Date(x.ott.date) >= today && !(streaming && !x.ott.app)) {
+    const at = new Date(x.ott.date + "T12:00:00");
+    return box("🍿", `Coming to OTT ${whenText(at)}`, x.ott.app ? `Will stream on <b>${esc(appName(x.ott.app))}</b>` : "The streaming app hasn't been announced yet");
+  }
+  if (streaming) return "";
+  if (x.ott && x.ott.app) return box("📺", `Released on OTT ${shortDate(x.ott.date)}`, `On <b>${esc(appName(x.ott.app))}</b>. It may not be listed in India yet`);
+  if (x.ref.type === "tv" && x.premiere && new Date(x.premiere) >= today)
+    return box("📅", `Premieres ${whenText(new Date(x.premiere + "T12:00:00"))}`, x.network.length ? `On <b>${esc(x.network.map(appName).join(" / "))}</b>` : "The streaming app hasn't been announced yet");
+  if (x.ref.type === "movie" && x.theatre) {
+    const t = new Date(x.theatre + "T12:00:00"), a = new Date(+t + 28 * dayMs), b = new Date(+t + 56 * dayMs);
+    if (t > today) return box("🎬", `In theatres ${whenText(t)}`, `OTT usually 4–8 weeks later (around ${shortDate(iso(a))} – ${shortDate(iso(b))}). The app isn't announced yet`);
+    if (+today - t < 120 * dayMs) return box("🎬", `In theatres since ${shortDate(x.theatre)}`, `Expected on OTT around ${shortDate(iso(a))} – ${shortDate(iso(b))}. The streaming app hasn't been announced yet`);
+  }
+  if (x.ref.type === "tv" && x.network.length) return box("📺", `Made for ${esc(x.network.join(" / "))}`, "Not listed on an Indian streaming app yet");
+  return "";
+}
 function airDate(s) { return s ? new Date(s + "T18:00:00") : null; }        // TMDB gives a date; assume an evening drop
 function whenText(d) {
   const days = Math.round((new Date(d.toDateString()) - new Date(new Date().toDateString())) / dayMs);
@@ -4483,7 +4523,16 @@ function openCalendar() {
       el.innerHTML = list.map(r => { const it = fromTmdb(r, type); if (!it) return "";
         const d = r.release_date || r.first_air_date || "";
         const label = k === "eps" ? "New episode" : d ? new Date(d + "T12:00:00").toLocaleDateString("en-IN", {day: "numeric", month: "short"}) : "";
-        return card(it).replace('<div class="ct">', `<div class="cdate">${esc(label)}</div><div class="ct">`); }).join("") || `<div class="empty">Nothing listed for these dates yet.</div>`;
+        return card(it).replace('<div class="ct">', `<div class="cdate"${type === "movie" ? ` data-rd="${r.id}" data-k="${k}"` : ""}>${esc(label)}</div><div class="ct">`); }).join("") || `<div class="empty">Nothing listed for these dates yet.</div>`;
+      // which app each one lands on (TMDB's India digital release note)
+      el.querySelectorAll("[data-rd]").forEach(async c => {
+        try {
+          const rd = await tget(`/movie/${c.dataset.rd}/release_dates`, {});
+          const o = ottFrom(rd);
+          if (o && (c.dataset.k !== "theatre" && c.dataset.k !== "upcoming")) c.textContent = shortDate(o.date) + (o.app ? " · " + appName(o.app) : "");
+          else if (o && o.app) c.textContent += " · OTT: " + appName(o.app);
+        } catch (e) {}
+      });
     } catch (e) { const el = $("#cal-" + k); if (el) el.innerHTML = `<div class="empty">Couldn't load this list.</div>`; }
   });
 }
@@ -4501,34 +4550,62 @@ async function provsFor(it) {
     return [...new Set(["flatrate", "free", "ads"].flatMap(k => ind[k] || []).filter(p => !STORE_IDS.has(p.provider_id)).map(p => provKey(p.provider_name)).filter(Boolean))];
   } catch (e) { return []; }
 }
+const PLAN = {mine: new Set(store.get("mysubs", [])), res: null};
 async function openPlan() {
   const list = [...new Set([...favs, ...Object.keys(X.st).filter(id => statusOf(id) === "watching")])].map(id => BY[id]).filter(it => it && !isWatched(it.id));
-  openXP(xpTop("Which plan?", "Based on your Saved and Watching titles: the subscriptions that cover the most of them.") + `<div id="planb"><div class="empty">Checking ${list.length} titles…</div></div>`, "plan");
+  openXP(xpTop("Which plan?", "Based on your Saved and Watching titles. Tick the apps you already pay for and VibeSync works out what's left.")
+    + `<div class="h3">Subscriptions you already have</div><div class="chips" id="mysubs"></div><div id="planb"><div class="empty">Checking ${list.length} titles…</div></div>`, "plan");
+  renderMySubs();
   if (!list.length) { $("#planb").innerHTML = `<div class="empty">Save a few titles first (♡ or 🃏 Swipe mode). VibeSync then works out the best subscription for them.</div>`; return; }
+  PLAN.res = await Promise.all(list.map(async it => [it, await provsFor(it)]));
+  renderPlan();
+}
+function renderMySubs() {
+  const box = $("#mysubs"); if (!box) return;
+  box.innerHTML = Object.entries(D.providers).filter(([k]) => k !== "youtube").map(([k, p]) =>
+    `<button class="chip sub" data-mysub="${k}" aria-pressed="${PLAN.mine.has(k)}" style="--pcol:${p.color}"><i class="pc" style="--pcol:${p.color}">${esc(p.name[0])}</i>${PLAN.mine.has(k) ? "✓ " : "＋ "}${esc(p.name)}</button>`).join("");
+}
+function renderPlan() {
+  const box = $("#planb"); if (!box || !PLAN.res) return;
+  const res = PLAN.res, all = res.map(([it]) => it), n = all.length;
   const cov = {}, none = [];
-  const res = await Promise.all(list.map(async it => [it, await provsFor(it)]));
   res.forEach(([it, ps]) => { if (!ps.length) none.push(it); ps.forEach(p => (cov[p] = cov[p] || []).push(it)); });
-  const ranked = Object.entries(cov).sort((a, b) => b[1].length - a[1].length);
-  // the best pair: the two apps that together cover the most titles
+  const mine = [...PLAN.mine], name = p => (D.providers[p] || {name: p}).name, col = p => (D.providers[p] || {}).color || "#888";
+  const pct = k => Math.round(k / n * 100);
+  const have = new Set(res.filter(([, ps]) => ps.some(p => PLAN.mine.has(p))).map(([it]) => it.id));
+  const left = res.filter(([it, ps]) => !have.has(it.id) && ps.length);
+  // what each other app would add on top of what you already have
+  const gain = {};
+  left.forEach(([it, ps]) => ps.filter(p => !PLAN.mine.has(p)).forEach(p => (gain[p] = gain[p] || []).push(it)));
+  const ranked = Object.entries(gain).sort((a, b) => b[1].length - a[1].length);
   let pair = null;
   for (let i = 0; i < ranked.length; i++) for (let j = i + 1; j < ranked.length; j++) {
-    const n = new Set(ranked[i][1].concat(ranked[j][1]).map(t => t.id)).size;
-    if (!pair || n > pair.n) pair = {a: ranked[i][0], b: ranked[j][0], n};
+    const k = new Set(ranked[i][1].concat(ranked[j][1]).map(t => t.id)).size;
+    if (!pair || k > pair.n) pair = {a: ranked[i][0], b: ranked[j][0], n: k};
   }
-  const pct = n => Math.round(n / list.length * 100);
-  const name = p => (D.providers[p] || {name: p}).name;
-  if (!$("#planb")) return;
-  $("#planb").innerHTML = (ranked.length ? `<div class="planwin" style="--pcol:${(D.providers[ranked[0][0]] || {}).color || "#888"}"><small>Best single subscription</small>
-      <b>${esc(name(ranked[0][0]))}</b><span>covers ${ranked[0][1].length} of your ${list.length} titles (${pct(ranked[0][1].length)}%)</span>
-      ${PLAN_PRICE[ranked[0][0]] ? `<em>from ${PLAN_PRICE[ranked[0][0]]}</em>` : ""}</div>` : "")
-    + (pair && pair.n > (ranked[0] || [0, []])[1].length ? `<div class="planpair">➕ <b>${esc(name(pair.a))} + ${esc(name(pair.b))}</b> together cover ${pair.n} of ${list.length} (${pct(pair.n)}%)</div>` : "")
-    + `<div class="plans">${ranked.map(([p, its]) => `<div class="plan" style="--pcol:${(D.providers[p] || {}).color || "#888"}">
-        <div class="ph"><b>${esc(name(p))}</b><span>${its.length} title${its.length === 1 ? "" : "s"}</span></div>
-        <div class="pbar"><i style="width:${pct(its.length)}%"></i></div>${PLAN_PRICE[p] ? `<small>from ${PLAN_PRICE[p]}</small>` : ""}
-        <div class="pmini">${its.slice(0, 8).map(it => `<button data-open="${esc(it.id)}" aria-label="${esc(it.title)}">${poster(it, "s166")}</button>`).join("")}</div></div>`).join("")}</div>`
-    + (none.length ? `<p class="fnote">Not on any subscription in India right now: ${none.map(i => esc(i.title)).join(", ")}.</p>` : "")
-    + `<p class="fnote">Prices are approximate entry plans as of Nov 2026, not live. Check the app for current plans and offers.</p>`;
+  const minis = its => `<div class="pmini">${its.slice(0, 8).map(it => `<button data-open="${esc(it.id)}" aria-label="${esc(it.title)}">${poster(it, "s166")}</button>`).join("")}</div>`;
+  let html = "";
+  if (mine.length) html += `<div class="planhave"><small>Your subscriptions</small><b>${have.size} of ${n} covered (${pct(have.size)}%)</b>
+      <span>${mine.map(name).map(esc).join(" + ")}</span><div class="pbar"><i style="width:${pct(have.size)}%;background:var(--tint)"></i></div></div>`;
+  if (ranked.length) html += `<div class="planwin" style="--pcol:${col(ranked[0][0])}"><small>${mine.length ? "Best one to add" : "Best single subscription"}</small>
+      <b>${esc(name(ranked[0][0]))}</b><span>${mine.length ? `adds ${ranked[0][1].length} more title${ranked[0][1].length === 1 ? "" : "s"}, so you'd cover ${have.size + ranked[0][1].length} of ${n} (${pct(have.size + ranked[0][1].length)}%)`
+        : `covers ${ranked[0][1].length} of your ${n} titles (${pct(ranked[0][1].length)}%)`}</span>
+      ${PLAN_PRICE[ranked[0][0]] ? `<em>from ${PLAN_PRICE[ranked[0][0]]}</em>` : ""}</div>`;
+  else if (mine.length && left.length === 0) html += `<div class="planwin" style="--pcol:var(--tint)"><small>All set</small><b>Nothing to add 🎉</b><span>Everything you saved that streams in India is on apps you already have.</span></div>`;
+  if (pair && pair.n > (ranked[0] || [0, []])[1].length) html += `<div class="planpair">➕ <b>${esc(name(pair.a))} + ${esc(name(pair.b))}</b> together ${mine.length ? "add" : "cover"} ${pair.n}${mine.length ? " more" : ` of ${n}`}</div>`;
+  html += `<div class="plans">` + mine.filter(p => cov[p]).map(p => `<div class="plan mine" style="--pcol:${col(p)}"><div class="ph"><b>✓ ${esc(name(p))}</b><span>you have it · ${cov[p].length} title${cov[p].length === 1 ? "" : "s"}</span></div>
+      <div class="pbar"><i style="width:${pct(cov[p].length)}%"></i></div>${minis(cov[p])}</div>`).join("")
+    + ranked.map(([p, its]) => `<div class="plan" style="--pcol:${col(p)}"><div class="ph"><b>${esc(name(p))}</b><span>${mine.length ? `+${its.length} new` : `${its.length} title${its.length === 1 ? "" : "s"}`}</span></div>
+      <div class="pbar"><i style="width:${pct(its.length)}%"></i></div>${PLAN_PRICE[p] ? `<small>from ${PLAN_PRICE[p]}</small>` : ""}${minis(its)}</div>`).join("") + `</div>`;
+  if (none.length) html += `<p class="fnote">Not on any subscription in India right now: ${none.map(i => esc(i.title)).join(", ")}.</p>`;
+  html += `<p class="fnote">Prices are approximate entry plans as of Nov 2026, not live. Check the app for current plans and offers.</p>`;
+  box.innerHTML = html;
 }
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-mysub]"); if (!b) return;
+  const k = b.dataset.mysub; PLAN.mine.has(k) ? PLAN.mine.delete(k) : PLAN.mine.add(k);
+  store.set("mysubs", [...PLAN.mine]); renderMySubs(); renderPlan(); buzz();
+});
 
 /* ───────────── VibeSync Wrapped ───────────── */
 const PERSONA = {action: ["Adrenaline Junkie", "💥"], comedy: ["Laugh Collector", "😂"], thriller: ["Edge-of-the-Seat Detective", "🔪"], crime: ["Case Cracker", "🕵️"],
@@ -4614,6 +4691,7 @@ async function applySync(replace) {
   else {
     const merge = (k, f) => { const a = store.get(k, null), b = J("vs." + k); if (b != null) store.set(k, a == null ? b : f(a, b)); };
     merge("favs", (a, b) => [...new Set(a.concat(b))]);
+    merge("mysubs", (a, b) => [...new Set(a.concat(b))]);
     ["favMeta", "status", "swiped", "reminders", "themeUse"].forEach(k => merge(k, (a, b) => Object.assign({}, b, a)));
     merge("tracker", (a, b) => { const o = Object.assign({}, b, a); Object.keys(b).forEach(id => { if (a[id]) o[id] = {watched: [...new Set((a[id].watched || []).concat(b[id].watched || []))], notes: (a[id].notes || []).concat((b[id].notes || []).filter(n => !(a[id].notes || []).some(m => m.ts === n.ts && m.text === n.text)))}; }); return o; });
     merge("themeRecent", (a, b) => a.concat(b.filter(t => !a.some(x => x.id === t.id))).slice(0, 10));
@@ -4683,21 +4761,6 @@ document.addEventListener("keydown", e => {
 const FLUID = {spring: CSS.supports("transition-timing-function", "linear(0, 1)") ? getComputedStyle(document.documentElement).getPropertyValue("--spring").trim() || "cubic-bezier(.2,1.2,.4,1)" : "cubic-bezier(.2,1.2,.4,1)",
                glide: "cubic-bezier(.16,1,.3,1)", x: innerWidth / 2, y: innerHeight * .8};
 document.addEventListener("pointerdown", e => { FLUID.x = e.clientX; FLUID.y = e.clientY; }, {capture: true, passive: true});
-// a water ripple spreads from every tap
-(() => {
-  if (REDUCED) return;
-  const layer = document.createElement("div"); layer.id = "ripples"; layer.setAttribute("aria-hidden", "true"); document.body.appendChild(layer);
-  const SEL = ".card,.btn,.xtool,.tool,.chip,.tile,.surprise,.mixcard,.tab,.cup,.db,.cast,.offer,.icon,.gz,.gb,.yt-b,.sp-src,.trkw,.cupx,#bnav button,.cast,.plan";
-  document.addEventListener("pointerdown", e => {
-    const t = e.target.closest && e.target.closest(SEL); if (!t || e.button > 0) return;
-    const r = t.getBoundingClientRect(), s = Math.round(Math.min(300, Math.max(110, Math.hypot(r.width, r.height) * 1.1)));
-    while (layer.childElementCount > 3) layer.firstChild.remove();
-    const i = document.createElement("i");
-    i.style.cssText = `--s:${s}px;--x:${e.clientX - s / 2}px;--y:${e.clientY - s / 2}px`;
-    layer.appendChild(i);
-    setTimeout(() => i.remove(), 1300);
-  }, {passive: true});
-})();
 // full-screen pages pour open from where you tapped, and drain back when closed
 function undrain(el) {              // reopened while still draining: stop the close
   if (!el || !el._drain) return false;
