@@ -386,7 +386,7 @@ img{display:block}
   box-shadow:0 18px 40px color-mix(in srgb,var(--accent) 30%,transparent)}
 .titled .mxchip{background:linear-gradient(120deg,var(--accent),var(--accent2));color:var(--on-tint)}
 .titled .surprise{background:linear-gradient(120deg,color-mix(in srgb,var(--accent) 30%,var(--s1)),color-mix(in srgb,var(--s1) 80%,transparent) 70%)}
-.titled .trkw,.titled .chip,.titled .tabrow{background:color-mix(in srgb,var(--s1) 82%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.titled .trkw,.titled .chip,.titled .tabrow{background:color-mix(in srgb,var(--s1) 90%,transparent)}
 .titled .tabs{background:transparent}
 .titled .tabs.glass{background:var(--glass)}
 .titled .pw{box-shadow:0 0 0 1px var(--line),0 12px 30px color-mix(in srgb,var(--accent) 14%,transparent)}
@@ -415,6 +415,95 @@ img{display:block}
 .tfx{display:block;font-size:13px;color:var(--muted)}
 .tchip{padding-left:6px}
 .tchip img{width:30px;height:30px;border-radius:50%;object-fit:cover}
+
+/* ── Title worlds: whole-app treatments ── */
+.w-fog,.w-grid,.w-waves,.w-spot,.w-vines,.w-webs{display:none;position:absolute;pointer-events:none}
+#piles{position:fixed;inset:0;z-index:14;pointer-events:none}
+#ffx{position:fixed;inset:0;width:100%;height:100%;z-index:13;pointer-events:none}
+#piles i{position:absolute;font-style:normal;font-size:30px;rotate:var(--r);filter:drop-shadow(0 6px 10px rgba(0,0,0,.55));animation:bob 4s ease-in-out infinite;animation-delay:var(--d)}
+@keyframes bob{50%{translate:0 -6px}}
+/* decorations that live on the app's own titles and posters */
+.titled .sec h2::after{content:var(--deco,"");display:inline-block;margin-left:.35em;font-size:.82em;vertical-align:-.05em;animation:bob 3.2s ease-in-out infinite;
+  -webkit-text-stroke:0;font-family:"Noto Color Emoji",sans-serif}
+.titled .mark::after{content:var(--deco,"");display:inline-block;margin-left:5px;font-size:.62em;animation:bob 2.8s ease-in-out infinite;-webkit-text-stroke:0;font-family:"Noto Color Emoji",sans-serif}
+.titled .ht::before{content:var(--deco2,"");display:block;font-size:.42em;margin-bottom:.12em;animation:bob 3.6s ease-in-out infinite;-webkit-text-stroke:0;font-family:"Noto Color Emoji",sans-serif}
+.titled .row>.card:nth-child(4n+2),.titled .grid>.card:nth-child(5n+3),.titled .t10{position:relative}
+.titled .row>.card:nth-child(4n+2)::after,.titled .grid>.card:nth-child(5n+3)::after,.titled .t10:nth-child(3n+1)::after{content:var(--deco2,"");position:absolute;z-index:4;top:6px;right:6px;
+  font-size:24px;animation:bob 3.4s ease-in-out infinite;filter:drop-shadow(0 4px 6px rgba(0,0,0,.55));pointer-events:none;font-family:"Noto Color Emoji",sans-serif}
+.has-font :is(.ht,.sec h2,.stitle,.mx-h,.tf-t,.surprise b,.mixcard b,.mark,.reel-cap,.tcur b){font-family:var(--display),'Archivo',sans-serif!important;
+  font-variation-settings:normal!important;letter-spacing:.005em!important}
+/* Upside Down: mirrored world, red glow, outlined titles, vines, fairy lights, flicker */
+.pk-upside .w-near{transform:translate3d(calc(var(--px,0px) * -2.2),calc(var(--py,0px) * -2.2 + var(--sy,0px) * 2.4),60px) scale(1.04,-1.04);
+  filter:saturate(.5) brightness(.7) sepia(.4) hue-rotate(-30deg);opacity:.6}
+.pk-upside .w-far{filter:blur(3px) saturate(.55) brightness(.75) hue-rotate(-12deg)}
+.pk-upside .w-shade{background:radial-gradient(90% 60% at 50% 100%,color-mix(in srgb,var(--accent) 22%,transparent),transparent 70%),
+  radial-gradient(130% 75% at 50% 0%,transparent 0%,color-mix(in srgb,var(--bg) 50%,transparent) 50%,color-mix(in srgb,var(--bg) 90%,transparent) 100%)}
+.pk-upside :is(.ht,.mark){color:transparent;-webkit-text-stroke:1.6px var(--accent);text-shadow:0 0 18px color-mix(in srgb,var(--accent) 75%,transparent),0 0 2px var(--accent)}
+.pk-upside .sec h2{text-shadow:0 0 16px color-mix(in srgb,var(--accent) 60%,transparent)}
+.pk-upside .pw{box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 30%,transparent),0 0 26px color-mix(in srgb,var(--accent) 22%,transparent)}
+.pk-vines .w-vines{display:block;inset:0;width:100%;height:100%}
+.w-vines path{fill:none;stroke:#120406;stroke-width:5px;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-dasharray:400;stroke-dashoffset:400;
+  animation:creep 4s var(--ease) forwards,sway 9s ease-in-out infinite 4s;filter:drop-shadow(0 0 3px color-mix(in srgb,var(--accent) 60%,transparent))}
+.pk-moss .w-vines path{stroke:#2c3a12;filter:drop-shadow(0 0 3px #9cc24a88)}
+@keyframes creep{to{stroke-dashoffset:0}}
+@keyframes sway{50%{transform:translateX(2px) skewY(.6deg)}}
+.pk-lights .top::after{content:"";position:absolute;left:0;right:0;bottom:-12px;height:16px;pointer-events:none;
+  background:radial-gradient(circle at 50% 72%,#ff3a3a 0 3.6px,transparent 4.6px) 0 0/64px 16px,radial-gradient(circle at 50% 72%,#ffd23f 0 3.6px,transparent 4.6px) 16px 0/64px 16px,
+    radial-gradient(circle at 50% 72%,#3fa9ff 0 3.6px,transparent 4.6px) 32px 0/64px 16px,radial-gradient(circle at 50% 72%,#4dff88 0 3.6px,transparent 4.6px) 48px 0/64px 16px,
+    linear-gradient(180deg,transparent 0 6px,#1b1b1b 6px 7px,transparent 7px);
+  filter:drop-shadow(0 0 5px rgba(255,255,255,.55));animation:blink 1.8s steps(2,jump-none) infinite}
+.pk-lights .tabs::before{content:"";position:absolute;left:18px;right:18px;top:-2px;height:14px;pointer-events:none;z-index:2;
+  background:radial-gradient(circle,#4dff88 0 3px,transparent 4px) 0 0/48px 14px,radial-gradient(circle,#ff3a3a 0 3px,transparent 4px) 12px 0/48px 14px,
+    radial-gradient(circle,#3fa9ff 0 3px,transparent 4px) 24px 0/48px 14px,radial-gradient(circle,#ffd23f 0 3px,transparent 4px) 36px 0/48px 14px;
+  filter:drop-shadow(0 0 4px rgba(255,255,255,.5));animation:blink 2.3s steps(2,jump-none) infinite .6s}
+@keyframes blink{50%{filter:brightness(.35) drop-shadow(0 0 0 transparent)}}
+.pk-flicker #app{animation:flick 9s infinite}
+@keyframes flick{0%,90%,100%{opacity:1}91%{opacity:.45}92%{opacity:1}94%{opacity:.3}95.5%{opacity:1}}
+/* rain: streaks on every poster, cobwebs in the corners */
+.pk-rain .pw::before{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;opacity:.6;
+  background-image:radial-gradient(1.6px 2.6px at 18% 22%,rgba(255,255,255,.7),transparent),radial-gradient(1.2px 2px at 62% 48%,rgba(255,255,255,.6),transparent),
+    radial-gradient(1.8px 3px at 82% 12%,rgba(255,255,255,.65),transparent),radial-gradient(1.2px 2.2px at 38% 76%,rgba(255,255,255,.55),transparent),
+    linear-gradient(180deg,transparent 40%,rgba(255,255,255,.06) 50%,transparent 60%);
+  background-size:54px 84px,70px 96px,62px 110px,48px 70px,100% 100%;animation:drip 2.4s linear infinite}
+@keyframes drip{to{background-position:0 84px,0 96px,0 110px,0 70px,0 0}}
+.pk-webs .w-webs{display:block;inset:0}
+.w-webs i{position:absolute;top:-14px;font-style:normal;font-size:110px;opacity:.38;filter:grayscale(1) brightness(1.6)}
+.w-webs i:first-child{left:-26px;rotate:-12deg}.w-webs i:last-child{right:-26px;rotate:100deg}
+/* snow settles on top of every poster */
+.pk-snow .pw::before{content:"";position:absolute;z-index:3;left:-2px;right:-2px;top:-2px;height:15px;pointer-events:none;
+  border-radius:12px 12px 45% 55%/12px 12px 9px 11px;background:linear-gradient(#ffffff,#e4eefc);box-shadow:0 3px 6px rgba(0,0,0,.3)}
+.pk-snow .top{box-shadow:inset 0 -3px 0 rgba(255,255,255,.75)}
+/* fire glows up from below */
+.pk-fire .w-shade{background:radial-gradient(90% 55% at 50% 105%,color-mix(in srgb,var(--accent) 38%,transparent),transparent 70%),
+  radial-gradient(130% 75% at 50% 0%,transparent 0%,color-mix(in srgb,var(--bg) 45%,transparent) 50%,color-mix(in srgb,var(--bg) 88%,transparent) 100%)}
+.pk-fire .ht{text-shadow:0 0 26px color-mix(in srgb,var(--accent) 70%,transparent)}
+/* fog / mist drifting across */
+.pk-fog .w-fog,.pk-mist .w-fog{display:block;inset:0 -50%;animation:fogmove 46s linear infinite;
+  background:radial-gradient(28% 18% at 20% 55%,rgba(255,255,255,.13),transparent 70%),radial-gradient(26% 16% at 55% 35%,rgba(255,255,255,.1),transparent 70%),
+    radial-gradient(30% 20% at 85% 70%,rgba(255,255,255,.12),transparent 70%)}
+.pk-mist .w-fog{background:radial-gradient(30% 22% at 25% 40%,rgba(255,236,200,.16),transparent 70%),radial-gradient(28% 20% at 70% 60%,rgba(200,230,255,.14),transparent 70%)}
+@keyframes fogmove{to{transform:translateX(33%)}}
+/* neon grid floor */
+.pk-neon .w-grid{display:block;left:-50%;right:-50%;bottom:-6%;height:52%;opacity:.45;transform:perspective(320px) rotateX(62deg);transform-origin:50% 100%;
+  background:repeating-linear-gradient(90deg,var(--accent) 0 1.5px,transparent 1.5px 64px),repeating-linear-gradient(0deg,var(--accent2) 0 1.5px,transparent 1.5px 64px);
+  -webkit-mask-image:linear-gradient(transparent,#000 60%);mask-image:linear-gradient(transparent,#000 60%);animation:gridmove 2.6s linear infinite}
+@keyframes gridmove{to{background-position:0 0,0 64px}}
+.pk-neon :is(.ht,.sec h2,.mark){text-shadow:0 0 12px var(--accent),0 0 28px color-mix(in srgb,var(--accent) 50%,transparent)}
+/* flat grid for offices and exam halls */
+.pk-grid .w-grid{display:block;inset:0;opacity:.07;background:repeating-linear-gradient(90deg,var(--text) 0 1px,transparent 1px 40px),repeating-linear-gradient(0deg,var(--text) 0 1px,transparent 1px 40px)}
+/* ocean waves along the bottom */
+.pk-ocean .w-waves{display:block;left:0;right:0;bottom:0;height:120px;background:color-mix(in srgb,var(--accent) 45%,transparent);opacity:.5;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40'%3E%3Cpath d='M0 20 Q25 0 50 20 T100 20 T150 20 T200 20 V40 H0Z'/%3E%3C/svg%3E") repeat-x 0 100%/220px 44px;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 40'%3E%3Cpath d='M0 20 Q25 0 50 20 T100 20 T150 20 T200 20 V40 H0Z'/%3E%3C/svg%3E") repeat-x 0 100%/220px 44px;
+  animation:waves 7s linear infinite}
+@keyframes waves{to{-webkit-mask-position:220px 100%;mask-position:220px 100%}}
+/* stage spotlights sweeping */
+.pk-stage .w-spot{display:block;inset:0;animation:spots 7s ease-in-out infinite alternate;
+  background:conic-gradient(from 168deg at 12% -6%,transparent 0deg,rgba(255,255,255,.13) 10deg,transparent 22deg),
+    conic-gradient(from 172deg at 88% -6%,transparent 0deg,color-mix(in srgb,var(--accent) 30%,transparent) 10deg,transparent 22deg)}
+@keyframes spots{to{transform:skewX(10deg)}}
+.pk-dust .w-shade{background:linear-gradient(180deg,color-mix(in srgb,var(--accent2) 10%,transparent),color-mix(in srgb,var(--bg) 70%,transparent) 55%,var(--bg))}
+.pk-squid :is(.ht,.mark){color:var(--accent)}
 
 /* ── Did you mean ── */
 .dym{display:flex;gap:12px;align-items:flex-start;margin:14px 0 4px;padding:14px 16px;border-radius:20px;
@@ -516,7 +605,9 @@ img{display:block}
 </head>
 <body>
 <div class="ambient" id="ambient"></div>
-<div class="world" id="world" aria-hidden="true"><div class="w-far" id="wfar"></div><div class="w-near" id="wnear"></div><canvas id="wfx"></canvas><div class="w-shade"></div></div>
+<div class="world" id="world" aria-hidden="true"><div class="w-far" id="wfar"></div><div class="w-near" id="wnear"></div><div class="w-fog"></div><div class="w-grid"></div><div class="w-waves"></div><div class="w-spot"></div><svg class="w-vines" viewBox="0 0 100 200" preserveAspectRatio="none"><path d="M-2,200 C6,182 1,168 8,150 S2,122 10,104 S3,78 7,58 S0,30 4,8"/><path d="M8,150 C14,146 16,140 22,141"/><path d="M10,104 C16,100 15,92 21,90"/><path d="M7,58 C12,55 13,49 18,50"/><path d="M102,200 C94,184 99,166 92,148 S98,120 90,100 S97,74 93,52 S100,26 96,4"/><path d="M92,148 C86,144 85,137 79,138"/><path d="M90,100 C84,97 85,89 80,88"/><path d="M93,52 C88,49 88,43 83,44"/><path d="M-2,2 C10,8 18,3 28,10 S40,6 48,13"/><path d="M102,2 C90,9 82,3 72,11 S60,7 52,14"/></svg><div class="w-webs"><i>🕸️</i><i>🕸️</i></div><canvas id="wfx"></canvas><div class="w-shade"></div></div>
+<div id="piles" aria-hidden="true"></div>
+<canvas id="ffx" aria-hidden="true"></canvas>
 <div id="app" aria-live="polite"></div>
 <div class="veil" id="veil"></div>
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Title details"></section>
@@ -1501,19 +1592,12 @@ async function analyse(src) {
   return {bgH, bgS: dw ? ds / dw : .2, accH: accH ?? (bgH + 180) % 360, accS: acc ? acc.s / acc.w : .7,
           acc2H: acc2 ? hue(acc2.cx, acc2.cy) : ((accH ?? bgH) + 40) % 360};
 }
-function makePalette(p) {
-  const bs = clamp(.16 + p.bgS * .45, .14, .42);
+function makePalette(p, hint) {
+  p = Object.assign({}, p, hint || {});
+  const bs = clamp((.16 + p.bgS * .45) * (p.satMul ?? 1), .04, .45);
   return {bg: hsl2hex(p.bgH, bs, .07), s1: hsl2hex(p.bgH, bs * .9, .11), s2: hsl2hex(p.bgH, bs * .85, .155), s3: hsl2hex(p.bgH, bs * .8, .205),
-          text: hsl2hex(p.bgH, .3, .95), muted: hsl2hex(p.bgH, .16, .7), accent: hsl2hex(p.accH, clamp(p.accS, .62, .92), .64),
+          text: hsl2hex(p.bgH, .3 * (p.satMul ?? 1), .95), muted: hsl2hex(p.bgH, .16, .7), accent: hsl2hex(p.accH, clamp(p.accS, .3, .95), p.accL ?? .64),
           accent2: hsl2hex(p.acc2H, .72, .62), onAccent: hsl2hex(p.accH, .55, .1), hot: "#FF4D5E"};
-}
-function fxFor(genres) {
-  const g = genres.join(" ").toLowerCase();
-  if (/horror|thriller|mystery|crime|supernatural|suspense/.test(g)) return "embers";
-  if (/sci-?fi|science|space|dystopia/.test(g)) return "stars";
-  if (/action|war|adventure|history|epic|sport|racing|martial|heist/.test(g)) return "sparks";
-  if (/anim|fantasy|family|kids|music|myth/.test(g)) return "sparkle";
-  return "bokeh";
 }
 async function tmdbRef(it) {
   if (it.tmdb) return it.tmdb;
@@ -1527,42 +1611,6 @@ async function tmdbRef(it) {
     const best = ok.find(r => same(r) && (!it.year || Math.abs(yr(r) - it.year) <= 1)) || ok.find(same);
     return best ? {type: best.media_type, id: best.id} : null;
   } catch (e) { return null; }
-}
-async function themeFrom(it, srcEl) {
-  if (!it || TT.busy) return;
-  TT.busy = true;
-  const flash = themeFlash(it, srcEl);
-  let genres = (it.genres || []).slice(), backs = [], tposter = it.tmdbPoster || "";
-  const ref = await tmdbRef(it);
-  if (ref) {
-    try {
-      const [det, imgs] = await Promise.all([tget(`/${ref.type}/${ref.id}`, {}),
-        tget(`/${ref.type}/${ref.id}/images`, {include_image_language: "null,en"}).catch(() => ({}))]);
-      genres = (det.genres || []).map(g => g.name).concat(genres);
-      backs = (imgs.backdrops || []).filter(b => b.width >= 1000).sort((a, b) => (a.iso_639_1 ? 1 : 0) - (b.iso_639_1 ? 1 : 0) || b.vote_average - a.vote_average)
-        .slice(0, 3).map(b => b.file_path);
-      if (!backs.length && det.backdrop_path) backs = [det.backdrop_path];
-      tposter = tposter || det.poster_path || "";
-    } catch (e) { /* poster-only theme */ }
-  }
-  const img = (p, w) => `https://image.tmdb.org/t/p/${w}${p}`;
-  const far = backs[0] ? img(backs[0], "w1280") : hasPoster(it) ? posterURL(it, "s592") : "";
-  const near = backs[1] ? img(backs[1], "w780") : backs[0] ? img(backs[0], "w780") : far;
-  let pal = null;
-  for (const src of [backs[0] && img(backs[0], "w300"), tposter && img(tposter, "w185"), hasPoster(it) && posterURL(it, "s166")].filter(Boolean)) {
-    try { pal = makePalette(await analyse(src)); break; } catch (e) { /* try the next image */ }
-  }
-  if (!pal) { const [h] = rgb2hsl(...[1, 3, 5].map(i => parseInt(tintOf(it).slice(i, i + 2), 16) / 255 || .5)); pal = makePalette({bgH: h, bgS: .3, accH: h, accS: .75, acc2H: (h + 40) % 360}); }
-  const theme = {id: it.id, title: it.title, year: it.year || "", poster: tposter ? img(tposter, "w185") : hasPoster(it) ? posterURL(it, "s166") : "",
-                 far, near, pal, fx: fxFor(genres), genres: genres.slice(0, 3), at: Date.now()};
-  TT.cur = theme; store.set("titleTheme", theme);
-  const rec = store.get("themeRecent", []).filter(t => t.id !== theme.id);
-  store.set("themeRecent", [theme].concat(rec).slice(0, 10));
-  await flash;
-  applyTitle(theme, true);
-  TT.busy = false;
-  closeThemer();
-  toast(`VibeSync is now ${theme.title} ✨`);
 }
 /* cinematic hand-off: the poster flies to the centre, its colours flood the screen, then the new UI fades in */
 function themeFlash(it, srcEl) {
@@ -1583,30 +1631,6 @@ function themeFlash(it, srcEl) {
     setTimeout(() => { f.classList.add("out"); setTimeout(() => f.remove(), 700); }, 1500);
   });
 }
-const VARS = ["--bg", "--s1", "--s2", "--s3", "--text", "--muted", "--accent", "--on-tint", "--line", "--glass", "--tint", "--accent2"];
-function applyTitle(theme, tell) {
-  const root = document.documentElement;
-  if (!theme) {
-    VARS.forEach(v => root.style.removeProperty(v));
-    root.classList.remove("titled"); stopFx();
-    $("#wfar").style.backgroundImage = $("#wnear").style.backgroundImage = "";
-  } else {
-    const p = theme.pal;
-    Object.entries({"--bg": p.bg, "--s1": p.s1, "--s2": p.s2, "--s3": p.s3, "--text": p.text, "--muted": p.muted, "--accent": p.accent,
-      "--accent2": p.accent2, "--on-tint": p.onAccent, "--tint": p.accent, "--line": `color-mix(in srgb,${p.text} 9%,transparent)`,
-      "--glass": `color-mix(in srgb,${p.bg} 74%,transparent)`}).forEach(([k, v]) => root.style.setProperty(k, v));
-    root.classList.add("titled");
-    $("#wfar").style.backgroundImage = theme.far ? `url('${theme.far}')` : "";
-    $("#wnear").style.backgroundImage = theme.near ? `url('${theme.near}')` : "";
-    startFx(theme.fx, p);
-  }
-  themeBtn();
-  if (tell) {
-    const p = theme && theme.pal;
-    send("streamlit:setComponentValue", {value: {theme: "cinema", n: Date.now(), palette: p ? {bg: p.bg, s1: p.s1, s2: p.s2, text: p.text, muted: p.muted,
-      accent: p.accent, on_accent: p.onAccent, hot: p.hot} : null}, dataType: "json"});
-  }
-}
 function themeBtn() {
   const b = $("[data-theme-btn]"); if (!b) return;
   b.innerHTML = TT.cur && TT.cur.poster ? `<img class="tthumb" src="${esc(TT.cur.poster)}" alt="">` : ICON.palette;
@@ -1620,70 +1644,6 @@ addEventListener("deviceorientation", e => {
   W.gx = clamp(e.gamma / 25, -1, 1); W.gy = clamp(((e.beta || 45) - 45) / 25, -1, 1);
 }, true);
 addEventListener("pointermove", e => { if (e.pointerType === "mouse") { W.gx = (e.clientX / innerWidth - .5) * 2; W.gy = (e.clientY / innerHeight - .5) * 2; } }, {passive: true});
-function stopFx() { cancelAnimationFrame(W.raf); W.raf = 0; const cv = $("#wfx"); if (cv) cv.getContext("2d").clearRect(0, 0, cv.width, cv.height); }
-function startFx(kind, pal) {
-  stopFx();
-  const cv = $("#wfx"); if (!cv) return;
-  const ctx = cv.getContext("2d"), dpr = Math.min(1.5, devicePixelRatio || 1);
-  const fit = () => { cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; };
-  fit(); if (!W.fitted) { addEventListener("resize", () => { if (W.raf) fit(); }); W.fitted = true; }
-  W.kind = kind; W.pal = pal;
-  const N = {embers: 64, stars: 120, sparkle: 56, sparks: 60, bokeh: 22}[kind] || 40;
-  const cols = [pal.accent, pal.accent2, pal.text];
-  const mk = born => ({x: Math.random() * cv.width, y: born ? Math.random() * cv.height : cv.height + 20 * dpr, z: .3 + Math.random() * .7,
-    r: (kind === "bokeh" ? 16 + Math.random() * 46 : 1 + Math.random() * 2.4) * dpr, t: Math.random() * 6.3,
-    c: cols[Math.random() < .7 ? 0 : Math.random() < .5 ? 1 : 2], sx: Math.random() * 2 - 1, sy: Math.random() * 2 - 1, life: Math.random()});
-  W.parts = Array.from({length: N}, () => mk(true));
-  const step = () => {
-    W.raf = requestAnimationFrame(step);
-    W.tx += (W.gx - W.tx) * .06; W.ty += (W.gy - W.ty) * .06;               // smooth the tilt
-    const root = document.documentElement.style;
-    root.setProperty("--px", (W.tx * 16).toFixed(2) + "px"); root.setProperty("--py", (W.ty * 12).toFixed(2) + "px");
-    if (document.hidden || REDUCED) return;
-    const w = cv.width, h = cv.height, cx = w / 2, cy = h / 2, ox = W.tx * 24 * dpr, oy = W.ty * 18 * dpr;
-    ctx.clearRect(0, 0, w, h);
-    ctx.globalCompositeOperation = "lighter";
-    for (const p of W.parts) {
-      p.t += .02;
-      if (kind === "stars") {                                     // fly through a star field
-        p.z -= .0035; if (p.z <= .05) Object.assign(p, mk(true), {z: 1});
-        const k = .35 / p.z, x = cx + (p.x - cx) * k + ox * (1 - p.z), y = cy + (p.y - cy) * k + oy * (1 - p.z);
-        if (x < 0 || x > w || y < 0 || y > h) { p.z = 1; continue; }
-        ctx.globalAlpha = clamp((1 - p.z) * 1.3, 0, .9); ctx.fillStyle = p.c;
-        ctx.beginPath(); ctx.arc(x, y, p.r * (1.2 - p.z), 0, 6.3); ctx.fill();
-        continue;
-      }
-      if (kind === "embers") { p.y -= (.35 + p.z * .8) * dpr; p.x += Math.sin(p.t) * .5 * dpr; }
-      else if (kind === "sparks") { p.y -= (1.4 + p.z * 2.2) * dpr; p.x += (.6 + p.sx) * dpr; }
-      else if (kind === "sparkle") { p.y += (.25 + p.z * .35) * dpr; p.x += Math.sin(p.t * .7) * .3 * dpr; }
-      else { p.y -= (.12 + p.z * .2) * dpr; p.x += p.sx * .15 * dpr; }
-      if (p.y < -60 * dpr || p.y > h + 60 * dpr || p.x < -80 * dpr || p.x > w + 80 * dpr) {
-        Object.assign(p, mk(false)); if (kind === "sparkle") p.y = -20 * dpr;
-      }
-      const x = p.x + ox * p.z, y = p.y + oy * p.z;
-      if (kind === "sparks") {
-        ctx.globalAlpha = .55 * p.z; ctx.strokeStyle = p.c; ctx.lineWidth = p.r * .7;
-        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - (.6 + p.sx) * 6 * dpr, y + (1.4 + p.z * 2.2) * 6 * dpr); ctx.stroke();
-      } else if (kind === "sparkle") {
-        const a = (Math.sin(p.t * 2.2) + 1) / 2, s = p.r * (1.5 + a * 2.5);
-        ctx.globalAlpha = .25 + a * .6; ctx.fillStyle = p.c;
-        ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * .22, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s * .22, y); ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x, y + s * .22); ctx.lineTo(x + s, y); ctx.lineTo(x, y - s * .22); ctx.closePath(); ctx.fill();
-      } else if (kind === "bokeh") {
-        const g = ctx.createRadialGradient(x, y, 0, x, y, p.r);
-        g.addColorStop(0, p.c); g.addColorStop(1, "transparent");
-        ctx.globalAlpha = .1 + .08 * Math.sin(p.t); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, p.r, 0, 6.3); ctx.fill();
-      } else {                                                      // embers: glowing, flickering
-        ctx.globalAlpha = (.35 + .4 * Math.abs(Math.sin(p.t * 1.7))) * p.z; ctx.fillStyle = p.c;
-        ctx.beginPath(); ctx.arc(x, y, p.r, 0, 6.3); ctx.fill();
-        ctx.globalAlpha *= .25; ctx.beginPath(); ctx.arc(x, y, p.r * 3.2, 0, 6.3); ctx.fill();
-      }
-    }
-    ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
-  };
-  step();
-}
-
 /* theme search screen */
 function openThemer() {
   const s = $("#themer");
@@ -1701,7 +1661,7 @@ function renderThemer(q) {
   q = q.trim().toLowerCase();
   const cur = TT.cur;
   const head = `<div class="tcur">${cur ? `<img src="${esc(cur.poster)}" alt=""><div><small>Current theme</small><b>${esc(cur.title)}</b>
-      <span class="tfx">${{embers: "🔥 Embers", stars: "✨ Star field", sparks: "⚡ Sparks", sparkle: "💫 Sparkle", bokeh: "🫧 Glow"}[cur.fx] || ""}</span></div>
+      <span class="tfx">${esc((PACKS[cur.world] || PACKS[chooseWorld(cur.title, [], "", cur.genres || [])]).label)}</span></div>
       <button class="btn soft" data-tdefault>Default look</button>` : `<div class="tcur-i">🎨</div><div><small>Current theme</small><b>Midnight show (default)</b>
       <span class="tfx">Search any movie or series to theme the whole app after it</span></div>`}</div>`;
   if (!q) {
@@ -1729,6 +1689,395 @@ function renderThemer(q) {
     if (!box || !input || input.value.trim().toLowerCase() !== q) return;
     box.innerHTML = more.length ? section("More titles", "Any of these works") + `<div class="grid">${more.map(tcard).join("")}</div>` : "";
   }, 320);
+}
+
+/* ───────────── Title worlds ─────────────
+   A "world" is everything a title theme changes beyond colour: particle emitters (rain, money, spores,
+   snow, bats, lightning...), whole-app treatments (flipped mirror world, vines, fairy lights, rain on the
+   posters, snow on the cards, fog, neon grid, waves), decorations that sit on the app's own titles,
+   piles of props at the edges, and a display font. Famous titles have signature worlds; every other
+   title gets one inferred from its TMDB keywords, overview and genres. */
+const FONTS = {
+  serif:  ["Playfair Display", "Playfair+Display:wght@800;900"], gothic: ["Cinzel Decorative", "Cinzel+Decorative:wght@700;900"],
+  type:   ["Special Elite", "Special+Elite"], royal: ["Cinzel", "Cinzel:wght@700;900"], bebas: ["Bebas Neue", "Bebas+Neue"],
+  orbit:  ["Orbitron", "Orbitron:wght@700;900"], pirate: ["Pirata One", "Pirata+One"], cute: ["Fredoka", "Fredoka:wght@600;700"],
+  hand:   ["Caveat", "Caveat:wght@700"], mono: ["IBM Plex Mono", "IBM+Plex+Mono:wght@600;700"], creep: ["Creepster", "Creepster"],
+  script: ["Playfair Display", "Playfair+Display:ital,wght@1,800"], exo: ["Exo 2", "Exo+2:wght@800;900"]
+};
+const E = (g, n, m, s, extra) => Object.assign({t: "emoji", g, n, m, s}, extra || {});
+const PACKS = {
+  upside:   {label: "🔦 The Upside Down", ui: "pk-upside pk-vines pk-lights pk-flicker", font: "serif", hint: {accH: 357, accS: .92, bgH: 230, bgS: .5},
+             fx: [{t: "dots", style: "spores", n: 110}, {t: "lightning", color: "#ff2b2b", every: [5, 10]}]},
+  wednesday:{label: "🌧️ Gothic rain", ui: "pk-rain pk-webs", font: "gothic", deco: "🕸️", deco2: "🦇", hint: {satMul: .2, accH: 275, accS: .3, accL: .72},
+             fx: [{t: "rain", n: 190}, {t: "lightning", color: "#ece8ff", every: [6, 12]}, E(["🦇"], 4, "fly", [16, 30])]},
+  breakingbad:{label: "💵 Cook money", ui: "pk-money pk-dust", font: "type", deco: "💵", deco2: "💎", piles: ["💰", "🧪", "💵", "💎"], hint: {accH: 192, accS: .85, acc2H: 52},
+             fx: [E(["💵"], 18, "flutter", [24, 42]), E(["💎"], 9, "float", [12, 22]), {t: "dots", style: "dust", n: 40}]},
+  heist:    {label: "💰 The heist", ui: "pk-money", font: "bebas", deco: "💰", deco2: "💵", piles: ["💰", "💵", "🪙"], hint: {accH: 356, accS: .85},
+             fx: [E(["💵", "💸"], 22, "flutter", [24, 40]), E(["🪙"], 8, "fall", [14, 22])]},
+  stocks:   {label: "📈 Market fever", ui: "pk-money", font: "mono", deco: "📈", deco2: "💵", piles: ["💰", "📈"], hint: {accH: 140, accS: .7},
+             fx: [{t: "text", g: ["▲ +4.2%", "▼ −1.8%", "₹", "+12%", "▲ +0.9%", "▼ −3.1%", "₹₹₹"], n: 26}, E(["💵"], 8, "flutter", [20, 32])]},
+  squid:    {label: "◯ △ ▢ The game", ui: "pk-squid", font: "bebas", deco: "△", hint: {accH: 336, accS: .88, acc2H: 168},
+             fx: [{t: "shapes", n: 26}]},
+  got:      {label: "❄️ Winter is here", ui: "pk-snow", font: "royal", deco: "❄️", hint: {bgH: 214, accH: 202, accS: .55, accL: .7},
+             fx: [{t: "dots", style: "snow", n: 150}, {t: "dots", style: "embers", n: 14}]},
+  dragon:   {label: "🐉 Fire and blood", ui: "pk-fire", font: "royal", deco: "🔥", deco2: "🐉", hint: {accH: 12, accS: .9},
+             fx: [{t: "dots", style: "embers", n: 90}, {t: "dots", style: "sparks", n: 30}, E(["🐉"], 1, "fly", [60, 80])]},
+  spores:   {label: "🍄 Infected", ui: "pk-vines pk-moss pk-fog", font: "bebas", deco: "🍄", hint: {accH: 72, satMul: .55, accS: .6},
+             fx: [{t: "dots", style: "spores", n: 90, color: "#d9e6a0"}, {t: "dots", style: "dust", n: 30}]},
+  space:    {label: "🪐 Deep space", ui: "", font: "exo", deco: "🪐", deco2: "✨",
+             fx: [{t: "dots", style: "stars", n: 150}, E(["🪐"], 2, "float", [34, 56]), {t: "comet", n: 1}]},
+  neon:     {label: "⚡ Neon city", ui: "pk-neon", font: "orbit", deco: "⚡", hint: {accH: 312, accS: .95, acc2H: 188},
+             fx: [{t: "dots", style: "sparks", n: 40}, {t: "dots", style: "bokeh", n: 16}]},
+  ocean:    {label: "🌊 High seas", ui: "pk-ocean", font: "pirate", deco: "🌊", deco2: "⚓", hint: {accH: 196, accS: .75},
+             fx: [{t: "bubbles", n: 46}, E(["🐚", "⭐"], 4, "float", [14, 22])]},
+  leaves:   {label: "🍃 Hidden village", ui: "", deco: "🍃", fx: [E(["🍃", "🍂"], 26, "swirl", [16, 28])]},
+  slayer:   {label: "🌸 Wisteria & flame", ui: "", font: "royal", deco: "🌸", hint: {acc2H: 280},
+             fx: [E(["🌸"], 22, "swirl", [14, 24]), {t: "dots", style: "embers", n: 30}]},
+  cursed:   {label: "🌀 Cursed energy", ui: "pk-fog", font: "bebas", deco: "🌀", hint: {accH: 268, accS: .85},
+             fx: [{t: "dots", style: "sparks", n: 50}, {t: "dots", style: "bokeh", n: 18}]},
+  royal:    {label: "👑 Epic kingdom", ui: "pk-mist", font: "royal", deco: "👑", deco2: "⚔️", hint: {acc2H: 44},
+             fx: [{t: "dots", style: "golddust", n: 70}, {t: "dots", style: "sparks", n: 18}]},
+  fire:     {label: "🔥 Inferno", ui: "pk-fire", font: "bebas", deco: "🔥", fx: [{t: "dots", style: "embers", n: 100}, {t: "dots", style: "sparks", n: 24}]},
+  war:      {label: "💥 Warfront", ui: "pk-fog", font: "bebas", deco: "💥", fx: [{t: "dots", style: "sparks", n: 40}, {t: "dots", style: "ash", n: 60}]},
+  office:   {label: "🔢 The office floor", ui: "pk-grid", font: "mono", deco: "📎", hint: {accH: 175, satMul: .5},
+             fx: [{t: "text", g: ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], n: 60}]},
+  football: {label: "⚽ Matchday", ui: "", font: "bebas", deco: "⚽", fx: [E(["⚽"], 9, "float", [18, 34]), {t: "dots", style: "confetti", n: 30}]},
+  cricket:  {label: "🏏 Stadium lights", ui: "pk-stage", font: "bebas", deco: "🏏", fx: [E(["🏏", "🏆"], 6, "float", [18, 30]), {t: "dots", style: "confetti", n: 30}]},
+  racing:   {label: "🏁 Full throttle", ui: "", font: "bebas", deco: "🏁", fx: [{t: "speed", n: 40}, {t: "dots", style: "sparks", n: 20}]},
+  comet:    {label: "☄️ Falling comet", ui: "", deco: "☄️", fx: [{t: "dots", style: "stars", n: 70}, {t: "comet", n: 3}]},
+  cute:     {label: "⭐ Pocket gadgets", ui: "", font: "cute", deco: "⭐", deco2: "🎈",
+             fx: [{t: "bubbles", n: 26}, E(["⭐", "🎈", "☁️"], 10, "float", [16, 30])]},
+  school:   {label: "✏️ Exam season", ui: "pk-grid", font: "hand", deco: "✏️", deco2: "📚",
+             fx: [{t: "text", g: ["E = mc²", "∫ dx", "π", "Δv", "x²+y²", "√2", "ΣF = ma", "sin θ", "H₂O", "log n"], n: 24}]},
+  hearts:   {label: "💕 Love story", ui: "", font: "script", deco: "💕", fx: [E(["💕", "💗"], 14, "rise", [14, 26]), {t: "dots", style: "bokeh", n: 14}]},
+  music:    {label: "🎵 On stage", ui: "pk-stage", font: "bebas", deco: "🎵", fx: [E(["🎵", "🎶"], 14, "float", [16, 28]), {t: "dots", style: "sparkle", n: 30}]},
+  ghost:    {label: "👻 Haunted", ui: "pk-fog pk-flicker", font: "creep", deco: "👻", hint: {satMul: .45},
+             fx: [E(["👻"], 3, "float", [26, 40], {alpha: .35}), {t: "dots", style: "ash", n: 50}, {t: "lightning", color: "#ffffff", every: [9, 16]}]},
+  magic:    {label: "✨ Spellbound", ui: "", font: "royal", deco: "✨", fx: [{t: "dots", style: "sparkle", n: 60}, E(["✨"], 8, "float", [14, 22])]},
+  stage:    {label: "🎤 Live on stage", ui: "pk-stage", font: "bebas", deco: "🎤", fx: [{t: "dots", style: "confetti", n: 60}, {t: "dots", style: "sparkle", n: 20}]},
+  desert:   {label: "🌵 Desert heat", ui: "pk-dust", font: "type", deco: "🌵", hint: {accH: 38}, fx: [{t: "dots", style: "dust", n: 90}]},
+  rain:     {label: "🌧️ Noir rain", ui: "pk-rain", font: "type", deco: "🌧️", hint: {satMul: .5},
+             fx: [{t: "rain", n: 170}, {t: "lightning", color: "#ffffff", every: [8, 15]}]},
+  smoke:    {label: "🚬 Smoke and rain", ui: "pk-rain pk-fog", font: "type", deco: "🎩", hint: {satMul: .4, accH: 30},
+             fx: [{t: "rain", n: 120}, {t: "dots", style: "embers", n: 20}]},
+  sparks:   {label: "⚡ Action", ui: "", font: "bebas", deco: "⚡", fx: [{t: "dots", style: "sparks", n: 70}]},
+  glow:     {label: "🫧 Soft glow", ui: "", deco: "", fx: [{t: "dots", style: "bokeh", n: 24}]}
+};
+// Signature worlds for well-known titles (matched on the start of the title, spelling-insensitive)
+const SIGNATURE = [
+  ["Stranger Things", "upside"], ["Wednesday", "wednesday"], ["Breaking Bad", "breakingbad"], ["Better Call Saul", "breakingbad"], ["El Camino", "breakingbad"],
+  ["Money Heist", "heist"], ["La Casa de Papel", "heist"], ["Scam 1992", "stocks"], ["Scam 2003", "stocks"], ["Lucky Baskhar", "stocks"], ["The Wolf of Wall Street", "stocks"],
+  ["Squid Game", "squid"], ["Alice in Borderland", "squid"], ["Game of Thrones", "got"], ["House of the Dragon", "dragon"], ["The Last of Us", "spores"],
+  ["Interstellar", "space"], ["Kalki", "space"], ["Dune", "desert"], ["Arcane", "neon"], ["Cyberpunk", "neon"], ["One Piece", "ocean"], ["Naruto", "leaves"],
+  ["Boruto", "leaves"], ["Demon Slayer", "slayer"], ["Jujutsu Kaisen", "cursed"], ["Chainsaw Man", "fire"], ["Solo Leveling", "cursed"], ["Baahubali", "royal"],
+  ["Bāhubali", "royal"], ["RRR", "fire"], ["Magadheera", "royal"], ["Pushpa", "fire"], ["Salaar", "war"], ["KGF", "war"], ["K.G.F", "war"], ["Kantara", "fire"],
+  ["Severance", "office"], ["Silo", "desert"], ["Ted Lasso", "football"], ["Blue Lock", "football"], ["Haikyu", "music"], ["F1", "racing"], ["Formula 1", "racing"],
+  ["Your Name", "comet"], ["Suzume", "comet"], ["Spirited Away", "magic"], ["Doraemon", "cute"], ["Stand by Me Doraemon", "cute"], ["Spy x Family", "cute"],
+  ["Peaky Blinders", "smoke"], ["The Boys", "fire"], ["Kota Factory", "school"], ["Aspirants", "school"], ["12th Fail", "school"], ["Panchayat", "leaves"],
+  ["Frieren", "magic"], ["Harry Potter", "magic"], ["Bigg Boss", "stage"], ["BB Jodi", "stage"], ["Shark Tank", "stocks"], ["The Dark Knight", "rain"],
+  ["Sita Ramam", "hearts"], ["Hi Nanna", "hearts"], ["Mirzapur", "war"], ["Paatal Lok", "rain"], ["The Family Man", "war"], ["Attack on Titan", "war"],
+  ["Death Note", "rain"], ["Dark", "rain"], ["Titanic", "ocean"], ["Avatar", "ocean"], ["Spider-Man", "neon"], ["Mirai", "magic"], ["HanuMan", "magic"]
+];
+// Keyword inference for every other title: [world, weight, pattern]
+const CLUES = [
+  ["upside", 3, /parallel (world|dimension|universe)|alternate dimension|other dimension|portal to|telekinesis/],
+  ["wednesday", 3, /boarding school.*(supernatural|outcast)|addams|gothic|goth\b/], ["rain", 1, /\brain\b|storm|noir|detective|serial killer|investigat|murder mystery|psychic|police/],
+  ["breakingbad", 3, /methamphetamine|drug lord|drug cartel|drug dealer|narco|cartel/], ["heist", 3, /heist|bank robbery|robbery|casino|counterfeit|smuggling|theft/],
+  ["stocks", 3, /stock market|stock broker|wall street|scam|fraud|financial crisis|banker|startup|entrepreneur|business/],
+  ["squid", 3, /survival game|death game|deadly game|battle royale|game show.*death/], ["got", 2, /\bsnow\b|winter|ice age|arctic|frozen|christmas|antarctic/],
+  ["dragon", 3, /dragon/], ["spores", 3, /zombie|infected|pandemic|virus|outbreak|fungus|post-apocalyptic|apocalypse/],
+  ["space", 2, /outer space|astronaut|space station|spaceship|spacecraft|planet|galaxy|alien|wormhole|black hole|space travel/],
+  ["neon", 2, /cyberpunk|dystopi|neon|virtual reality|hacker|artificial intelligence|android|robot|1980s|synth/],
+  ["ocean", 2, /pirate|ocean|\bsea\b|sailor|ship|island|underwater|shark|navy|submarine|beach/], ["leaves", 2, /ninja|forest|village|jungle|rural|farm|countryside|nature/],
+  ["slayer", 2, /samurai|demon hunter|swordsman|katana|feudal japan/], ["cursed", 2, /curse|sorcer|exorcis|shaman|spirit energy|demon/],
+  ["royal", 2, /\bking\b|kingdom|empire|throne|warrior|mythology|princess|prince|palace|epic|dynasty|ancient/],
+  ["fire", 2, /\bfire\b|volcano|hell|revenge|rebellion|riot|smuggler/], ["war", 2, /\bwar\b|soldier|army|military|battle|revolution|freedom fighter|terroris|mafia|gangster|gang war/],
+  ["office", 2, /office|corporate|workplace|employee|memory loss/], ["football", 3, /football|soccer|premier league|fifa/],
+  ["cricket", 3, /cricket|\bipl\b|world cup/], ["racing", 3, /racing|race car|formula (1|one)|street race|motorsport|car chase/],
+  ["comet", 3, /comet|meteor|time travel|body swap/], ["cute", 2, /robot cat|children|kids|family film|talking animal|spy family|toddler|puppy|kitten/],
+  ["school", 2, /exam|student|coaching|entrance exam|college|teacher|engineering|education|upsc|iit/], ["hearts", 2, /love|romance|romantic|wedding|marriage|first love|couple/],
+  ["music", 2, /musician|singer|band\b|concert|musical|dance|rapper|music/], ["ghost", 3, /ghost|haunted|paranormal|possession|exorcism|witch|horror/],
+  ["magic", 2, /magic|wizard|witchcraft|spell|fairy|sorcerer|superpower|enchant/], ["stage", 2, /reality show|talent show|competition|contest|game show/],
+  ["desert", 2, /desert|western|cowboy|new mexico|sand/], ["smoke", 2, /1920s|1930s|bootleg|prohibition/]
+];
+const GENRE_WORLD = [[/horror/, "ghost"], [/thriller|crime|mystery/, "rain"], [/sci-?fi|science/, "space"], [/war|action|adventure/, "sparks"],
+                     [/anim/, "cute"], [/fantasy/, "magic"], [/romance/, "hearts"], [/music/, "music"], [/reality/, "stage"], [/western/, "desert"], [/documentary/, "office"]];
+function chooseWorld(title, keywords, overview, genres) {
+  const tk = twinKey(title), nk = norm(title), head = norm(String(title).split(":")[0]);
+  const sig = SIGNATURE.find(([t]) => {                 // short names (RRR, Dark, F1, Silo) must match exactly
+    const k = twinKey(t), n = norm(t);
+    return k === tk || n === nk || n === head || (n.length >= 5 && k.length >= 5 && (nk.startsWith(n) || tk.startsWith(k)));
+  });
+  if (sig) return sig[1];
+  const text = [keywords.join(" | "), overview, genres.join(" "), title].join(" | ").toLowerCase();
+  let best = null, top = 0;
+  for (const [w, weight, rx] of CLUES) {
+    const hits = (text.match(new RegExp(rx.source, "g")) || []).length;
+    const sc = hits * weight + (rx.test(keywords.join(" | ").toLowerCase()) ? weight : 0);   // keywords count double
+    if (sc > top) { top = sc; best = w; }
+  }
+  if (best && top >= 2) return best;
+  const g = genres.join(" ").toLowerCase();
+  const gw = GENRE_WORLD.find(([rx]) => rx.test(g));
+  return best || (gw ? gw[1] : "glow");
+}
+async function themeFrom(it, srcEl) {
+  if (!it || TT.busy) return;
+  TT.busy = true;
+  const flash = themeFlash(it, srcEl);
+  let genres = (it.genres || []).slice(), backs = [], tposter = it.tmdbPoster || "", keywords = [], overview = it.synopsis || "";
+  const ref = await tmdbRef(it);
+  if (ref) {
+    try {
+      const [det, imgs, kw] = await Promise.all([tget(`/${ref.type}/${ref.id}`, {}),
+        tget(`/${ref.type}/${ref.id}/images`, {include_image_language: "null,en"}).catch(() => ({})),
+        tget(`/${ref.type}/${ref.id}/keywords`, {}).catch(() => ({}))]);
+      genres = (det.genres || []).map(g => g.name).concat(genres);
+      overview = det.overview || overview;
+      keywords = (kw.keywords || kw.results || []).map(k => k.name);
+      backs = (imgs.backdrops || []).filter(b => b.width >= 1000).sort((a, b) => (a.iso_639_1 ? 1 : 0) - (b.iso_639_1 ? 1 : 0) || b.vote_average - a.vote_average)
+        .slice(0, 3).map(b => b.file_path);
+      if (!backs.length && det.backdrop_path) backs = [det.backdrop_path];
+      tposter = tposter || det.poster_path || "";
+    } catch (e) { /* poster-only theme */ }
+  }
+  const world = chooseWorld(it.title, keywords, overview, genres), pack = PACKS[world];
+  const img = (p, w) => `https://image.tmdb.org/t/p/${w}${p}`;
+  const far = backs[0] ? img(backs[0], "w1280") : hasPoster(it) ? posterURL(it, "s592") : "";
+  const near = backs[1] ? img(backs[1], "w780") : backs[0] ? img(backs[0], "w780") : far;
+  let base = null;
+  for (const src of [backs[0] && img(backs[0], "w300"), tposter && img(tposter, "w185"), hasPoster(it) && posterURL(it, "s166")].filter(Boolean)) {
+    try { base = await analyse(src); break; } catch (e) { /* try the next image */ }
+  }
+  if (!base) { const [h] = rgb2hsl(...[1, 3, 5].map(i => parseInt(tintOf(it).slice(i, i + 2), 16) / 255 || .5)); base = {bgH: h, bgS: .3, accH: h, accS: .75, acc2H: (h + 40) % 360}; }
+  const pal = makePalette(base, pack.hint);
+  const theme = {v: 2, id: it.id, title: it.title, year: it.year || "", poster: tposter ? img(tposter, "w185") : hasPoster(it) ? posterURL(it, "s166") : "",
+                 far, near, pal, world, at: Date.now()};
+  TT.cur = theme; store.set("titleTheme", theme);
+  const rec = store.get("themeRecent", []).filter(t => t.id !== theme.id);
+  store.set("themeRecent", [theme].concat(rec).slice(0, 10));
+  loadFont(pack.font);
+  await flash;
+  applyTitle(theme, true);
+  TT.busy = false;
+  closeThemer();
+  toast(`${pack.label.split(" ").slice(1).join(" ")}: VibeSync is now ${theme.title}`);
+}
+const fontLoaded = new Set();
+function loadFont(key) {
+  const f = FONTS[key]; if (!f || fontLoaded.has(key)) return;
+  fontLoaded.add(key);
+  const l = document.createElement("link"); l.rel = "stylesheet";
+  l.href = `https://fonts.googleapis.com/css2?family=${f[1]}&display=swap`; document.head.appendChild(l);
+}
+const VARS = ["--bg", "--s1", "--s2", "--s3", "--text", "--muted", "--accent", "--on-tint", "--line", "--glass", "--tint", "--accent2", "--deco", "--deco2", "--display"];
+const PILE_SPOTS = [["left:2%", "bottom:92px", -14], ["right:3%", "bottom:96px", 12], ["left:44%", "bottom:86px", -4], ["right:30%", "bottom:90px", 8]];
+function applyTitle(theme, tell) {
+  const root = document.documentElement;
+  root.className = root.className.split(" ").filter(c => c && !c.startsWith("pk-") && c !== "titled" && c !== "has-font").join(" ");
+  VARS.forEach(v => root.style.removeProperty(v));
+  stopWorld();
+  $("#piles").innerHTML = "";
+  if (!theme) {
+    $("#wfar").style.backgroundImage = $("#wnear").style.backgroundImage = "";
+  } else {
+    const p = theme.pal, world = PACKS[theme.world] ? theme.world : chooseWorld(theme.title, [], "", theme.genres || []), pack = PACKS[world];
+    Object.entries({"--bg": p.bg, "--s1": p.s1, "--s2": p.s2, "--s3": p.s3, "--text": p.text, "--muted": p.muted, "--accent": p.accent,
+      "--accent2": p.accent2, "--on-tint": p.onAccent, "--tint": p.accent, "--line": `color-mix(in srgb,${p.text} 9%,transparent)`,
+      "--glass": `color-mix(in srgb,${p.bg} 74%,transparent)`, "--deco": JSON.stringify(pack.deco || ""), "--deco2": JSON.stringify(pack.deco2 || pack.deco || "")})
+      .forEach(([k, v]) => root.style.setProperty(k, v));
+    if (pack.font && FONTS[pack.font]) { loadFont(pack.font); root.style.setProperty("--display", `"${FONTS[pack.font][0]}"`); root.classList.add("has-font"); }
+    root.classList.add("titled", "pk-" + world, ...(pack.ui || "").split(" ").filter(Boolean));
+    $("#wfar").style.backgroundImage = theme.far ? `url('${theme.far}')` : "";
+    $("#wnear").style.backgroundImage = theme.near ? `url('${theme.near}')` : "";
+    $("#piles").innerHTML = (pack.piles || []).map((g, i) => { const [x, y, r] = PILE_SPOTS[i % PILE_SPOTS.length];
+      return `<i style="${x};${y};--r:${r}deg;--d:${i * .7}s">${g}</i>`; }).join("");
+    startWorld(pack, p);
+  }
+  themeBtn();
+  if (tell) {
+    const p = theme && theme.pal;
+    send("streamlit:setComponentValue", {value: {theme: "cinema", n: Date.now(), palette: p ? {bg: p.bg, s1: p.s1, s2: p.s2, text: p.text, muted: p.muted,
+      accent: p.accent, on_accent: p.onAccent, hot: p.hot} : null}, dataType: "json"});
+  }
+}
+
+/* particle engine: several emitters per world, emoji sprites cached once, tilt parallax by depth */
+const SPR = {};
+function sprite(g) {
+  if (SPR[g]) return SPR[g];
+  const c = document.createElement("canvas"); c.width = c.height = 80;
+  const x = c.getContext("2d"); x.textAlign = "center"; x.textBaseline = "middle";
+  x.font = `64px "Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif`; x.fillText(g, 40, 44);
+  return (SPR[g] = c);
+}
+function stopWorld() { cancelAnimationFrame(W.raf); W.raf = 0; ["#wfx", "#ffx"].forEach(s => { const cv = $(s); if (cv) cv.getContext("2d").clearRect(0, 0, cv.width, cv.height); }); }
+function startWorld(pack, pal) {
+  const cv = $("#wfx"), fv = $("#ffx"); if (!cv || !fv) return;
+  // two layers: behind the UI (the world) and in front of it (things floating over the whole app)
+  const back = cv.getContext("2d"), front = fv.getContext("2d"), dpr = Math.min(1.5, devicePixelRatio || 1);
+  let ctx = back;
+  const fit = () => { [cv, fv].forEach(c => { c.width = innerWidth * dpr; c.height = innerHeight * dpr; }); };
+  fit(); if (!W.fitted) { addEventListener("resize", () => { if (W.raf) fit(); }); W.fitted = true; }
+  const cols = [pal.accent, pal.accent2, pal.text];
+  const R = (a, b) => a + Math.random() * (b - a);
+  const FRONT_DOTS = ["snow", "spores", "confetti", "embers"];
+  const emitters = pack.fx.map(f => Object.assign({}, f, {parts: [], next: f.every ? R(...f.every) * 60 : 0, flash: 0, bolt: null,
+    front: f.front ?? (f.t === "emoji" || f.t === "rain" || f.t === "lightning" || (f.t === "dots" && FRONT_DOTS.includes(f.style)))}));
+  const spawn = (f, born) => {
+    const w = cv.width, h = cv.height, z = R(.35, 1);
+    const p = {x: R(0, w), y: born ? R(0, h) : -40 * dpr, z, t: R(0, 6.3), rot: R(-.6, .6), vr: R(-.02, .02),
+               c: f.color || cols[Math.random() < .65 ? 0 : Math.random() < .5 ? 1 : 2], life: 0};
+    if (f.t === "emoji") {
+      p.g = sprite(f.g[Math.floor(Math.random() * f.g.length)]); p.size = R(...f.s) * dpr * (.6 + z * .5);
+      if (f.m === "rise") p.y = born ? R(0, h) : h + 40 * dpr;
+      if (f.m === "fly") { p.dir = Math.random() < .5 ? 1 : -1; p.x = p.dir > 0 ? -80 * dpr : w + 80 * dpr; p.y = R(h * .05, h * .6); if (born) p.x = R(0, w); }
+      if (f.m === "float") { p.vx = R(-.25, .25) * dpr; p.vy = R(-.2, .2) * dpr; }
+    } else if (f.t === "rain") { p.len = R(14, 30) * dpr * z; p.y = born ? R(0, h) : R(-h * .2, 0); }
+    else if (f.t === "text") { p.txt = f.g[Math.floor(Math.random() * f.g.length)]; p.size = R(12, 22) * dpr * (.6 + z * .5); p.vx = R(-.2, .2) * dpr; p.vy = R(-.35, -.1) * dpr; }
+    else if (f.t === "shapes") { p.k = Math.floor(R(0, 3)); p.size = R(14, 34) * dpr * z; p.vx = R(-.3, .3) * dpr; p.vy = R(-.3, .3) * dpr; }
+    else if (f.t === "bubbles") { p.y = born ? R(0, h) : h + 20 * dpr; p.r = R(3, 12) * dpr * z; }
+    else if (f.t === "speed") { p.len = R(60, 180) * dpr; p.y = R(0, h); p.x = born ? R(0, w) : w + p.len; }
+    else if (f.t === "comet") { p.x = R(w * .3, w * 1.1); p.y = R(-h * .3, h * .2); p.wait = R(0, 400); }
+    else {                                                     // dots
+      p.r = ({snow: R(1, 3.4), spores: R(.8, 2.6), dust: R(.6, 1.8), ash: R(.8, 2.2), golddust: R(.8, 2.2), confetti: R(3, 6), bokeh: R(16, 50)}[f.style] || R(1, 2.4)) * dpr;
+      if (f.style === "stars") { p.z = R(.05, 1); p.r = R(.8, 2) * dpr; }
+      if (["embers", "sparks", "spores", "golddust", "ash"].includes(f.style)) p.y = born ? R(0, h) : h + 20 * dpr;
+      if (f.style === "confetti") p.c = ["#ff5d7a", "#ffd166", "#5ee6b8", "#7cc4ff", "#c084fc"][Math.floor(R(0, 5))];
+    }
+    return p;
+  };
+  emitters.forEach(f => { if (f.n) f.parts = Array.from({length: f.n}, () => spawn(f, true)); });
+  const step = () => {
+    W.raf = requestAnimationFrame(step);
+    W.tx += (W.gx - W.tx) * .06; W.ty += (W.gy - W.ty) * .06;
+    const rs = document.documentElement.style;
+    rs.setProperty("--px", (W.tx * 16).toFixed(2) + "px"); rs.setProperty("--py", (W.ty * 12).toFixed(2) + "px");
+    if (document.hidden || REDUCED) return;
+    const w = cv.width, h = cv.height, ox = W.tx * 26 * dpr, oy = W.ty * 20 * dpr;
+    back.clearRect(0, 0, w, h); front.clearRect(0, 0, w, h);
+    for (const f of emitters) {
+      ctx = f.front ? front : back;
+      if (f.t === "lightning") {                                 // flash + jagged bolt, every few seconds
+        if (--f.next <= 0) {
+          f.next = R(...f.every) * 60; f.flash = 1;
+          let x = R(w * .15, w * .85), y = 0; f.bolt = [[x, y]];
+          while (y < h * R(.35, .65)) { x += R(-40, 40) * dpr; y += R(18, 46) * dpr; f.bolt.push([x, y]); }
+        }
+        if (f.flash > 0) {
+          ctx.globalCompositeOperation = "lighter";
+          ctx.globalAlpha = f.flash * .22; ctx.fillStyle = f.color; ctx.fillRect(0, 0, w, h);
+          if (f.flash > .55 && f.bolt) {
+            ctx.globalAlpha = f.flash; ctx.strokeStyle = f.color; ctx.lineWidth = 2.4 * dpr; ctx.shadowColor = f.color; ctx.shadowBlur = 18 * dpr;
+            ctx.beginPath(); f.bolt.forEach(([bx, by], i) => i ? ctx.lineTo(bx, by) : ctx.moveTo(bx, by)); ctx.stroke(); ctx.shadowBlur = 0;
+          }
+          f.flash -= .045; ctx.globalCompositeOperation = "source-over";
+        }
+        continue;
+      }
+      const glow = f.t === "dots" && !["confetti", "snow"].includes(f.style) || f.t === "comet" || f.t === "speed";
+      ctx.globalCompositeOperation = glow ? "lighter" : "source-over";
+      if (f.t === "rain") ctx.beginPath();                       // all rain in one stroke: cheap on phones
+      for (let i = 0; i < f.parts.length; i++) {
+        const p = f.parts[i]; p.t += .02;
+        let out = false;
+        if (f.t === "emoji") {
+          if (f.m === "flutter") { p.y += (.5 + p.z * .7) * dpr; p.x += Math.sin(p.t * 1.3) * 1.1 * dpr; p.rot += p.vr + Math.sin(p.t) * .01; }
+          else if (f.m === "fall") { p.y += (1.1 + p.z * 1.4) * dpr; p.rot += p.vr * 3; }
+          else if (f.m === "rise") { p.y -= (.45 + p.z * .6) * dpr; p.x += Math.sin(p.t) * .5 * dpr; }
+          else if (f.m === "swirl") { p.y += (.55 + p.z * .6) * dpr; p.x += Math.sin(p.t * 1.1) * 1.4 * dpr; p.rot += p.vr * 2; }
+          else if (f.m === "fly") { p.x += p.dir * (1.6 + p.z * 1.6) * dpr; p.y += Math.sin(p.t * 3) * 1.2 * dpr; }
+          else { p.x += p.vx + Math.sin(p.t * .7) * .25 * dpr; p.y += p.vy + Math.cos(p.t * .6) * .25 * dpr; p.rot = Math.sin(p.t * .5) * .25;
+                 if (p.x < -60 * dpr) p.x = w + 50 * dpr; if (p.x > w + 60 * dpr) p.x = -50 * dpr; if (p.y < -60 * dpr) p.y = h + 50 * dpr; if (p.y > h + 60 * dpr) p.y = -50 * dpr; }
+          out = p.y > h + 70 * dpr || p.y < -90 * dpr || p.x < -120 * dpr || p.x > w + 120 * dpr;
+          if (!out) {
+            const flip = f.m === "flutter" ? Math.cos(p.t * 2.2) : 1;              // banknotes turning in the air
+            ctx.save(); ctx.globalAlpha = (f.alpha ?? .92) * (.55 + p.z * .45) * (f.front ? .85 : 1);
+            ctx.translate(p.x + ox * p.z, p.y + oy * p.z); ctx.rotate(p.rot); ctx.scale(flip || .05, 1);
+            ctx.drawImage(p.g, -p.size / 2, -p.size / 2, p.size, p.size); ctx.restore();
+          }
+        } else if (f.t === "rain") {
+          p.y += (14 + p.z * 12) * dpr; p.x += 2.2 * dpr;
+          out = p.y > h + 30 * dpr;
+          ctx.moveTo(p.x + ox * p.z, p.y + oy * p.z); ctx.lineTo(p.x + ox * p.z - p.len * .16, p.y + oy * p.z - p.len);
+        } else if (f.t === "text") {
+          p.x += p.vx; p.y += p.vy; out = p.y < -40 * dpr;
+          ctx.globalAlpha = .18 + p.z * .35; ctx.fillStyle = /▼|−/.test(p.txt) ? "#ff6b7a" : /▲|\+/.test(p.txt) ? "#5ee6a0" : p.c;
+          ctx.font = `700 ${p.size}px ${FONTS.mono[0]}, monospace`; ctx.fillText(p.txt, p.x + ox * p.z, p.y + oy * p.z);
+        } else if (f.t === "shapes") {
+          p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+          if (p.x < -50 * dpr) p.x = w + 40 * dpr; if (p.x > w + 50 * dpr) p.x = -40 * dpr; if (p.y < -50 * dpr) p.y = h + 40 * dpr; if (p.y > h + 50 * dpr) p.y = -40 * dpr;
+          ctx.save(); ctx.translate(p.x + ox * p.z, p.y + oy * p.z); ctx.rotate(p.rot);
+          ctx.globalAlpha = .25 + p.z * .45; ctx.strokeStyle = i % 3 ? pal.accent : pal.accent2; ctx.lineWidth = 2.5 * dpr; ctx.beginPath();
+          const s = p.size;
+          if (p.k === 0) ctx.arc(0, 0, s / 2, 0, 6.3); else if (p.k === 1) { ctx.moveTo(0, -s / 2); ctx.lineTo(s / 2, s / 2.4); ctx.lineTo(-s / 2, s / 2.4); ctx.closePath(); }
+          else ctx.rect(-s / 2, -s / 2, s, s);
+          ctx.stroke(); ctx.restore();
+        } else if (f.t === "bubbles") {
+          p.y -= (.5 + p.z * .9) * dpr; p.x += Math.sin(p.t * 1.5) * .6 * dpr; out = p.y < -20 * dpr;
+          ctx.globalAlpha = .2 + p.z * .3; ctx.strokeStyle = pal.text; ctx.lineWidth = dpr;
+          ctx.beginPath(); ctx.arc(p.x + ox * p.z, p.y + oy * p.z, p.r, 0, 6.3); ctx.stroke();
+          ctx.globalAlpha *= .6; ctx.beginPath(); ctx.arc(p.x + ox * p.z - p.r * .35, p.y + oy * p.z - p.r * .35, p.r * .22, 0, 6.3); ctx.fillStyle = pal.text; ctx.fill();
+        } else if (f.t === "speed") {
+          p.x -= (18 + p.z * 22) * dpr; out = p.x < -p.len;
+          const g = ctx.createLinearGradient(p.x, 0, p.x + p.len, 0); g.addColorStop(0, "transparent"); g.addColorStop(1, p.c);
+          ctx.globalAlpha = .2 + p.z * .4; ctx.strokeStyle = g; ctx.lineWidth = (1 + p.z) * dpr;
+          ctx.beginPath(); ctx.moveTo(p.x, p.y + oy * p.z); ctx.lineTo(p.x + p.len, p.y + oy * p.z); ctx.stroke();
+        } else if (f.t === "comet") {
+          if (p.wait-- > 0) continue;
+          p.x -= 7 * dpr; p.y += 3.2 * dpr; out = p.x < -200 * dpr || p.y > h * .8;
+          const g = ctx.createLinearGradient(p.x, p.y, p.x + 160 * dpr, p.y - 72 * dpr); g.addColorStop(0, pal.text); g.addColorStop(1, "transparent");
+          ctx.globalAlpha = .85; ctx.strokeStyle = g; ctx.lineWidth = 2.2 * dpr;
+          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + 160 * dpr, p.y - 72 * dpr); ctx.stroke();
+          if (out) { Object.assign(p, spawn(f, false)); p.wait = R(200, 700); out = false; }
+        } else {                                               // dots
+          const st = f.style;
+          if (st === "stars") {
+            p.z -= .0035; if (p.z <= .05) { Object.assign(p, spawn(f, true)); p.z = 1; }
+            const cx = w / 2, cy = h / 2, k = .35 / p.z, x = cx + (p.x - cx) * k + ox * (1 - p.z), y = cy + (p.y - cy) * k + oy * (1 - p.z);
+            if (x < 0 || x > w || y < 0 || y > h) { p.z = 1; continue; }
+            ctx.globalAlpha = clamp((1 - p.z) * 1.3, 0, .9); ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(x, y, p.r * (1.3 - p.z), 0, 6.3); ctx.fill();
+            continue;
+          }
+          if (st === "snow") { p.y += (.6 + p.z * 1.1) * dpr; p.x += Math.sin(p.t) * .6 * dpr; out = p.y > h + 20 * dpr; }
+          else if (st === "spores") { p.y -= (.12 + p.z * .3) * dpr; p.x += Math.sin(p.t * .8 + i) * .35 * dpr; out = p.y < -20 * dpr; }
+          else if (st === "dust") { p.x += (.25 + p.z * .5) * dpr; p.y += Math.sin(p.t) * .2 * dpr; if (p.x > w + 10) p.x = -10; }
+          else if (st === "ash") { p.y -= (.2 + p.z * .35) * dpr; p.x += Math.sin(p.t * .6) * .4 * dpr; out = p.y < -20 * dpr; }
+          else if (st === "embers") { p.y -= (.35 + p.z * .8) * dpr; p.x += Math.sin(p.t) * .5 * dpr; out = p.y < -20 * dpr; }
+          else if (st === "golddust") { p.y -= (.2 + p.z * .4) * dpr; p.x += Math.sin(p.t * .5) * .5 * dpr; out = p.y < -20 * dpr; }
+          else if (st === "sparks") { p.y -= (1.4 + p.z * 2.2) * dpr; p.x += .7 * dpr; out = p.y < -20 * dpr || p.x > w + 20; }
+          else if (st === "sparkle") { p.y += (.25 + p.z * .35) * dpr; p.x += Math.sin(p.t * .7) * .3 * dpr; out = p.y > h + 20 * dpr; }
+          else if (st === "confetti") { p.y += (1 + p.z * 1.4) * dpr; p.x += Math.sin(p.t * 2) * .8 * dpr; p.rot += .06; out = p.y > h + 20 * dpr; }
+          else { p.y -= (.12 + p.z * .2) * dpr; p.x += Math.sin(p.t * .3) * .2 * dpr; out = p.y < -60 * dpr; }      // bokeh
+          if (out) { f.parts[i] = spawn(f, false); if (["embers", "sparks", "spores", "golddust", "ash", "bokeh"].includes(st)) f.parts[i].y = h + 20 * dpr; continue; }
+          const x = p.x + ox * p.z, y = p.y + oy * p.z;
+          if (st === "sparks") {
+            ctx.globalAlpha = .55 * p.z; ctx.strokeStyle = p.c; ctx.lineWidth = p.r * .7;
+            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 4 * dpr, y + (1.4 + p.z * 2.2) * 6 * dpr); ctx.stroke();
+          } else if (st === "sparkle") {
+            const a = (Math.sin(p.t * 2.2) + 1) / 2, s = p.r * (1.5 + a * 2.5);
+            ctx.globalAlpha = .25 + a * .6; ctx.fillStyle = p.c; ctx.beginPath();
+            ctx.moveTo(x, y - s); ctx.lineTo(x + s * .22, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s * .22, y); ctx.closePath();
+            ctx.moveTo(x - s, y); ctx.lineTo(x, y + s * .22); ctx.lineTo(x + s, y); ctx.lineTo(x, y - s * .22); ctx.closePath(); ctx.fill();
+          } else if (st === "confetti") {
+            ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot); ctx.globalAlpha = .75; ctx.fillStyle = p.c; ctx.fillRect(-p.r, -p.r * .45, p.r * 2, p.r * .9); ctx.restore();
+          } else if (st === "bokeh") {
+            const g = ctx.createRadialGradient(x, y, 0, x, y, p.r); g.addColorStop(0, p.c); g.addColorStop(1, "transparent");
+            ctx.globalAlpha = .1 + .08 * Math.sin(p.t); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, p.r, 0, 6.3); ctx.fill();
+          } else {
+            const col = st === "snow" ? "#ffffff" : st === "spores" ? (f.color || "#f3e9e4") : st === "ash" ? "#cfc8c4" : st === "golddust" ? "#ffd479" : st === "dust" ? "#f1d9a6" : p.c;
+            const a = st === "embers" ? (.35 + .4 * Math.abs(Math.sin(p.t * 1.7))) * p.z : st === "spores" ? (.35 + .35 * Math.sin(p.t + i)) * p.z + .15 : (.4 + .5 * p.z) * (st === "dust" ? .5 : 1);
+            ctx.globalAlpha = a; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, p.r, 0, 6.3); ctx.fill();
+            if (st === "embers" || st === "spores" || st === "golddust") { ctx.globalAlpha = a * .25; ctx.beginPath(); ctx.arc(x, y, p.r * 3.2, 0, 6.3); ctx.fill(); }
+          }
+        }
+        if (out) f.parts[i] = spawn(f, false);
+      }
+      if (f.t === "rain") { ctx.globalAlpha = .42; ctx.strokeStyle = pal.text; ctx.lineWidth = 1.1 * dpr; ctx.stroke(); }
+    }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+  };
+  step();
 }
 
 /* ───────────── TMDB live library (only when a key is configured) ─────────────
