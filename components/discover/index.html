@@ -452,16 +452,18 @@ img{display:block}
 .ytcard.searching .yt-v{background:radial-gradient(circle,var(--s2),#000)}
 .ytcard.searching .yt-v::after{content:"";position:absolute;inset:calc(50% - 16px);border-radius:50%;border:3px solid var(--line);border-top-color:var(--tint);animation:spin .9s linear infinite}
 .yt-h{min-width:0;display:flex;flex-direction:column;gap:6px;align-self:stretch;justify-content:center}
-.yt-k{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tint)}
+.yt-k{display:flex;align-items:center;gap:7px;min-width:0;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--tint)}
+.yt-kt{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .yt-t{font-size:15px;font-weight:800;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .yt-by{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .yt-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
-.yt-b{height:32px;padding:0 11px;border-radius:999px;background:var(--s2);font-size:12px;font-weight:800;white-space:nowrap}
+.yt-b{height:32px;padding:0 10px;border-radius:999px;background:var(--s2);font-size:12px;font-weight:800;white-space:nowrap}
 .yt-disc{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:#222 center/cover;box-shadow:0 0 0 2px var(--tint);animation:spin 6s linear infinite}
 .ytcard.min{grid-template-columns:minmax(0,1fr);padding:8px 10px}
 .ytcard.min .yt-v{width:0;height:0;position:absolute;visibility:hidden}
 .ytcard.min .yt-t{-webkit-line-clamp:1;font-size:13px}
-.ytcard.min .yt-by,.ytcard.min [data-ytnext]{display:none}
+.ytcard.min .yt-by,.ytcard.min [data-ytnext],.ytcard.min [data-ytviral]{display:none}
+.yt-b[aria-pressed="true"]{background:var(--tint);color:#fff}
 .ytcard.min .yt-h{flex-direction:row;align-items:center;flex-wrap:wrap}
 .ytcard.min .yt-k{flex:1 1 100%}
 .ytcard.min .yt-t{flex:1}
@@ -707,8 +709,8 @@ img{display:block}
 <div class="sndp" id="sndp" role="dialog" aria-label="Sound"></div>
 <div class="ytcard" id="ytcard" role="region" aria-label="Official soundtrack">
   <div class="yt-v"><div id="ytp"></div></div>
-  <div class="yt-h"><span class="yt-k"><span class="yt-disc" aria-hidden="true"></span>Official soundtrack</span><span class="yt-t"></span><span class="yt-by"></span>
-    <div class="yt-btns"><button class="yt-b" data-ytmin aria-label="Hide (pauses) or play the soundtrack">Hide</button><button class="yt-b" data-ytnext aria-label="Try another official track">⏭ Next</button>
+  <div class="yt-h"><span class="yt-k"><span class="yt-disc" aria-hidden="true"></span><span class="yt-kt">Official theme</span></span><span class="yt-t"></span><span class="yt-by"></span>
+    <div class="yt-btns"><button class="yt-b" data-ytviral aria-label="Play the most viral BGM of this title">🔥 Viral</button><button class="yt-b" data-ytmin aria-label="Hide (pauses) or play the soundtrack">Hide</button><button class="yt-b" data-ytnext aria-label="Try another official track">⏭ Next</button>
     <button class="yt-b" data-ytclose aria-label="Use the VibeSync score instead">✕</button></div></div></div>
   <div class="yt-h"><button class="yt-disc" data-ytmin aria-label="Collapse (pauses) or play the soundtrack"></button><span class="yt-t"></span>
     <button class="yt-b" data-ytnext aria-label="Try another official track">⏭</button><button class="yt-b" data-ytmin aria-label="Collapse and pause">–</button>
@@ -1448,6 +1450,7 @@ document.addEventListener("click", e => {
   if (t.hasAttribute("data-sndmute")) { setSound(!AU.on); soundPanel(); buzz(); return; }
   if (t.hasAttribute("data-ytmin")) { ytToggle(); return; }
   if (t.hasAttribute("data-ytnext")) { ytNext(); return; }
+  if (t.hasAttribute("data-ytviral")) { ytViral(); buzz(); return; }
   if (t.hasAttribute("data-ytclose")) { AU.src = "score"; store.set("sndsrc", "score"); AU.scoreKey = ""; startSound(TT.cur); toast("Playing the VibeSync score. Switch back any time from 🔊"); return; }
   if (t.hasAttribute("data-tdefault")) { TT.cur = null; store.set("titleTheme", null); applyTitle(null, true); renderThemer($("#tq").value); toast("Back to the default look"); return; }
   if (t.dataset.trecent) {
@@ -3188,7 +3191,7 @@ document.addEventListener("input", e => {
    Invidious search APIs; the TMDB "Opening Credits" video is the last resort. Playback always goes
    through YouTube's own embedded player, at the smallest size YouTube allows (200x200), docked at
    the top. Collapsing it to the circle pauses it (YouTube doesn't allow a hidden player to play). */
-const YTS = {api: null, player: null, list: [], i: 0, theme: null, collapsed: false, key: ""};
+const YTS = {api: null, player: null, list: [], i: 0, theme: null, collapsed: false, key: "", mode: store.get("ytmode", "official")};
 const PIPED = ["https://pipedapi.kavin.rocks", "https://pipedapi.adminforge.de", "https://api.piped.private.coffee", "https://pipedapi.leptons.xyz"];
 const INVID = ["https://inv.nadeko.net", "https://invidious.nerdvpn.de", "https://yewtu.be", "https://invidious.privacyredirect.com"];
 const timeout = (p, ms) => Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error("timeout")), ms))]);
@@ -3248,6 +3251,22 @@ async function findBgm(theme) {
   if (TT.cur && TT.cur.id === theme.id) { TT.cur.bgm = list; store.set("titleTheme", TT.cur); }      // search once per title
   return list;
 }
+/* "Viral": whatever YouTube ranks first for "<title> viral BGM", played in YouTube's own order */
+async function findViral(theme) {
+  if (Array.isArray(theme.viral) && theme.viral.length) return theme.viral;
+  const name = String(theme.title).split(":")[0].trim(), seen = new Set();
+  const list = (await ytSearch(`${name} viral bgm`)).filter(v => !seen.has(v.key) && seen.add(v.key)).slice(0, 8).map(({key, name, by}) => ({key, name, by}));
+  if (!list.length) return findBgm(theme);                    // search unavailable: the official theme instead
+  theme.viral = list;
+  if (TT.cur && TT.cur.id === theme.id) { TT.cur.viral = list; store.set("titleTheme", TT.cur); }
+  return list;
+}
+function ytViral() {
+  if (!YTS.theme) return;
+  YTS.mode = YTS.mode === "viral" ? "official" : "viral"; store.set("ytmode", YTS.mode);
+  toast(YTS.mode === "viral" ? `Playing the most viral BGM of ${YTS.theme.title}` : `Back to the official theme of ${YTS.theme.title}`);
+  ytPlay(YTS.theme, AU.tok);
+}
 function ytLoadApi() {
   if (YTS.api) return YTS.api;
   YTS.api = new Promise(res => {
@@ -3264,12 +3283,17 @@ function ytCard(state) {
   box.querySelector(".yt-t").textContent = state === "searching" ? "Finding the official soundtrack…" : (v.name || "Soundtrack");
   box.querySelector(".yt-by").textContent = state === "searching" ? (YTS.theme ? YTS.theme.title : "") : (v.by || "");
   box.querySelector("[data-ytmin]").textContent = YTS.collapsed ? "▶ Play" : "Hide";
+  const viral = YTS.mode === "viral";
+  box.querySelector(".yt-kt").textContent = viral ? "🔥 Viral BGM" : "Official theme";
+  box.querySelector("[data-ytviral]").setAttribute("aria-pressed", viral);
+  box.querySelector("[data-ytviral]").textContent = viral ? "🎬 Official" : "🔥 Viral";
+  box.querySelector(".yt-t").textContent = state === "searching" ? (viral ? "Finding the most viral BGM…" : "Finding the official soundtrack…") : (v.name || "Soundtrack");
   const th = YTS.theme && YTS.theme.poster; box.querySelector(".yt-disc").style.backgroundImage = th ? `url('${th}')` : "";
 }
 async function ytPlay(theme, tok) {
   YTS.theme = theme; YTS.i = 0; YTS.collapsed = false; YTS.list = [];
   ytCard("searching");
-  const [list, YT] = await Promise.all([findBgm(theme), ytLoadApi()]);
+  const [list, YT] = await Promise.all([YTS.mode === "viral" ? findViral(theme) : findBgm(theme), ytLoadApi()]);
   if (tok !== AU.tok) return;
   YTS.list = list;
   if (!YT || !list.length) return ytFallback(!list.length ? "No official soundtrack found for this title" : "YouTube couldn't load");
