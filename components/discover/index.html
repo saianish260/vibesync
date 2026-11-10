@@ -1489,7 +1489,7 @@ function renderSearch(q) {
 /* Truly random: the whole library (hand-picked + live titles already loaded), filtered by the
    selected mood if there is one, never repeating the last few picks. Saved titles get a small boost. */
 function surprisePool() {
-  const playable = i => i && hasPoster(i) && (i.offers.length || i.tmdb) && i.kind !== "sports" && !isWatched(i.id);
+  const playable = i => i && hasPoster(i) && watchableNow(i) && !isWatched(i.id);
   let pool = D.items.filter(playable);
   Object.values(liveState).forEach(st => st.ids.forEach(id => { const it = BY[id]; if (playable(it) && !pool.includes(it)) pool.push(it); }));
   if (state.mood) {
@@ -3702,7 +3702,7 @@ function fromTmdb(r, typeHint) {
   const it = {id: `tmdb:${type}:${r.id}`, tmdb: {type, id: r.id}, title, kind, year, meta: "", genres: [], synopsis: r.overview || "",
     moods: [], telugu: r.original_language === "te", imdb: null, score: r.vote_average ? Math.round(r.vote_average * 10) / 10 : null,
     poster: null, tmdbPoster: r.poster_path, status: null, note: "", emoji: "🎬", colors: ["#3F2A3A", "#1B1220"], offers: [],
-    trailer: "https://www.youtube.com/results?search_query=" + enc(`${title} ${year} trailer`), gids: g, lang: r.original_language || ""};
+    trailer: "https://www.youtube.com/results?search_query=" + enc(`${title} ${year} trailer`), gids: g, lang: r.original_language || "", rel: r.release_date || r.first_air_date || ""};
   const twin = curatedTwin(it);
   if (twin) return twin;                                 // prefer our hand-checked version
   if (!BY[it.id]) BY[it.id] = it;
@@ -3715,7 +3715,7 @@ function curatedTwin(it) {
     && (!it.year || !c.year || Math.abs(+c.year - +it.year) <= 1)) || null;
 }
 const slim = it => ({id: it.id, tmdb: it.tmdb, title: it.title, kind: it.kind, year: it.year, score: it.score, tmdbPoster: it.tmdbPoster,
-  synopsis: it.synopsis, telugu: it.telugu, trailer: it.trailer, gids: it.gids, lang: it.lang});
+  synopsis: it.synopsis, telugu: it.telugu, trailer: it.trailer, gids: it.gids, lang: it.lang, rel: it.rel, streams: it.streams});
 function rehydrate(m) {
   return Object.assign({meta: "", genres: [], moods: [], imdb: null, poster: null, status: null, note: "", emoji: "🎬",
     colors: ["#3F2A3A", "#1B1220"], offers: []}, m);
@@ -3776,6 +3776,8 @@ async function loadLive(key) {
     st.page = j.page || st.page + 1; st.total = j.total_pages || 1;
     const seen = new Set(st.ids);
     const fresh = (j.results || []).map(r => fromTmdb(r, def.type)).filter(it => it && !isWatched(it.id) && !seen.has(it.id) && (seen.add(it.id), true));
+    // rows filtered to "streaming in India" vouch for their titles; trending lists also carry upcoming films
+    if (def.params && def.params.with_watch_monetization_types) fresh.forEach(it => { if (it.tmdb) it.streams = true; });
     fresh.forEach(it => st.ids.push(it.id));
     const el = document.querySelector(`[data-live="${CSS.escape(key)}"]`);
     if (el) {
@@ -3900,6 +3902,10 @@ function searchTmdb(q, have, forQ = q) {
 const X = {st: store.get("status", {}), taste: Object.assign({t: {}, k: {}, l: {}, n: 0}, store.get("taste", {})),
            swiped: store.get("swiped", {}), rt: store.get("rt", {}), use: store.get("themeUse", {})};
 const isWatched = id => !!(X.st[id] && X.st[id].s === "watched");
+// out already? (TMDB titles carry their release date; the hand-picked library is all released)
+const isReleased = it => !it || !it.rel || new Date(it.rel + "T00:00:00") <= new Date();
+// safe to recommend for tonight: released, and known to stream in India
+const watchableNow = it => !!it && isReleased(it) && it.kind !== "sports" && (it.offers.length > 0 || (!!it.tmdb && !!it.streams) || !!(details[it.id] && details[it.id].apps.length));
 const statusOf = id => (X.st[id] && X.st[id].s) || "";
 X.st && Object.values(X.st).forEach(v => { if (v.meta && !BY[v.meta.id]) { /* rehydrated at boot */ } });
 
@@ -4229,7 +4235,7 @@ async function runDescribe(q) {
 /* ───────────── Swipe mode: learns your taste ───────────── */
 const DECK = {on: false, ids: [], i: 0, page: 0, busy: false, n: 0};
 function deckPool() {
-  const ok = it => it && hasPoster(it) && it.kind !== "sports" && !(it.id in X.swiped) && !favs.has(it.id) && !X.st[it.id];
+  const ok = it => it && hasPoster(it) && watchableNow(it) && !(it.id in X.swiped) && !favs.has(it.id) && !X.st[it.id];
   const pool = D.items.filter(ok);
   Object.values(liveState).forEach(st => st.ids.forEach(id => { const it = BY[id]; if (ok(it) && !pool.includes(it)) pool.push(it); }));
   return shuffle(pool).sort((a, b) => tasteScore(b) - tasteScore(a) + (Math.random() - .5) * 3).map(it => it.id);
@@ -4242,7 +4248,7 @@ async function deckRefill() {
     if (tags.length) p.with_genres = tags.map(k => TAGS[k][type === "tv" ? "t" : "m"]).filter(Boolean).join("|");
     const l = topOf(X.taste.l, 1)[0]; if (l && Math.random() < .5) p.with_original_language = l;
     const j = await tget(`/discover/${type}`, p);
-    (j.results || []).map(r => fromTmdb(r, type)).filter(it => it && !(it.id in X.swiped) && !favs.has(it.id) && !X.st[it.id] && !DECK.ids.includes(it.id))
+    (j.results || []).map(r => fromTmdb(r, type)).map(it => { if (it && it.tmdb) it.streams = true; return it; }).filter(it => it && isReleased(it) && !(it.id in X.swiped) && !favs.has(it.id) && !X.st[it.id] && !DECK.ids.includes(it.id))
       .forEach(it => DECK.ids.push(it.id));
   } catch (e) {}
   DECK.busy = false;
@@ -4881,8 +4887,8 @@ async function applySync(replace) {
 /* ───────────── tonight's pick: the Android home-screen widget ───────────── */
 function pickTonight() {
   const day = new Date().toISOString().slice(0, 10), cur = store.get("tonight", null);
-  if (cur && cur.day === day && BY[cur.id] && !isWatched(cur.id) && X.swiped[cur.id] !== -1) return BY[cur.id];
-  const pool = surprisePool().filter(it => !isWatched(it.id) && X.swiped[it.id] !== -1 && (it.offers.length || it.tmdb));
+  if (cur && cur.day === day && watchableNow(BY[cur.id]) && !isWatched(cur.id) && X.swiped[cur.id] !== -1) return BY[cur.id];
+  const pool = surprisePool().filter(it => !isWatched(it.id) && X.swiped[it.id] !== -1 && watchableNow(it));
   if (!pool.length) return null;
   const ranked = pool.map(it => [tasteScore(it) + (favs.has(it.id) ? 3 : 0) + Math.random() * 4, it]).sort((a, b) => b[0] - a[0]);
   const it = ranked[Math.floor(Math.random() * Math.min(8, ranked.length))][1];
@@ -4899,7 +4905,7 @@ const widgetCard = it => {
 function pushWidget() {
   const b = window.VibeSyncApp; if (!b || typeof b.setPick !== "function") return;
   const first = pickTonight(); if (!first) return;
-  const pool = surprisePool().filter(it => it !== first && !isWatched(it.id) && X.swiped[it.id] !== -1 && (it.offers.length || it.tmdb));
+  const pool = surprisePool().filter(it => it !== first && !isWatched(it.id) && X.swiped[it.id] !== -1 && watchableNow(it));
   const rest = pool.map(it => [tasteScore(it) + (favs.has(it.id) ? 3 : 0) + Math.random() * 5, it]).sort((a, b) => b[0] - a[0]).slice(0, 14).map(([, it]) => it);
   const queue = [first].concat(rest);
   const meta = {}; queue.forEach(it => { if (it.tmdb) meta[it.id] = slim(it); }); store.set("widgetMeta", meta);
