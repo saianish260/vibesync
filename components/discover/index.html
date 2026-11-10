@@ -858,6 +858,19 @@ img{display:block}
 .lg-rent .lg-row{margin-top:8px}
 .rt.rel b{color:var(--text)}
 
+.rate{margin-top:12px;padding:14px;border-radius:18px;background:var(--s2)}
+.rate-h{display:flex;justify-content:space-between;align-items:baseline}
+.rate-h b{font-size:15px}.rate-big{font-size:30px;font-weight:900;letter-spacing:-.02em;color:var(--tint)}.rate-big small{font-size:14px;color:var(--muted);font-weight:700;margin-left:2px}
+.rate-sl{width:100%;margin:12px 0 6px;-webkit-appearance:none;appearance:none;height:8px;border-radius:999px;
+  background:linear-gradient(90deg,var(--tint) var(--p,70%),var(--s3) var(--p,70%));outline:none}
+.rate-sl::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.4)}
+.rate-sl::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:#fff;border:0}
+.rate-f{display:flex;gap:8px;align-items:center;margin-top:8px}
+.rate-f input{width:96px;height:40px;border-radius:12px;border:0;padding:0 12px;background:var(--s1);color:var(--text);font:inherit;font-size:16px;font-weight:800;box-shadow:inset 0 0 0 1px var(--line)}
+.rate-f input:focus{outline:2px solid var(--tint)}
+.rate-n{display:block;color:var(--muted);font-size:12px;margin-top:8px;line-height:1.4}
+.myr{position:absolute;z-index:3;right:7px;bottom:7px;font-size:11px;font-weight:900;padding:3px 7px;border-radius:999px;background:rgba(0,0,0,.72);color:#FFD166}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -1070,7 +1083,7 @@ function overlay(it) {
   let o = "";
   if (it.status === "live") o += `<span class="badge live"><i></i>Live</span>`;
   if (favs.has(it.id)) o += `<span class="heart">${ICON.heart}</span>`;
-  return o + statusBadge(it.id) + provBadges(it);
+  return o + statusBadge(it.id) + myRatingBadge(it.id) + provBadges(it);
 }
 function card(it) {
   const sc = scoreOf(it);
@@ -4478,7 +4491,8 @@ function whenText(d) {
   return days === 0 ? `today · ${date}` : days === 1 ? `tomorrow · ${date}` : days > 1 ? `in ${days} days · ${date}` : date;
 }
 function sheetExtras(it) {
-  if (!it || it.kind === "sports") return "";
+  if (!it) return "";
+  if (it.kind === "sports") return `<div class="xs">${rateHTML(it)}</div>`;
   queueMicrotask(() => loadExtras(it));
   const x = XD[it.id] || {}, s = statusOf(it.id);
   const chips = [];
@@ -4495,6 +4509,7 @@ function sheetExtras(it) {
   let html = chips.length ? `<div class="rts">${chips.join("")}</div>` : x.busy ? `<div class="rts"><span class="rt sk">Loading ratings…</span></div>` : "";
   html += `<div class="stbtns"><button class="btn soft${s === "watching" ? " on" : ""}" data-status="watching" data-sid="${esc(it.id)}" aria-pressed="${s === "watching"}">👀 ${s === "watching" ? "Watching" : "Mark watching"}</button>
     <button class="btn soft${s === "watched" ? " on" : ""}" data-status="watched" data-sid="${esc(it.id)}" aria-pressed="${s === "watched"}">✓ ${s === "watched" ? "Watched" : "Mark watched"}</button></div>`;
+  html += rateHTML(it);
   if (x.ref && x.ref.type === "tv") {
     const nx = x.next, at = nx && airDate(nx.air_date), rem = REM.list[it.id];
     if (nx && at) html += `<div class="nextep"><span class="ne-i" aria-hidden="true">📅</span><span class="ne-t"><b>S${nx.season_number} E${nx.episode_number}${nx.name && !/^episode \d+$/i.test(nx.name) ? ` · ${esc(nx.name)}` : ""}</b>
@@ -4635,15 +4650,18 @@ async function checkReminders() {
 /* ───────────── Saved tab: Coming up · Watching · Saved · Watched ───────────── */
 function savedHTML() {
   const ids = s => Object.entries(X.st).filter(([, v]) => v.s === s).sort((a, b) => b[1].at - a[1].at).map(([id]) => BY[id]).filter(Boolean);
+  Object.values(RATE.r).forEach(v => { if (v.meta && !BY[v.meta.id]) BY[v.meta.id] = rehydrate(v.meta); });
+  const rated = Object.entries(RATE.r).sort((a, b) => b[1].r - a[1].r).map(([id]) => BY[id]).filter(Boolean);
   const saved = [...favs].map(id => BY[id]).filter(it => it && !isWatched(it.id)), watching = ids("watching"), watched = ids("watched");
   const quick = `<div class="chips qk"><button class="chip" data-tool="plan">💳 Which plan?</button><button class="chip" data-tool="calendar">📅 OTT calendar</button>
     <button class="chip" data-tool="wrapped">🎁 Wrapped</button><button class="chip" data-tool="sync">🔄 Sync</button></div>`;
-  if (!saved.length && !watching.length && !watched.length)
+  if (!saved.length && !watching.length && !watched.length && !rated.length)
     return `<div class="sec"><h2>Saved</h2></div>${quick}<div class="empty">Nothing saved yet.<br>Tap the ♡ on any title, or try 🃏 Swipe mode, and it lands here.</div>`;
   return quick + `<div id="comingup"></div>`
     + (watching.length ? section("Watching", `${watching.length}`) + row(watching.map(i => i.id)) : "")
     + (saved.length ? section("Saved", `${saved.length} title${saved.length > 1 ? "s" : ""}`) + grid(saved) : "")
-    + (watched.length ? section("Watched", `${watched.length}`) + row(watched.map(i => i.id)) : "");
+    + (watched.length ? section("Watched", `${watched.length}`) + row(watched.map(i => i.id)) : "")
+    + (rated.length ? section("Rated by you", "highest first") + row(rated.map(i => i.id)) : "");
 }
 async function fillComingUp() {
   const box = $("#comingup"); if (!box || !T.key || T.failed) return;
@@ -4781,7 +4799,8 @@ function wrappedStats() {
   const eps = Object.values(tracker).reduce((s, t) => s + (t.watched || []).filter(d => d.startsWith(String(yr))).length, 0);
   const themes = Object.values(X.use).sort((a, b) => b.n - a.n);
   const swipes = Object.values(X.swiped), liked = swipes.filter(v => v === 1).length;
-  return {yr, watched, saved, tags: topOf(tags, 3), plat: topOf(plats, 1)[0], lang: topOf(langs, 1)[0], mins, eps, themes, swipes: swipes.length, liked,
+  const rated = Object.entries(RATE.r).map(([id, v]) => ({title: (BY[id] || (v.meta || {})).title || "", r: v.r})).filter(x => x.title).sort((a, b) => b.r - a.r);
+  return {rated, yr, watched, saved, tags: topOf(tags, 3), plat: topOf(plats, 1)[0], lang: topOf(langs, 1)[0], mins, eps, themes, swipes: swipes.length, liked,
           movies: watched.filter(i => i.kind === "movie").length, shows: watched.filter(i => i.kind !== "movie").length};
 }
 function openWrapped() {
@@ -4795,6 +4814,7 @@ function openWrapped() {
     top ? `<small>Your top genres</small><h2>${TAGS[top].e} ${TAGS[top].label}</h2><p>${s.tags.slice(1).map(k => `${TAGS[k].e} ${TAGS[k].label}`).join(" · ")}</p>` : "",
     s.plat ? `<small>Your go-to app</small><h2>${esc(D.providers[s.plat].name)}</h2><p>has the most of what you save and watch${s.lang ? ` · mostly in ${L(s.lang)}` : ""}</p>` : "",
     s.themes.length ? `<small>Your favourite world</small><h2>${esc(s.themes[0].title)}</h2><p>You themed VibeSync with it ${s.themes[0].n} time${s.themes[0].n === 1 ? "" : "s"}${s.themes.length > 1 ? ` · ${s.themes.length} worlds explored` : ""}</p>` : "",
+    s.rated.length ? `<small>Your highest rated</small><h2>${esc(s.rated[0].title)}</h2><p>★ ${fmtR(s.rated[0].r)} / 10${s.rated.length > 1 ? ` · ${s.rated.length} titles rated, average ${fmtR(s.rated.reduce((t, x) => t + x.r, 0) / s.rated.length)}` : ""}</p>` : "",
     s.swipes ? `<small>Swipe mode</small><h2>${s.swipes}</h2><p>titles swiped · ${s.liked} saved ♥</p>` : "",
     `<small>Your ${s.yr} vibe</small><h2>${per[1]} ${per[0]}</h2><p>${s.saved.length} saved · ${s.watched.length} watched. Here's to more great watches.</p><span class="wtap">Tap to close</span>`,
   ].filter(Boolean);
@@ -4849,7 +4869,7 @@ async function applySync(replace) {
     const merge = (k, f) => { const a = store.get(k, null), b = J("vs." + k); if (b != null) store.set(k, a == null ? b : f(a, b)); };
     merge("favs", (a, b) => [...new Set(a.concat(b))]);
     merge("mysubs", (a, b) => [...new Set(a.concat(b))]);
-    ["favMeta", "status", "swiped", "reminders", "themeUse"].forEach(k => merge(k, (a, b) => Object.assign({}, b, a)));
+    ["favMeta", "status", "swiped", "reminders", "themeUse", "ratings"].forEach(k => merge(k, (a, b) => Object.assign({}, b, a)));
     merge("tracker", (a, b) => { const o = Object.assign({}, b, a); Object.keys(b).forEach(id => { if (a[id]) o[id] = {watched: [...new Set((a[id].watched || []).concat(b[id].watched || []))], notes: (a[id].notes || []).concat((b[id].notes || []).filter(n => !(a[id].notes || []).some(m => m.ts === n.ts && m.text === n.text)))}; }); return o; });
     merge("themeRecent", (a, b) => a.concat(b.filter(t => !a.some(x => x.id === t.id))).slice(0, 10));
     merge("taste", (a, b) => { const o = {t: {}, k: {}, l: {}, n: (a.n || 0) + (b.n || 0)}; ["t", "k", "l"].forEach(g => [a[g] || {}, b[g] || {}].forEach(m => Object.entries(m).forEach(([k, v]) => o[g][k] = (o[g][k] || 0) + v))); return o; });
@@ -4920,7 +4940,14 @@ const LANG_FULL = {te: "Telugu", hi: "Hindi", ta: "Tamil", ml: "Malayalam", kn: 
   gu: "Gujarati", pa: "Punjabi", or: "Odia", as: "Assamese", ur: "Urdu", ja: "Japanese", ko: "Korean", zh: "Chinese", es: "Spanish",
   fr: "French", de: "German", it: "Italian", pt: "Portuguese", ru: "Russian", ar: "Arabic", tr: "Turkish", th: "Thai", id: "Indonesian"};
 const PREF_LANGS = ["te", "hi", "ta", "ml", "kn", "en", "bn", "mr", "ko", "ja"];
-const lname = c => LANG_FULL[String(c).slice(0, 2).toLowerCase()] || String(c).toUpperCase();
+const LDN = (() => { try { return new Intl.DisplayNames(["en"], {type: "language"}); } catch (e) { return null; } })();
+const lcode = c => String(c || "").toLowerCase().split(/[-_]/)[0];
+const lname = c => { const k = lcode(c); if (LANG_FULL[k]) return LANG_FULL[k]; try { const n = LDN && LDN.of(k); if (n && n.toLowerCase() !== k) return n; } catch (e) {} return String(c).toUpperCase(); };
+const INDIAN_L = ["te", "hi", "ta", "ml", "kn", "bn", "mr", "gu", "pa", "or", "as", "ur"];
+// your language first, then Indian languages, then the rest A–Z
+const lsort = (list, pref) => [...new Set(list.map(lcode))].sort((a, b) => (b === pref) - (a === pref) || (INDIAN_L.includes(b) - INDIAN_L.includes(a)) || lname(a).localeCompare(lname(b)));
+// "Crunchyroll Amazon Channel" is an add-on bought inside Prime Video, not Prime Video itself
+const isChannel = n => /channel|add-?on/i.test(n || "");
 const JWQ = `query GetSearchTitles($searchTitlesFilter: TitleFilter!, $country: Country!, $language: Language!, $first: Int!, $filter: OfferFilter!) {
   popularTitles(country: $country, filter: $searchTitlesFilter, first: $first, sortBy: POPULAR, sortRandomSeed: 0) {
     edges { node { id objectType content(country: $country, language: $language) { title originalReleaseYear originalReleaseDate externalIds { imdbId tmdbId } }
@@ -4991,22 +5018,40 @@ function langsHTML(it) {
   else if (L.error) body = `<div class="note">Couldn't reach the language data right now. Try again in a moment.</div>`;
   else if (!L.found) body = `<div class="note">No language details listed for this title in India yet.</div>`;
   else {
-    const stream = L.apps.filter(a => a.types.some(t => STREAM_TYPES.includes(t))), rent = L.apps.filter(a => !stream.includes(a));
-    const known = stream.filter(a => a.audio.length), unknown = stream.filter(a => !a.audio.length);
-    const nm = a => esc(appName(a.name));
+    const all = L.apps.filter(a => a.types.some(t => STREAM_TYPES.includes(t))), rent = L.apps.filter(a => !all.includes(a));
+    // the same apps as "Where to watch in India" above; add-on channels and anything else go in their own fold
+    const det = details[it.id];
+    const shown = new Set((it.offers || []).map(o => o.p).concat(det ? det.apps.map(p => p.key) : []).filter(Boolean));
+    const keyOf = a => isChannel(a.name) ? null : provKey(a.name);
+    const main = all.filter(a => { const k = keyOf(a); return k && (!shown.size || shown.has(k)); });
+    const extra = all.filter(a => !main.includes(a));
+    shown.forEach(k => {
+      if (k === "youtube" || main.some(a => keyOf(a) === k)) return;
+      // "Prime Video" above can be an add-on channel inside Prime (e.g. Crunchyroll Amazon Channel): show it under its real name
+      const ch = extra.find(a => isChannel(a.name) && provKey(a.name) === k);
+      if (ch) { extra.splice(extra.indexOf(ch), 1); main.push(Object.assign({}, ch, {label: `${D.providers[k].name} · ${ch.name}`})); }
+      else main.push({name: D.providers[k] ? D.providers[k].name : k, types: ["FLATRATE"], audio: [], subs: []});
+    });
+    const known = main.filter(a => a.audio.length), unknown = main.filter(a => !a.audio.length);
+    const nm = a => esc(a.label || (keyOf(a) && D.providers[keyOf(a)] ? D.providers[keyOf(a)].name : a.name));
+    const hasL = (a, l) => a.audio.some(x => lcode(x) === l), subL = (a, l) => a.subs.some(x => lcode(x) === l);
     let answer = "";
     if (pref) {
-      const P = LANG_FULL[pref], has = stream.filter(a => a.audio.some(l => l.slice(0, 2) === pref)), subs = stream.filter(a => !has.includes(a) && a.subs.some(l => l.slice(0, 2) === pref));
+      const P = LANG_FULL[pref], has = main.filter(a => hasL(a, pref)), subs = main.filter(a => !has.includes(a) && subL(a, pref)), viaAddon = extra.filter(a => hasL(a, pref));
       if (has.length) answer = `<div class="lg-ans ok">✅ <span>Available in <b>${P}</b> on <b>${has.map(nm).join(", ")}</b></span></div>`;
-      else if (!stream.length) answer = `<div class="lg-ans no">❌ <span>Not on any streaming app in India, so not in ${P} either</span></div>`;
+      else if (!main.length) answer = `<div class="lg-ans no">❌ <span>Not on any streaming app in India, so not in ${P} either</span></div>`;
       else if (!known.length) answer = `<div class="lg-ans unk">❓ <span>${unknown.map(nm).join(", ")} ${unknown.length > 1 ? "haven't" : "hasn't"} listed audio languages, so VibeSync can't confirm ${P}</span></div>`;
-      else answer = `<div class="lg-ans no">❌ <span>Not available in <b>${P}</b> on any app in India${unknown.length ? ` (${unknown.map(nm).join(", ")} ${unknown.length > 1 ? "don't" : "doesn't"} list languages)` : ""}</span></div>`;
+      else answer = `<div class="lg-ans no">❌ <span>Not available in <b>${P}</b> on ${main.length > 1 ? "these apps" : nm(main[0])}${unknown.length ? ` (${unknown.map(nm).join(", ")} ${unknown.length > 1 ? "don't" : "doesn't"} list languages)` : ""}</span></div>`;
       if (!has.length && subs.length) answer += `<div class="lg-sub">${P} subtitles on ${subs.map(nm).join(", ")}</div>`;
+      if (viaAddon.length) answer += `<div class="lg-sub">Also in ${P} through ${viaAddon.map(a => esc(a.name)).join(", ")}${viaAddon.some(a => /amazon/i.test(a.name)) ? " (an add-on subscription inside Prime Video)" : ""}</div>`;
     } else answer = `<div class="lg-sub">Pick your language to check it</div>`;
-    const row = a => `<div class="lg-row"><span class="logo" style="--pcol:${(D.providers[provKey(a.name)] || {}).color || "#666"}">${esc(appName(a.name)[0])}</span>
-      <span><b>${nm(a)}</b>${a.audio.length ? `<small>🔊 ${a.audio.map(lname).join(", ")}</small>` : `<small>Audio languages not listed</small>`}
-      ${a.subs.length ? `<small>💬 ${a.subs.map(lname).join(", ")}</small>` : ""}</span></div>`;
-    body = answer + (stream.length ? `<div class="lg-list">${stream.map(row).join("")}</div>` : "")
+    const row = a => { const k = keyOf(a) || provKey(a.name);
+      return `<div class="lg-row"><span class="logo" style="--pcol:${(D.providers[k] || {}).color || "#666"}">${esc((nm(a) || "?")[0])}</span>
+      <span><b>${nm(a)}</b>${isChannel(a.name) && /amazon/i.test(a.name) ? `<small>Add-on bought inside Prime Video</small>` : ""}
+      ${a.audio.length ? `<small>🔊 ${lsort(a.audio, pref).map(lname).join(", ")}</small>` : `<small>Audio languages not listed</small>`}
+      ${a.subs.length ? `<small>💬 ${lsort(a.subs, pref).map(lname).join(", ")}</small>` : ""}</span></div>`; };
+    body = answer + (main.length ? `<div class="lg-list">${main.map(row).join("")}</div>` : "")
+      + (extra.length ? `<details class="lg-rent"><summary>Add-on channels & other apps (${extra.length})</summary>${extra.map(row).join("")}</details>` : "")
       + (rent.length ? `<details class="lg-rent"><summary>Rent or buy (${rent.length})</summary>${rent.map(row).join("")}</details>` : "");
   }
   return `<div class="h3">Languages on each app</div><div class="langs"><div class="lg-q">Your language</div>${chips}${body}
@@ -5023,6 +5068,58 @@ function releaseOf(d, type) {
   const t = r && r.release_dates.filter(x => [1, 2, 3].includes(x.type) && x.release_date).map(x => x.release_date.slice(0, 10)).sort()[0];
   return t ? {date: t, india: true} : d.release_date ? {date: d.release_date, india: false} : null;
 }
+
+/* ───────────── Your rating: 0–10, decimals allowed, kept to 2 places (8.756 → 8.76) ───────────── */
+const RATE = {r: store.get("ratings", {})};
+const fmtR = v => String(Math.round(v * 100) / 100);
+function parseRating(s) {
+  const t = String(s == null ? "" : s).trim().replace(",", ".");
+  if (!/^\d{0,2}(\.\d*)?$/.test(t) || t === "" || t === ".") return null;
+  const v = Number(t);
+  return v >= 0 && v <= 10 ? Math.round(v * 100) / 100 : NaN;
+}
+const myRating = id => RATE.r[id] ? RATE.r[id].r : null;
+const myRatingBadge = id => myRating(id) != null ? `<span class="myr">★ ${fmtR(myRating(id))}</span>` : "";
+function rateHTML(it) {
+  if (!it) return "";
+  const r = myRating(it.id), v = r != null ? r : 7;
+  return `<div class="rate"><div class="rate-h"><b>${r != null ? "Your rating" : "Rate it"}</b><span class="rate-big" id="ratebig">${r != null ? fmtR(r) : "–"}<small>/10</small></span></div>
+    <input class="rate-sl" type="range" min="0" max="10" step="0.05" value="${v}" data-ratesl="${esc(it.id)}" aria-label="Your rating out of 10" style="--p:${v * 10}%">
+    <form class="rate-f" data-ratef="${esc(it.id)}"><label class="sr" for="ratein">Exact rating</label>
+      <input id="ratein" name="r" inputmode="decimal" autocomplete="off" maxlength="7" placeholder="e.g. 8.75" value="${r != null ? fmtR(r) : ""}">
+      <button class="btn tint sm" type="submit">${r != null ? "Update" : "Save rating"}</button>${r != null ? `<button class="btn soft sm" type="button" data-rateclear="${esc(it.id)}">Remove</button>` : ""}</form>
+    <small class="rate-n">Any number from 0 to 10. Decimals are fine; more than 2 places are rounded (8.756 → 8.76).</small></div>`;
+}
+function saveRating(id, v) {
+  const it = BY[id]; if (!it) return;
+  const first = myRating(id) == null;
+  RATE.r[id] = {r: v, at: Date.now(), meta: it.tmdb ? slim(it) : null};
+  store.set("ratings", RATE.r);
+  if (first) learn(it, v >= 7.5 ? 2 : v >= 5 ? .5 : -1);
+  toast(`Rated ${fmtR(v)} / 10 ★`); refreshSheet(); buzz();
+  $$(`.card[data-open="${CSS.escape(id)}"] .pw`).forEach(pw => { const b = pw.querySelector(".myr"); if (b) b.remove(); pw.insertAdjacentHTML("beforeend", myRatingBadge(id)); });
+}
+document.addEventListener("input", e => {
+  const sl = e.target.closest && e.target.closest("[data-ratesl]"); if (!sl) return;
+  const v = Math.round(+sl.value * 100) / 100, inp = $("#ratein"), big = $("#ratebig");
+  sl.style.setProperty("--p", v * 10 + "%");
+  if (inp) inp.value = fmtR(v);
+  if (big) big.innerHTML = `${fmtR(v)}<small>/10</small>`;
+});
+document.addEventListener("change", e => { const sl = e.target.closest && e.target.closest("[data-ratesl]"); if (sl) saveRating(sl.dataset.ratesl, Math.round(+sl.value * 100) / 100); });
+document.addEventListener("submit", e => {
+  const f = e.target.closest && e.target.closest("[data-ratef]"); if (!f) return;
+  e.preventDefault();
+  const v = parseRating(f.r.value);
+  if (v === null) { toast("Type a number, like 8.75"); return; }
+  if (Number.isNaN(v)) { toast("Ratings go from 0 to 10"); return; }
+  f.r.blur(); saveRating(f.dataset.ratef, v);
+});
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-rateclear]"); if (!b) return;
+  delete RATE.r[b.dataset.rateclear]; store.set("ratings", RATE.r); toast("Rating removed"); refreshSheet();
+  $$(`.card[data-open="${CSS.escape(b.dataset.rateclear)}"] .myr`).forEach(x => x.remove());
+});
 
 /* ───────────── events for everything above ───────────── */
 document.addEventListener("click", e => {
