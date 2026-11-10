@@ -536,15 +536,36 @@ function renderSearch(q) {
 }
 
 /* ───────────── surprise ───────────── */
+/* Truly random: the whole library (hand-picked + live titles already loaded), filtered by the
+   selected mood if there is one, never repeating the last few picks. Saved titles get a small boost. */
+function surprisePool() {
+  const playable = i => i && hasPoster(i) && (i.offers.length || i.tmdb) && i.kind !== "sports";
+  let pool = D.items.filter(playable);
+  Object.values(liveState).forEach(st => st.ids.forEach(id => { const it = BY[id]; if (playable(it) && !pool.includes(it)) pool.push(it); }));
+  if (state.mood) {
+    const tags = new Set(D.moods[state.mood].tags);
+    const moodPool = pool.filter(i => i.moods.some(t => tags.has(t)));
+    if (moodPool.length >= 3) pool = moodPool;
+  }
+  return pool;
+}
 function surprise() {
-  let pool = (favs.size ? [...favs].map(id => BY[id]) : D.items).filter(i => i && i.offers.length);
-  if (!pool.length) pool = D.items.filter(i => i.offers.length);
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  const filler = D.items.filter(i => i.poster).sort(() => Math.random() - .5).slice(0, 14);
+  const pool = surprisePool();
+  if (!pool.length) return;
+  const recent = store.get("recentPicks", []);
+  const keep = Math.min(15, Math.floor(pool.length / 2));
+  let fresh = pool.filter(i => !recent.slice(-keep).includes(i.id));
+  if (!fresh.length) fresh = pool;
+  const saved = fresh.filter(i => favs.has(i.id));
+  const from = saved.length && Math.random() < 0.25 ? saved : fresh;   // 1 in 4 rolls lean on your saved list
+  const pick = from[Math.floor(Math.random() * from.length)];
+  store.set("recentPicks", recent.concat(pick.id).slice(-30));
+
+  const filler = pool.filter(i => i !== pick).sort(() => Math.random() - .5).slice(0, 14);
   const strip = $("#strip");
   strip.innerHTML = filler.concat([pick]).map(i => poster(i, "s166")).join("");
   strip.style.transition = "none"; strip.style.transform = "translateX(0)";
-  $("#reelcap").textContent = favs.size ? "Rolling your saved titles…" : "Rolling…";
+  $("#reelcap").textContent = state.mood ? `Rolling something ${D.moods[state.mood].label.toLowerCase()}…` : "Rolling…";
   $("#reel").classList.add("on");
   requestAnimationFrame(() => requestAnimationFrame(() => {
     const win = $(".reel-win").offsetWidth, cardW = 132, idx = filler.length;
@@ -587,7 +608,7 @@ function render() {
       <div class="chips" role="group" aria-label="Mood">${Object.entries(D.moods).map(([k, m]) =>
         `<button class="chip" data-mood="${k}" aria-pressed="false"><span>${m.emoji}</span>${esc(m.label)}</button>`).join("")}</div>
       <div class="moodbox" id="moodbox"><div></div></div>
-      <button class="surprise-cta" data-surprise><span class="die" aria-hidden="true">🎲</span><span><b>Surprise me</b><small>Can't decide? Let VibeSync pick.</small></span></button>
+      <button class="surprise-cta" data-surprise><span class="die" aria-hidden="true">🎲</span><span><b>Surprise me</b><small>Can't decide? Let VibeSync pick. Pick a mood first to narrow it.</small></span></button>
       <nav class="tabs" aria-label="Categories"><div class="tabrow" role="tablist">${TABS.map(([k, l]) =>
         `<button class="tab" role="tab" data-tab="${k}" aria-selected="${k === state.tab}">${l}</button>`).join("")}<span class="ink" id="ink"></span></div><div class="tabline"></div></nav>
       <div id="panel" class="panel"></div>
