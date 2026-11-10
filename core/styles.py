@@ -2,40 +2,49 @@
 import streamlit as st
 
 THEMES = {
-    "cinema":   dict(bg="#150A0E", s1="#1F1016", s2="#2B1820", line="rgba(244,185,66,.14)", text="#F7EFE3",
-                     muted="#BFA9A0", accent="#F4B942", on_accent="#2A1408", hot="#FF5A4E"),
-    "daylight": dict(bg="#F7F4EF", s1="#FFFFFF", s2="#EFE9E1", line="rgba(40,30,20,.12)", text="#1E1A17",
-                     muted="#6B615A", accent="#0F766E", on_accent="#FFFFFF", hot="#E11D48"),
-    "deepsea":  dict(bg="#06171C", s1="#0C252C", s2="#123139", line="rgba(94,230,184,.14)", text="#E6F4F1",
+    "cinema":   dict(bg="#0D0A12", s1="#17131E", s2="#221C2B", line="rgba(246,242,236,.08)", text="#F6F2EC",
+                     muted="#A69EB0", accent="#FFB547", on_accent="#1A1208", hot="#FF4D5E"),
+    "daylight": dict(bg="#F6F3EE", s1="#FFFFFF", s2="#EDE7DF", line="rgba(30,26,23,.1)", text="#1D1916",
+                     muted="#6E655D", accent="#0F766E", on_accent="#FFFFFF", hot="#E11D48"),
+    "deepsea":  dict(bg="#05161B", s1="#0B232A", s2="#123039", line="rgba(230,244,241,.08)", text="#E8F5F2",
                      muted="#8FB3AC", accent="#5EE6B8", on_accent="#03231A", hot="#FF6B6B"),
-    "mono":     dict(bg="#000000", s1="#121212", s2="#1E1E1E", line="rgba(255,255,255,.12)", text="#FFFFFF",
-                     muted="#9C9C9C", accent="#FFFFFF", on_accent="#000000", hot="#FF453A"),
+    "mono":     dict(bg="#000000", s1="#111111", s2="#1C1C1C", line="rgba(255,255,255,.1)", text="#FFFFFF",
+                     muted="#9A9A9A", accent="#FFFFFF", on_accent="#000000", hot="#FF453A"),
 }
 
 CSS = r"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap');
 :root{--bg:%(bg)s;--s1:%(s1)s;--s2:%(s2)s;--line:%(line)s;--text:%(text)s;--muted:%(muted)s;--accent:%(accent)s;--on-accent:%(on_accent)s;--hot:%(hot)s;}
 html,body,.stApp,[data-testid="stAppViewContainer"]{background:var(--bg)!important;color:var(--text);
-  font-family:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;}
+  font-family:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
 .stApp *{font-family:inherit}
 .stApp p,.stApp label,.stApp span,.stApp h1,.stApp h2,.stApp h3,.stApp h4,.stApp h5{color:var(--text)}
 [data-testid="stHeader"],[data-testid="stToolbar"],[data-testid="stDecoration"],#MainMenu,footer{display:none!important;height:0!important}
-.block-container,[data-testid="stMainBlockContainer"]{padding:.5rem .6rem 1rem!important;max-width:1180px}
+.block-container,[data-testid="stMainBlockContainer"]{padding:.75rem 1rem 2rem!important;max-width:1080px}
+.stApp::before{content:"";position:fixed;inset:0 0 auto 0;height:70vh;pointer-events:none;z-index:0;
+  background:radial-gradient(80%% 60%% at 50%% 0%%,color-mix(in srgb,var(--accent) 22%%,transparent),transparent 70%%)}
 [data-testid="stVerticalBlock"]{gap:.6rem}
 iframe{border:0;display:block}
 
-/* top switcher */
-.st-key-nav_widget{display:flex;justify-content:center}
-.st-key-nav_widget [data-baseweb="button-group"]{background:var(--s1);border-radius:999px;padding:3px;border:1px solid var(--line)}
-.st-key-nav_widget button{border:0!important;border-radius:999px!important;background:transparent!important;color:var(--muted)!important;font-weight:600;padding:.2rem 1.1rem!important;min-height:34px}
-.st-key-nav_widget button[kind$="Active"],.st-key-nav_widget button[aria-checked="true"],.st-key-nav_widget button[data-testid$="Active"]{background:var(--accent)!important;color:var(--on-accent)!important}
-.st-key-nav_widget button p{color:inherit!important}
+/* Lounge top bar */
+.vs-top{display:flex;align-items:center;justify-content:space-between;gap:.8rem;margin:.2rem 0 .4rem}
+.vs-mark{font-weight:900;font-size:1.45rem;letter-spacing:-.03em;font-variation-settings:"wdth" 125}
+.vs-mark i{font-style:normal;color:var(--accent)}
+.st-key-back_discover{display:flex;justify-content:flex-end}
+.st-key-back_discover button{min-height:42px;padding:0 1.1rem!important;background:var(--s2)!important;border:0!important}
+.vs-hero{position:relative;padding:1.4rem 1.3rem;border-radius:26px;overflow:hidden;margin:.4rem 0 .6rem;
+  background:linear-gradient(125deg,color-mix(in srgb,var(--accent) 30%%,var(--s1)),var(--s1) 62%%);box-shadow:inset 0 0 0 1px var(--line)}
+.vs-hero h1{margin:0;font-weight:850;font-variation-settings:"wdth" 125;font-size:clamp(2rem,8vw,3.4rem);line-height:.95;letter-spacing:-.035em}
+.vs-hero p{margin:.6rem 0 0;color:var(--muted)!important;font-size:1rem;max-width:44ch}
+.vs-hero .emo{position:absolute;right:1rem;top:.6rem;font-size:3.6rem;opacity:.9;transform:rotate(8deg)}
+[data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]){border-radius:22px!important}
 
 /* widgets */
-.stButton>button,.stFormSubmitButton>button,.stLinkButton>a{border-radius:999px;border:1px solid var(--line);background:var(--s1);color:var(--text);font-weight:600;transition:transform .15s,background-color .2s}
+.stButton>button,.stFormSubmitButton>button,.stLinkButton>a{border-radius:999px;border:1px solid var(--line);background:var(--s1);color:var(--text);font-weight:700;min-height:44px;transition:transform .15s,background-color .2s,filter .2s}
+.stButton>button:hover{filter:brightness(1.08);border-color:var(--line)!important;color:var(--text)!important}
 .stButton>button:active,.stFormSubmitButton>button:active{transform:scale(.97)}
-.stButton>button[kind="primary"],.stFormSubmitButton>button{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.stButton>button[kind="primary"],.stFormSubmitButton>button{background:var(--accent);color:var(--on-accent);border-color:transparent;box-shadow:0 8px 24px color-mix(in srgb,var(--accent) 30%%,transparent)}
 .stButton>button p,.stFormSubmitButton>button p{color:inherit!important}
 .stTextInput input,.stTextArea textarea,[data-baseweb="select"]>div,[data-baseweb="input"]{background:var(--s1)!important;color:var(--text)!important;border-color:var(--line)!important;border-radius:12px!important}
 [data-testid="stChatInput"]{background:var(--s1)!important;border-color:var(--line)!important}
@@ -45,12 +54,12 @@ iframe{border:0;display:block}
 [data-testid="stCode"],.stCode{border-radius:12px}
 
 /* lounge */
-.vs-section{margin:.6rem 0 .3rem}.vs-sec-title{font-weight:800;font-size:clamp(1.4rem,5vw,2rem);letter-spacing:-.02em}
+.vs-section{margin:.6rem 0 .3rem}.vs-sec-title{font-weight:850;font-variation-settings:"wdth" 118;font-size:clamp(1.4rem,5vw,2rem);letter-spacing:-.025em}
 .vs-sec-title .ic{margin-right:.35rem}.vs-sec-sub{display:block;color:var(--muted);font-size:.95rem;margin-top:.15rem}
-.vs-roomhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.6rem;padding:1rem 1.1rem;border-radius:20px;background:var(--s1);border:1px solid var(--line)}
-.vs-roomname{font-weight:800;font-size:1.3rem;letter-spacing:-.01em}
+.vs-roomhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.6rem;padding:1.1rem 1.2rem;border-radius:24px;background:linear-gradient(125deg,color-mix(in srgb,var(--accent) 26%%,var(--s1)),var(--s1) 65%%);box-shadow:inset 0 0 0 1px var(--line)}
+.vs-roomname{font-weight:850;font-variation-settings:"wdth" 120;font-size:1.5rem;letter-spacing:-.02em}
 .vs-code{font-weight:800;letter-spacing:.25em;font-size:1.2rem;background:var(--accent);color:var(--on-accent);padding:.3rem .8rem;border-radius:12px}
-.vs-chat{display:flex;flex-direction:column-reverse;gap:.55rem;height:400px;overflow-y:auto;padding:.8rem;border-radius:18px;background:var(--s1);border:1px solid var(--line);scrollbar-width:thin}
+.vs-chat{display:flex;flex-direction:column-reverse;gap:.55rem;height:400px;overflow-y:auto;padding:.9rem;border-radius:22px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);scrollbar-width:thin}
 .vs-msg{display:flex;gap:.5rem;align-items:flex-end;max-width:88%%;animation:msgIn .3s cubic-bezier(.2,.8,.2,1)}
 @keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .vs-msg.mine{align-self:flex-end;flex-direction:row-reverse}
@@ -92,5 +101,17 @@ def palette(theme: str) -> dict:
     return THEMES.get(theme, THEMES["cinema"])
 
 
-def inject(theme: str = "cinema") -> None:
-    st.markdown(CSS % palette(theme), unsafe_allow_html=True)
+# Discover is one full-screen component with its own top bar and tab bar, so drop the page padding there.
+DISCOVER_CSS = """
+<style>
+.block-container,[data-testid="stMainBlockContainer"]{padding:0!important;max-width:none!important}
+[data-testid="stMain"],section.main,.stMain{overflow:hidden!important}
+[data-testid="stVerticalBlock"]{gap:0!important}
+.stApp::before{display:none}
+[data-testid="stElementContainer"]:has(> .stMarkdown style){display:none}
+</style>
+"""
+
+
+def inject(theme: str = "cinema", page: str = "discover") -> None:
+    st.markdown(CSS % palette(theme) + (DISCOVER_CSS if page == "discover" else ""), unsafe_allow_html=True)

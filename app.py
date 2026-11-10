@@ -41,33 +41,41 @@ for _name in _OWN_MODULES:          # remember which version of each file is loa
     if _name in sys.modules:
         sys.modules[_name].__vs_mtime__ = _file_mtime(sys.modules[_name])
 
-PAGES = {"discover": "Discover", "lounge": "Lounge"}
-
 if "theme" not in st.session_state:
     st.session_state.theme = "cinema"
 # Invite links (?room=CODE) open straight into the Lounge
 if "page" not in st.session_state:
     st.session_state.page = "lounge" if st.query_params.get("room") else "discover"
-if "nav_widget" not in st.session_state:
-    st.session_state.nav_widget = st.session_state.page
 
 
-def _on_nav() -> None:
-    if st.session_state.nav_widget:
-        st.session_state.page = st.session_state.nav_widget
-    else:                                   # tapping the active option again keeps it selected
-        st.session_state.nav_widget = st.session_state.page
+def _to_discover() -> None:
+    st.session_state.page = "discover"
 
 
-styles.inject(st.session_state.theme)
-st.segmented_control("Navigate", options=list(PAGES), format_func=PAGES.get, key="nav_widget",
-                     on_change=_on_nav, label_visibility="collapsed")
+styles.inject(st.session_state.theme, st.session_state.page)
 
 if st.session_state.page == "lounge":
+    top_l, top_r = st.columns([1, 1], vertical_alignment="center")
+    with top_l:
+        st.markdown('<div class="vs-mark">Vibe<i>Sync</i></div>', unsafe_allow_html=True)
+    with top_r:
+        st.button("← Discover", key="back_discover", on_click=_to_discover)
     lounge.render()
 else:
+    # The Discover screen reports {theme, page, n}; n is a nonce so each tap is handled exactly once
+    # (a component keeps returning its last value on every rerun).
     value = discover.render(st.session_state.theme)
-    picked = value.get("theme") if isinstance(value, dict) else None
-    if picked in styles.THEMES and picked != st.session_state.theme:
-        st.session_state.theme = picked     # keep page chrome + Lounge in the same look
-        st.rerun()
+    if isinstance(value, dict):
+        nonce = value.get("n")
+        if nonce is None or nonce != st.session_state.get("_discover_nonce"):
+            st.session_state._discover_nonce = nonce
+            changed = False
+            picked = value.get("theme")
+            if picked in styles.THEMES and picked != st.session_state.theme:
+                st.session_state.theme = picked     # keep page chrome + Lounge in the same look
+                changed = True
+            if nonce is not None and value.get("page") == "lounge":
+                st.session_state.page = "lounge"
+                changed = True
+            if changed:
+                st.rerun()

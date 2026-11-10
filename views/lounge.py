@@ -52,7 +52,8 @@ def _share_link(code: str) -> str:
 
 # ───────────────────────── lobby ─────────────────────────
 def _lobby() -> None:
-    html(cards.section_html("", "Watch together", "Open a room, share the code, vote on what to watch and chat live."))
+    html('<div class="vs-hero"><span class="emo" aria-hidden="true">🍿</span><h1>Watch<br>together.</h1>'
+         '<p>Open a room, share the code, vote on what to watch and chat live while it plays.</p></div>')
     hub = get_hub()
     default_name = st.session_state.get("lounge_name", "")
     name = clean_name(st.text_input("Your display name", value=default_name, max_chars=config.MAX_NAME_LEN,
