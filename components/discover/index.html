@@ -462,7 +462,7 @@ img{display:block}
 .ytcard.min{grid-template-columns:minmax(0,1fr);padding:8px 10px}
 .ytcard.min .yt-v{width:0;height:0;position:absolute;visibility:hidden}
 .ytcard.min .yt-t{-webkit-line-clamp:1;font-size:13px}
-.ytcard.min .yt-by,.ytcard.min [data-ytnext],.ytcard.min [data-ytviral]{display:none}
+.ytcard.min .yt-by,.ytcard.min [data-ytnext],.ytcard.min [data-ytmode]{display:none}
 .yt-b[aria-pressed="true"]{background:var(--tint);color:#fff}
 .ytcard.min .yt-h{flex-direction:row;align-items:center;flex-wrap:wrap}
 .ytcard.min .yt-k{flex:1 1 100%}
@@ -710,7 +710,7 @@ img{display:block}
 <div class="ytcard" id="ytcard" role="region" aria-label="Official soundtrack">
   <div class="yt-v"><div id="ytp"></div></div>
   <div class="yt-h"><span class="yt-k"><span class="yt-disc" aria-hidden="true"></span><span class="yt-kt">Official theme</span></span><span class="yt-t"></span><span class="yt-by"></span>
-    <div class="yt-btns"><button class="yt-b" data-ytviral aria-label="Play the most viral BGM of this title">🔥 Viral</button><button class="yt-b" data-ytmin aria-label="Hide (pauses) or play the soundtrack">Hide</button><button class="yt-b" data-ytnext aria-label="Try another official track">⏭ Next</button>
+    <div class="yt-btns"><button class="yt-b" data-ytmode="viral" aria-label="Play the most viral BGM of this title">🔥 Viral</button><button class="yt-b" data-ytmode="song" aria-label="Play the most viral song of this title">🎵 Song</button><button class="yt-b" data-ytmin aria-label="Hide (pauses) or play the soundtrack">Hide</button><button class="yt-b" data-ytnext aria-label="Next track">⏭</button>
     <button class="yt-b" data-ytclose aria-label="Use the VibeSync score instead">✕</button></div></div></div>
   <div class="yt-h"><button class="yt-disc" data-ytmin aria-label="Collapse (pauses) or play the soundtrack"></button><span class="yt-t"></span>
     <button class="yt-b" data-ytnext aria-label="Try another official track">⏭</button><button class="yt-b" data-ytmin aria-label="Collapse and pause">–</button>
@@ -1450,7 +1450,7 @@ document.addEventListener("click", e => {
   if (t.hasAttribute("data-sndmute")) { setSound(!AU.on); soundPanel(); buzz(); return; }
   if (t.hasAttribute("data-ytmin")) { ytToggle(); return; }
   if (t.hasAttribute("data-ytnext")) { ytNext(); return; }
-  if (t.hasAttribute("data-ytviral")) { ytViral(); buzz(); return; }
+  if (t.dataset.ytmode) { ytMode(t.dataset.ytmode); buzz(); return; }
   if (t.hasAttribute("data-ytclose")) { AU.src = "score"; store.set("sndsrc", "score"); AU.scoreKey = ""; startSound(TT.cur); toast("Playing the VibeSync score. Switch back any time from 🔊"); return; }
   if (t.hasAttribute("data-tdefault")) { TT.cur = null; store.set("titleTheme", null); applyTitle(null, true); renderThemer($("#tq").value); toast("Back to the default look"); return; }
   if (t.dataset.trecent) {
@@ -3251,20 +3251,22 @@ async function findBgm(theme) {
   if (TT.cur && TT.cur.id === theme.id) { TT.cur.bgm = list; store.set("titleTheme", TT.cur); }      // search once per title
   return list;
 }
-/* "Viral": whatever YouTube ranks first for "<title> viral BGM", played in YouTube's own order */
-async function findViral(theme) {
-  if (Array.isArray(theme.viral) && theme.viral.length) return theme.viral;
+/* "Viral" BGM and "Song": whatever YouTube ranks first for "<title> viral bgm" / "<title> viral song", in YouTube's own order */
+const YT_MODES = {viral: {q: "viral bgm", label: "🔥 Viral BGM", btn: "🔥 Viral", toast: "the most viral BGM"},
+                  song: {q: "viral song", label: "🎵 Viral song", btn: "🎵 Song", toast: "the most viral song"}};
+async function findTop(theme, mode) {
+  if (theme[mode] && theme[mode].length) return theme[mode];
   const name = String(theme.title).split(":")[0].trim(), seen = new Set();
-  const list = (await ytSearch(`${name} viral bgm`)).filter(v => !seen.has(v.key) && seen.add(v.key)).slice(0, 8).map(({key, name, by}) => ({key, name, by}));
+  const list = (await ytSearch(`${name} ${YT_MODES[mode].q}`)).filter(v => !seen.has(v.key) && seen.add(v.key)).slice(0, 8).map(({key, name, by}) => ({key, name, by}));
   if (!list.length) return findBgm(theme);                    // search unavailable: the official theme instead
-  theme.viral = list;
-  if (TT.cur && TT.cur.id === theme.id) { TT.cur.viral = list; store.set("titleTheme", TT.cur); }
+  theme[mode] = list;
+  if (TT.cur && TT.cur.id === theme.id) { TT.cur[mode] = list; store.set("titleTheme", TT.cur); }
   return list;
 }
-function ytViral() {
-  if (!YTS.theme) return;
-  YTS.mode = YTS.mode === "viral" ? "official" : "viral"; store.set("ytmode", YTS.mode);
-  toast(YTS.mode === "viral" ? `Playing the most viral BGM of ${YTS.theme.title}` : `Back to the official theme of ${YTS.theme.title}`);
+function ytMode(mode) {
+  if (!YTS.theme || !YT_MODES[mode]) return;
+  YTS.mode = YTS.mode === mode ? "official" : mode; store.set("ytmode", YTS.mode);
+  toast(YTS.mode === "official" ? `Back to the official theme of ${YTS.theme.title}` : `Playing ${YT_MODES[mode].toast} of ${YTS.theme.title}`);
   ytPlay(YTS.theme, AU.tok);
 }
 function ytLoadApi() {
@@ -3283,17 +3285,16 @@ function ytCard(state) {
   box.querySelector(".yt-t").textContent = state === "searching" ? "Finding the official soundtrack…" : (v.name || "Soundtrack");
   box.querySelector(".yt-by").textContent = state === "searching" ? (YTS.theme ? YTS.theme.title : "") : (v.by || "");
   box.querySelector("[data-ytmin]").textContent = YTS.collapsed ? "▶ Play" : "Hide";
-  const viral = YTS.mode === "viral";
-  box.querySelector(".yt-kt").textContent = viral ? "🔥 Viral BGM" : "Official theme";
-  box.querySelector("[data-ytviral]").setAttribute("aria-pressed", viral);
-  box.querySelector("[data-ytviral]").textContent = viral ? "🎬 Official" : "🔥 Viral";
-  box.querySelector(".yt-t").textContent = state === "searching" ? (viral ? "Finding the most viral BGM…" : "Finding the official soundtrack…") : (v.name || "Soundtrack");
+  const m = YT_MODES[YTS.mode];
+  box.querySelector(".yt-kt").textContent = m ? m.label : "Official theme";
+  box.querySelectorAll("[data-ytmode]").forEach(b => { const on = b.dataset.ytmode === YTS.mode; b.setAttribute("aria-pressed", on); b.textContent = on ? "🎬 Official" : YT_MODES[b.dataset.ytmode].btn; });
+  box.querySelector(".yt-t").textContent = state === "searching" ? (m ? `Finding ${m.toast}…` : "Finding the official soundtrack…") : (v.name || "Soundtrack");
   const th = YTS.theme && YTS.theme.poster; box.querySelector(".yt-disc").style.backgroundImage = th ? `url('${th}')` : "";
 }
 async function ytPlay(theme, tok) {
   YTS.theme = theme; YTS.i = 0; YTS.collapsed = false; YTS.list = [];
   ytCard("searching");
-  const [list, YT] = await Promise.all([YTS.mode === "viral" ? findViral(theme) : findBgm(theme), ytLoadApi()]);
+  const [list, YT] = await Promise.all([YT_MODES[YTS.mode] ? findTop(theme, YTS.mode) : findBgm(theme), ytLoadApi()]);
   if (tok !== AU.tok) return;
   YTS.list = list;
   if (!YT || !list.length) return ytFallback(!list.length ? "No official soundtrack found for this title" : "YouTube couldn't load");
