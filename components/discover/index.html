@@ -934,7 +934,7 @@ function closeSearch() { $("#search").classList.remove("on"); }
    - edit distance (with swaps) against the whole title, each word and each run of leading words
    - a consonant "skeleton" (vowels and doubled letters dropped), so Indian titles match however they're
      spelled in English: bihubali / bahubali / baahubali all become "bhbl". */
-const skel = s => norm(s).replace(/[aeiouyh]/g, "").replace(/(.)\1+/g, "$1");   // h too: dh/bh/th spellings vary
+const skel = s => norm(s).replace(/([bdgjkpt])h/g, "$1").replace(/[aeiouy]/g, "").replace(/(.)\1+/g, "$1");   // dh/bh/th... spellings vary
 function lev(a, b) {
   if (Math.abs(a.length - b.length) > 4) return 99;
   let p2 = null, p = Array.from({length: b.length + 1}, (_, j) => j);
@@ -968,19 +968,22 @@ function suggestions(q, exclude) {
   const seen = new Set(), out = [];
   const pool = Object.values(BY).filter(i => i && i.title && hasPoster(i));
   pool.forEach(i => { const s = fuzzy(q, i.title); if (s >= .62 && !exclude.has(i.id)) out.push([s, i]); });
-  out.sort((a, b) => b[0] - a[0] || (scoreOf(b[1]) || 0) - (scoreOf(a[1]) || 0));
-  return out.filter(([, i]) => !seen.has(norm(i.title)) && seen.add(norm(i.title)));
+  // curated (hand-checked links) first among equals, then one card per title however it's spelt
+  out.sort((a, b) => b[0] - a[0] || (!!a[1].tmdb - !!b[1].tmdb) || (scoreOf(b[1]) || 0) - (scoreOf(a[1]) || 0));
+  return out.filter(([, i]) => { const k = twinKey(i.title) + "|" + (i.year || ""); return !seen.has(k) && seen.add(k); });
 }
 const WORDS = () => [...new Set([...Object.values(D.providers).map(p => p.name), ...D.items.flatMap(i => i.genres), "Anime", "Telugu", "Reality", "Doraemon"])];
 function renderSearch(q) {
   q = q.trim().toLowerCase();
   const hay = i => (i.title + " " + i.genres.join(" ") + " " + i.offers.map(o => D.providers[o.p].name).join(" ") + " " + kindLabel(i) + (i.telugu ? " telugu" : "")).toLowerCase();
-  const items = !q ? D.items.filter(i => i.offers.length && hasPoster(i)).sort(() => Math.random() - .5).slice(0, 12) : D.items.filter(i => hay(i).includes(q));
+  const tq = twinKey(q);
+  const items = !q ? D.items.filter(i => i.offers.length && hasPoster(i)).sort(() => Math.random() - .5).slice(0, 12)
+    : D.items.filter(i => hay(i).includes(q) || (tq.length > 2 && twinKey(i.title).includes(tq)));
   const quick = !q ? `<div class="quick"><button class="chip mxchip" data-mixer>🎛️ Genre mixer</button>${QUICK.map(w => `<button class="chip" data-q="${esc(w)}">${esc(w)}</button>`).join("")}</div>` : "";
   // "Did you mean…?" when the typed text finds little, or isn't literally in the best match's title
   let dym = "", close = [];
   if (q.length >= 3) {
-    const exact = items.some(i => i.title.toLowerCase().includes(q));
+    const exact = items.some(i => twinKey(i.title).includes(twinKey(q)));
     const sug = suggestions(q, new Set());
     const top = sug[0];
     if (top && !exact && top[0] >= .72) {
@@ -1423,7 +1426,9 @@ const FIND = {   // in-app search where the site supports it; otherwise open the
   zee5: t => `https://www.zee5.com/search?q=${enc(t)}`,
 };
 const HOME = {appletv: "https://tv.apple.com/in", hotstar: "https://www.hotstar.com/in", sonyliv: "https://www.sonyliv.com", aha: "https://www.aha.video", fancode: "https://www.fancode.com"};
-const norm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+// Accents are dropped (Bāhubali -> bahubali) and, for matching the same title, doubled letters too (Baahubali -> bahubali)
+const norm = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const twinKey = s => norm(s).replace(/(.)\1+/g, "$1");
 
 async function tget(path, params) {
   const u = new URL(T.base + path);
@@ -1457,9 +1462,9 @@ function fromTmdb(r, typeHint) {
   return BY[it.id];
 }
 function curatedTwin(it) {
-  const n = norm(it.title);
+  const n = twinKey(it.title);
   // "F1" on TMDB is our "F1: The Movie", so also compare the part before a colon
-  return D.items.find(c => c.kind !== "sports" && (norm(c.title) === n || norm(c.title.split(":")[0]) === n)
+  return D.items.find(c => c.kind !== "sports" && (twinKey(c.title) === n || twinKey(c.title.split(":")[0]) === n)
     && (!it.year || !c.year || Math.abs(+c.year - +it.year) <= 1)) || null;
 }
 const slim = it => ({id: it.id, tmdb: it.tmdb, title: it.title, kind: it.kind, year: it.year, score: it.score, tmdbPoster: it.tmdbPoster,
