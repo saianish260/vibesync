@@ -689,6 +689,137 @@ img{display:block}
     animation:riseIn linear both;animation-timeline:view();animation-range:entry 0% entry 70%}
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* ── Explore & track ── */
+.xtools{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(148px,42vw);grid-template-rows:repeat(2,auto);gap:10px;overflow-x:auto;padding:2px 18px 8px;margin:0 -18px;scrollbar-width:none}
+.xtools::-webkit-scrollbar{display:none}
+@media (min-width:760px){.xtools{grid-auto-flow:row;grid-template-columns:repeat(5,1fr);grid-template-rows:none;overflow:visible}}
+.tool{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;align-items:center;text-align:left;padding:12px 12px;border-radius:18px;
+  background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);transition:transform .2s var(--spring),background-color .25s}
+.tool:active{transform:scale(.96)}
+.tool .te{grid-row:1/3;font-size:26px;line-height:1}
+.tool b{font-size:14.5px;font-weight:800;line-height:1.15}
+.tool small{font-size:11.5px;color:var(--muted);line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.xp{position:fixed;inset:0;z-index:25;background:var(--bg);display:flex;flex-direction:column;opacity:0;pointer-events:none;transform:translateY(30px);
+  transition:opacity .3s,transform .45s var(--ease)}
+.xp.on{opacity:1;pointer-events:auto;transform:none}
+.xp::before{content:"";position:absolute;inset:0 0 auto 0;height:260px;pointer-events:none;
+  background:radial-gradient(80% 100% at 20% 0%,color-mix(in srgb,var(--tint) 26%,transparent),transparent 70%)}
+.xp .mx-top .icon{flex:0 0 auto;background:var(--s2);font-size:20px;font-weight:800}
+.seg.two button[aria-selected="true"]{background:var(--text);color:var(--bg)}
+.fnote{color:var(--muted);font-size:12.5px;line-height:1.5;margin:14px 2px}
+.xmore{display:flex;margin:22px auto 0}
+.btn.sm{height:38px;padding:0 14px;font-size:13.5px}
+.btn.soft.on{background:var(--tint);color:var(--on-tint)}
+.understood{margin-top:14px}
+.chip.on{background:color-mix(in srgb,var(--tint) 22%,var(--s1));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint) 50%,transparent);font-size:13.5px;height:36px}
+.dform{display:flex;gap:8px;margin:6px 0 12px}
+.dform input{flex:1;min-width:0;height:52px;border-radius:999px;padding:0 20px;background:var(--s1);color:var(--text);border:0;box-shadow:inset 0 0 0 1px var(--line);font:inherit;font-size:16px}
+.dform input:focus{outline:2px solid var(--tint)}
+.dex .chip{font-size:13.5px;height:36px}
+/* status badges on posters */
+.stb{position:absolute;z-index:3;left:7px;top:7px;font-size:10.5px;font-weight:800;padding:3px 7px;border-radius:999px;background:rgba(0,0,0,.7);color:#fff}
+.stb.watched{background:rgba(22,140,90,.88)}
+.badge+.stb{top:34px}
+/* swipe deck */
+.deck{position:relative;height:min(64vh,560px);max-width:380px;margin:4px auto 0}
+.dcard{position:absolute;inset:0;border-radius:26px;overflow:hidden;background:var(--s1);box-shadow:0 20px 50px rgba(0,0,0,.45);touch-action:none;user-select:none;
+  transform:translateY(calc(var(--k) * 12px)) scale(calc(1 - var(--k) * .05));transition:transform .35s var(--spring)}
+.dcard .pw{position:absolute;inset:0;border-radius:0;aspect-ratio:auto;height:100%}
+.dcard .pw img{pointer-events:none}
+.dtx{position:absolute;left:0;right:0;bottom:0;padding:70px 18px 18px;background:linear-gradient(transparent,rgba(0,0,0,.88) 38%);color:#fff;z-index:3}
+.dtx b{display:block;font-size:24px;font-weight:900;line-height:1.05;letter-spacing:-.02em}
+.dtx small{display:block;opacity:.8;margin:4px 0 8px;font-weight:650}
+.dtx p{font-size:13.5px;line-height:1.4;opacity:.9;margin:8px 0 10px}
+.dtx .tag{background:rgba(255,255,255,.16);color:#fff}
+.dstamp{position:absolute;z-index:4;top:26px;padding:6px 14px;border:4px solid;border-radius:12px;font-weight:900;font-size:26px;letter-spacing:.08em;opacity:0;transition:opacity .15s}
+.dstamp.like{left:22px;color:#34D399;transform:rotate(-14deg)}.dstamp.skip{right:22px;color:#FB7185;transform:rotate(14deg)}
+.dstamp.seen{left:50%;transform:translateX(-50%);color:#7CC4FF}
+.dcard[data-lean="like"] .dstamp.like,.dcard[data-lean="skip"] .dstamp.skip,.dcard[data-lean="seen"] .dstamp.seen{opacity:1}
+.dbtns{display:flex;justify-content:center;gap:22px;margin-top:20px}
+.db{width:64px;height:64px;border-radius:50%;font-size:26px;font-weight:900;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line),0 10px 26px rgba(0,0,0,.3);transition:transform .2s var(--spring)}
+.db:active{transform:scale(.88)}
+.db.like{color:#FB7185;width:72px;height:72px;font-size:30px}.db.skip{color:var(--muted)}.db.seen{width:56px;height:56px;font-size:22px;align-self:center}
+/* sheet extras */
+.xs{margin-top:8px}
+.rts{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px}
+.rt{display:inline-flex;align-items:baseline;gap:5px;padding:7px 11px;border-radius:12px;background:var(--s2);font-size:12.5px;color:var(--muted);font-weight:650}
+.rt b{color:var(--text);font-size:14px}.rt small{font-size:11px;opacity:.75}
+.rt.imdb b{color:#F5C518}.rt.tomato b{color:#FA6B4A}.rt.sk{animation:pulse 1.2s infinite}
+.stbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.stbtns .btn{height:44px;font-size:14px;padding:0 10px}
+.nextep{display:flex;align-items:center;gap:12px;margin-top:14px;padding:12px 12px 12px 14px;border-radius:18px;background:color-mix(in srgb,var(--st) 16%,var(--s2))}
+.nextep.done{background:var(--s2)}
+.ne-i{font-size:24px}.ne-t{flex:1;min-width:0}.ne-t b{display:block;font-size:14.5px}.ne-t small{color:var(--muted);font-size:12.5px}
+.recap{margin-top:12px;border-radius:18px;background:var(--s2);padding:0 14px}
+.recap summary{cursor:pointer;list-style:none;padding:14px 0;font-weight:800;font-size:14.5px}
+.recap summary::-webkit-details-marker{display:none}
+.recap summary small{color:var(--muted);font-weight:600;margin-left:6px}
+.rc-b{padding-bottom:14px;font-size:14px;line-height:1.55;color:var(--muted)}
+.rc-o{margin:0 0 10px;color:var(--text)}
+.rc-eps{border-top:1px solid var(--line)}
+.rc-eps summary{font-size:13.5px;padding:12px 0}
+.rc-e{padding:8px 0;border-top:1px solid var(--line)}.rc-e b{color:var(--text);font-size:13.5px}.rc-e p{margin:4px 0 0;font-size:13px}
+.castrow{display:grid;grid-auto-flow:column;grid-auto-columns:84px;gap:10px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:none}
+.castrow::-webkit-scrollbar{display:none}
+.cast{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px}
+.cast img,.cast .ci{width:72px;height:72px;border-radius:50%;object-fit:cover;background:var(--s2);display:grid;place-items:center;font-size:24px;font-weight:800;box-shadow:0 0 0 2px var(--line)}
+.cast b{font-size:12px;line-height:1.2;max-width:84px}.cast small{font-size:11px;color:var(--muted);line-height:1.2;max-height:2.4em;overflow:hidden}
+/* trailer player */
+.trv{position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.86);display:grid;place-items:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .25s}
+.trv.on{opacity:1;pointer-events:auto}
+.trv-in{width:min(900px,100%)}
+.trv-h{display:flex;justify-content:space-between;align-items:center;gap:10px;color:#fff;margin-bottom:10px}
+.trv-h .icon{background:rgba(255,255,255,.14);color:#fff}
+.trv-v{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#000}
+.trv-v iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.trv .chips{margin-top:12px}
+/* person page */
+.pp-h{display:flex;gap:14px;align-items:flex-start;margin-bottom:6px}
+.pp-h img{width:110px;border-radius:16px;flex:0 0 auto}
+.pp-bio{margin:0;font-size:14px;line-height:1.55;color:var(--muted);display:-webkit-box;-webkit-line-clamp:7;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+.pp-bio.open{-webkit-line-clamp:unset}
+/* coming up */
+.qk{margin:18px -18px 0}
+.cups{display:grid;gap:10px}
+.cup{display:flex;align-items:center;gap:12px;padding:8px 12px 8px 8px;border-radius:18px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);text-align:left}
+.cup .pw{width:46px;flex:0 0 auto;border-radius:10px}
+.cup>span:nth-child(2){flex:1;min-width:0}.cup b{display:block;font-size:14.5px}.cup small{color:var(--muted);font-size:12.5px}
+.cup .cd{font-size:22px;font-weight:900;text-align:center;line-height:1;color:var(--tint)}.cup .cd small{display:block;font-size:10px;font-weight:700}
+.cdate{position:relative;margin-top:6px;font-size:11.5px;font-weight:800;color:var(--tint)}
+.cdate+.ct{margin-top:2px}
+/* which plan */
+.planwin{padding:18px;border-radius:22px;background:linear-gradient(135deg,color-mix(in srgb,var(--pcol) 45%,var(--s1)),var(--s1));box-shadow:inset 0 0 0 1px var(--line);display:grid;gap:2px}
+.planwin small{font-weight:800;text-transform:uppercase;letter-spacing:.08em;font-size:11px;opacity:.85}
+.planwin b{font-size:30px;font-weight:900;letter-spacing:-.02em}.planwin span{font-size:14.5px}.planwin em{font-style:normal;font-weight:700;margin-top:4px}
+.planpair{margin:12px 0 4px;padding:12px 14px;border-radius:16px;background:var(--s2);font-size:14px}
+.plans{display:grid;gap:10px;margin-top:16px}
+.plan{padding:12px 14px;border-radius:18px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line)}
+.plan .ph{display:flex;justify-content:space-between;font-size:14.5px}.plan .ph span{color:var(--muted);font-weight:650}
+.plan small{color:var(--muted);font-size:12px}
+.pbar{height:8px;border-radius:999px;background:var(--s2);margin:8px 0 6px;overflow:hidden}.pbar i{display:block;height:100%;border-radius:999px;background:var(--pcol)}
+.pmini{display:flex;gap:6px;margin-top:8px;overflow-x:auto}.pmini button{width:38px;flex:0 0 auto}.pmini .pw{border-radius:7px}
+/* wrapped */
+.xp.wrapped .mx-in{padding:0;max-width:none}
+.xp.wrapped::before{display:none}
+.wrap-s{position:relative;height:100%;min-height:100vh;overflow:hidden}
+.ws{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;padding:40px 28px 120px;cursor:pointer;
+  background:radial-gradient(120% 80% at 20% 10%,hsl(var(--h) 80% 45%),transparent 60%),radial-gradient(120% 90% at 90% 100%,hsl(calc(var(--h) + 60) 75% 40%),#0B0710 70%);
+  color:#fff;opacity:0;transform:scale(1.04);transition:opacity .45s,transform .6s var(--ease);pointer-events:none}
+.ws.on{opacity:1;transform:none;pointer-events:auto}
+.ws small{font-weight:800;text-transform:uppercase;letter-spacing:.12em;font-size:13px;opacity:.85}
+.ws h2{margin:10px 0;font-size:clamp(44px,14vw,96px);line-height:.95;font-weight:900;letter-spacing:-.04em;font-variation-settings:"wdth" 120}
+.ws p{font-size:18px;line-height:1.45;max-width:30ch;opacity:.92;margin:0}
+.ws .wtap{position:absolute;bottom:60px;left:28px;font-size:13px;opacity:.7}
+.wposters{display:flex;gap:8px;margin-top:22px}.wposters .pw{width:64px;border-radius:10px;flex:0 0 auto;transform:rotate(-3deg)}
+.wposters .pw:nth-child(even){transform:rotate(4deg) translateY(8px)}
+.wbars{position:absolute;top:14px;left:14px;right:64px;display:flex;gap:4px;z-index:2}
+.wbars i{flex:1;height:3px;border-radius:9px;background:rgba(255,255,255,.3)}.wbars i.on{background:#fff}
+.wx{position:absolute;top:4px;right:10px;z-index:3;color:#fff;background:rgba(255,255,255,.15)!important}
+/* sync */
+.synct{width:100%;border-radius:16px;border:0;padding:12px 14px;background:var(--s1);color:var(--text);box-shadow:inset 0 0 0 1px var(--line);font:12.5px/1.45 ui-monospace,monospace;resize:vertical}
+.xp .acts{margin-top:10px}
+.lowfx .xp,.lowfx .dcard{transition:none}
 </style>
 </head>
 <body>
@@ -702,6 +833,8 @@ img{display:block}
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Title details"></section>
 <div class="search" id="search" role="dialog" aria-label="Search"></div>
 <div class="mixer" id="mixer" role="dialog" aria-label="Genre mixer"></div>
+<div class="xp" id="xp" role="dialog" aria-label="Explore"></div>
+<div class="trv" id="trv" role="dialog" aria-label="Trailer"></div>
 <div class="search themer" id="themer" role="dialog" aria-label="Themes"></div>
 <div class="reel" id="reel" aria-hidden="true"><div class="reel-in"><div class="reel-win"><div class="frame"></div><div class="reel-strip" id="strip"></div></div>
   <div class="reel-cap" id="reelcap">Rolling…</div><div class="reel-sub" id="reelsub"></div></div></div>
@@ -710,7 +843,7 @@ img{display:block}
 <div class="ytcard" id="ytcard" role="region" aria-label="Official soundtrack">
   <div class="yt-v"><div id="ytp"></div></div>
   <div class="yt-h"><span class="yt-k"><span class="yt-disc" aria-hidden="true"></span><span class="yt-kt">Official theme</span></span><span class="yt-t"></span><span class="yt-by"></span>
-    <div class="yt-btns"><button class="yt-b" data-ytmode="viral" aria-label="Viral BGM: play the most viral BGM of this title">VB🔥</button><button class="yt-b" data-ytmode="song" aria-label="Viral song: play the most viral song of this title">VS🔥</button><button class="yt-b" data-ytmin aria-label="Hide (pauses) or play the soundtrack">Hide</button><button class="yt-b" data-ytnext aria-label="Next track">⏭</button>
+    <div class="yt-btns"><button class="yt-b" data-ytmode="viral" aria-label="Viral BGM: play the most viral BGM of this title">VB🔥</button><button class="yt-b" data-ytmode="song" aria-label="Viral song: play the most viral song of this title">VS🔥</button><button class="yt-b" data-ytmode="intro" hidden aria-label="Intro: play the opening theme of this series">IN🔥</button><button class="yt-b" data-ytmin aria-label="Hide (pauses) or play the soundtrack">Hide</button><button class="yt-b" data-ytnext aria-label="Next track">⏭</button>
     <button class="yt-b" data-ytclose aria-label="Use the VibeSync score instead">✕</button></div></div></div>
   <div class="yt-h"><button class="yt-disc" data-ytmin aria-label="Collapse (pauses) or play the soundtrack"></button><span class="yt-t"></span>
     <button class="yt-b" data-ytnext aria-label="Try another official track">⏭</button><button class="yt-b" data-ytmin aria-label="Collapse and pause">–</button>
@@ -873,7 +1006,7 @@ function overlay(it) {
   let o = "";
   if (it.status === "live") o += `<span class="badge live"><i></i>Live</span>`;
   if (favs.has(it.id)) o += `<span class="heart">${ICON.heart}</span>`;
-  return o + provBadges(it);
+  return o + statusBadge(it.id) + provBadges(it);
 }
 function card(it) {
   const sc = scoreOf(it);
@@ -969,18 +1102,15 @@ function trackerWidget() {
 }
 function panelHTML(tab) {
   if (tab === "foryou") {
-    const top = D.items.filter(i => i.imdb && i.offers.length && hasPoster(i)).sort((a, b) => b.imdb - a.imdb).slice(0, 10).map(i => i.id);
-    const telugu = D.items.filter(i => i.telugu && i.offers.length).map(i => i.id);
-    const hot = D.items.filter(i => i.offers.some(o => o.p === "hotstar") && i.kind !== "sports").map(i => i.id);
-    return section("Top 10 in VibeSync", "by IMDb") + top10(top) + liveRowsHTML("foryou")
+    const fresh = i => !isWatched(i.id);                     // watched titles drop out of suggestions
+    const top = D.items.filter(i => i.imdb && i.offers.length && hasPoster(i) && fresh(i)).sort((a, b) => b.imdb - a.imdb).slice(0, 10).map(i => i.id);
+    const telugu = D.items.filter(i => i.telugu && i.offers.length && fresh(i)).map(i => i.id);
+    const hot = D.items.filter(i => i.offers.some(o => o.p === "hotstar") && i.kind !== "sports" && fresh(i)).map(i => i.id);
+    return tasteRowsHTML() + section("Top 10 in VibeSync", "by IMDb") + top10(top) + liveRowsHTML("foryou")
       + section("Telugu picks", `${telugu.length} titles`) + row(telugu) + section("On JioHotstar") + row(hot) + platformsHTML();
   }
-  if (tab === "saved") {
-    const items = [...favs].map(id => BY[id]).filter(Boolean);
-    return items.length ? section("Saved", `${items.length} title${items.length > 1 ? "s" : ""}`) + grid(items)
-      : `<div class="sec"><h2>Saved</h2></div><div class="empty">Nothing saved yet.<br>Tap the ♡ on any title and it lands here.</div>`;
-  }
-  return (D.rows[tab] || []).map(([t, ids]) => section(t, `${ids.length} titles`) + row(ids)).join("") + liveRowsHTML(tab);
+  if (tab === "saved") return savedHTML();
+  return (D.rows[tab] || []).map(([t, ids]) => { const f = ids.filter(id => !isWatched(id)); return section(t, `${f.length} titles`) + row(f); }).join("") + liveRowsHTML(tab);
 }
 function movePill() {
   const sel = $('.tab[aria-selected="true"]'), pill = $("#pill");
@@ -998,6 +1128,7 @@ function setTab(tab, scrollTo) {
   p.classList.remove("panel"); void p.offsetWidth; p.classList.add("panel");
   p.innerHTML = panelHTML(tab);
   fillLive(p);
+  if (tab === "saved") fillComingUp();
   movePill();
   const sel = $(`.tab[data-tab="${tab}"]`), rowEl = $(".tabrow");
   if (sel && rowEl) rowEl.scrollTo({left: sel.offsetLeft - (rowEl.clientWidth - sel.offsetWidth) / 2, behavior: REDUCED ? "auto" : "smooth"});
@@ -1046,7 +1177,7 @@ function sheetShell(it, facts, body) {
   return `<div class="grab" data-grab><i></i></div><button class="icon x" data-close aria-label="Close">${ICON.close}</button>
     <div class="sbody"><div class="shero"><div class="sbd" style="${bd}"></div>
       <div class="shead">${poster(it, "s592")}<div><h2 class="stitle">${esc(it.title)}</h2><div class="facts">${facts.filter(Boolean).join("")}</div></div></div></div>
-    <div class="sin${sheetStill ? " still" : ""}">${body}</div></div>`;
+    <div class="sin${sheetStill ? " still" : ""}">${body}${sheetExtras(it)}</div></div>`;
 }
 const fact = (t, cls = "") => t ? `<span class="fact ${cls}">${t}</span>` : "";
 const saveBtn = it => { const s = favs.has(it.id);
@@ -1061,7 +1192,8 @@ function sheetHTML(it) {
     <p class="syn">${esc(it.synopsis)}</p>
     <div class="h3">${it.kind === "sports" ? "Where to watch live" : "Where to watch in India"}</div>${offers}
     ${it.note ? `<div class="note">${esc(it.note)}</div>` : ""}
-    <div class="acts"><a class="btn tint" href="${esc(ytLink(it))}" target="_blank" rel="noopener">${ICON.play}${it.kind === "sports" ? "Highlights" : it.kind === "reality" ? "Latest promos" : "Trailer"}</a>${saveBtn(it)}</div>
+    <div class="acts">${it.kind === "sports" || it.kind === "reality" ? `<a class="btn tint" href="${esc(ytLink(it))}" target="_blank" rel="noopener">${ICON.play}${it.kind === "sports" ? "Highlights" : "Latest promos"}</a>`
+      : `<button class="btn tint" data-trailer="${esc(it.id)}">${ICON.play}Trailer</button>`}${saveBtn(it)}</div>
     ${D.tracker[it.id] ? trackerHTML(it.id) : ""}`;
   return sheetShell(it, [fact(it.imdb ? `★ ${it.imdb.toFixed(1)} IMDb` : "", "sc"), fact(esc(it.meta)), it.kind === "sports" ? "" : fact(esc(it.year)), fact(esc(kindLabel(it)))], body);
 }
@@ -1257,7 +1389,7 @@ function renderSearch(q) {
 /* Truly random: the whole library (hand-picked + live titles already loaded), filtered by the
    selected mood if there is one, never repeating the last few picks. Saved titles get a small boost. */
 function surprisePool() {
-  const playable = i => i && hasPoster(i) && (i.offers.length || i.tmdb) && i.kind !== "sports";
+  const playable = i => i && hasPoster(i) && (i.offers.length || i.tmdb) && i.kind !== "sports" && !isWatched(i.id);
   let pool = D.items.filter(playable);
   Object.values(liveState).forEach(st => st.ids.forEach(id => { const it = BY[id]; if (playable(it) && !pool.includes(it)) pool.push(it); }));
   if (state.mood) {
@@ -1370,6 +1502,7 @@ function render() {
       <div class="moodbox" id="moodbox"><div></div></div>
       <button class="surprise" data-surprise><span class="die" aria-hidden="true">🎲</span><span style="flex:1"><b>Surprise me</b><small id="surprise-sub">Tap and VibeSync picks from the whole library</small></span><span class="go" style="width:22px;height:22px;opacity:.7">${ICON.arrow}</span></button>
       ${trackerWidget()}
+      ${exploreHTML()}
       <nav class="tabs" id="tabs" aria-label="Categories"><div class="tabrow" role="tablist"><span class="pill" id="pill"></span>${TABS.map(([k, l]) =>
         `<button class="tab" role="tab" data-tab="${k}" aria-selected="${k === state.tab}">${l}</button>`).join("")}</div></nav>
       <div id="panel" class="panel"></div>
@@ -1945,6 +2078,7 @@ async function themeFrom(it, srcEl) {
   TT.busy = true;
   const flash = themeFlash(it, srcEl);
   let genres = (it.genres || []).slice(), backs = [], tposter = it.tmdbPoster || "", keywords = [], overview = it.synopsis || "", indian = !!it.telugu, yt = [];
+  let olang = it.lang || (it.telugu ? "te" : ""), oyear = String(it.year || "");
   const ref = await tmdbRef(it);
   if (ref) {
     try {
@@ -1960,6 +2094,7 @@ async function themeFrom(it, srcEl) {
       overview = det.overview || overview;
       keywords = (kw.keywords || kw.results || []).map(k => k.name);
       indian = /^(te|hi|ta|ml|kn|mr|bn)$/.test(det.original_language || "") || indian;
+      olang = det.original_language || olang; oyear = (det.release_date || det.first_air_date || "").slice(0, 4) || oyear;
       backs = (imgs.backdrops || []).filter(b => b.width >= 1000).sort((a, b) => (a.iso_639_1 ? 1 : 0) - (b.iso_639_1 ? 1 : 0) || b.vote_average - a.vote_average)
         .slice(0, 3).map(b => b.file_path);
       if (!backs.length && det.backdrop_path) backs = [det.backdrop_path];
@@ -1976,9 +2111,10 @@ async function themeFrom(it, srcEl) {
   }
   if (!base) { const [h] = rgb2hsl(...[1, 3, 5].map(i => parseInt(tintOf(it).slice(i, i + 2), 16) / 255 || .5)); base = {bgH: h, bgS: .3, accH: h, accS: .75, acc2H: (h + 40) % 360}; }
   const pal = makePalette(base, pack.hint);
-  const theme = {v: 2, id: it.id, title: it.title, year: it.year || "", poster: tposter ? img(tposter, "w185") : hasPoster(it) ? posterURL(it, "s166") : "",
-                 far, near, pal, world, indian, yt, kind: kindWord(it, ref), at: Date.now()};
+  const theme = {v: 2, id: it.id, title: it.title,  poster: tposter ? img(tposter, "w185") : hasPoster(it) ? posterURL(it, "s166") : "",
+                 far, near, pal, world, indian, yt, kind: kindWord(it, ref), lang: olang, year: oyear, at: Date.now()};
   TT.cur = theme; store.set("titleTheme", theme);
+  const u = X.use[theme.id] || {n: 0, title: theme.title}; u.n++; u.title = theme.title; X.use[theme.id] = u; store.set("themeUse", X.use);
   const rec = store.get("themeRecent", []).filter(t => t.id !== theme.id);
   store.set("themeRecent", [theme].concat(rec).slice(0, 10));
   loadFont(pack.font);
@@ -2408,7 +2544,7 @@ function stopWorld() {
   cancelAnimationFrame(W.raf); W.raf = 0;
   ["#wfx", "#ffx"].forEach(s => { const cv = $(s); if (cv) cv.getContext("2d").clearRect(0, 0, cv.width, cv.height); });
 }
-function overlayOpen() { return ["#search", "#mixer", "#themer"].some(s => { const e = $(s); return e && e.classList.contains("on"); }); }
+function overlayOpen() { return ["#search", "#mixer", "#themer", "#xp", "#trv"].some(s => { const e = $(s); return e && e.classList.contains("on"); }); }
 function startWorld(pack, pal) {
   stopWorld();
   const cv = $("#wfx"), fv = $("#ffx"); if (!cv || !fv) return;
@@ -3245,8 +3381,8 @@ function rankBgm(list, title) {
   }).filter(v => v.sc >= 4 && !seen.has(v.key) && seen.add(v.key)).sort((a, b) => b.sc - a.sc).slice(0, 6);
 }
 async function findBgm(theme) {
-  if (Array.isArray(theme.bgm2)) return theme.bgm2;
-  const name = String(theme.title).split(":")[0].trim(), kind = theme.kind || kindWord(BY[theme.id], null);
+  if (Array.isArray(theme.bgm3)) return theme.bgm3;
+  const w = ytWho(theme), name = w.name, kind = w.full.slice(name.length).trim();     // "telugu 2023 movie"
   const anime = /anime|cursed|slayer/.test(theme.world) || /anime/i.test((theme.genres || []).join(" "));
   const qs = theme.indian ? [`${name} ${kind} BGM original background score`, `${name} ${kind} theme music official`]
            : anime ? [`${name} anime opening theme official`, `${name} anime OST main theme`]
@@ -3255,21 +3391,40 @@ async function findBgm(theme) {
   for (const q of qs) { found = rankBgm(found.concat(await ytSearch(q)), name); if (found.length >= 3) break; }
   const credits = (theme.yt || []).filter(v => v.type === "Opening Credits").map(v => ({key: v.key, name: v.name, by: "Official"}));
   const list = found.map(({key, name, by}) => ({key, name, by})).concat(credits);
-  theme.bgm2 = list;
-  if (TT.cur && TT.cur.id === theme.id) { TT.cur.bgm2 = list; store.set("titleTheme", TT.cur); }      // search once per title
+  theme.bgm3 = list;
+  if (TT.cur && TT.cur.id === theme.id) { TT.cur.bgm3 = list; store.set("titleTheme", TT.cur); }      // search once per title
   return list;
 }
 /* "Viral" BGM and "Song": whatever YouTube ranks first for "<title> viral bgm" / "<title> viral song", in YouTube's own order */
 const YT_MODES = {viral: {q: "viral bgm", label: "VB🔥 Viral BGM", btn: "VB🔥", toast: "the most viral BGM"},
-                  song: {q: "viral song", label: "VS🔥 Viral song", btn: "VS🔥", toast: "the most viral song"}};
+                  song: {q: "viral song", label: "VS🔥 Viral song", btn: "VS🔥", toast: "the most viral song"},
+                  intro: {q: "intro theme", label: "IN🔥 Intro theme", btn: "IN🔥", toast: "the intro theme", tv: true}};
+const LANG_NAME = {te: "telugu", ta: "tamil", hi: "hindi", ml: "malayalam", kn: "kannada", bn: "bengali", mr: "marathi", pa: "punjabi", gu: "gujarati",
+                   ko: "korean", ja: "japanese", zh: "chinese", es: "spanish", fr: "french", de: "german", it: "italian", tr: "turkish", th: "thai"};
+// the words that pin a search to this exact title: "Salaar telugu 2023 movie"
+function ytWho(theme) {
+  const name = String(theme.title).split(":")[0].trim();
+  const it = BY[theme.id];
+  const kind = theme.kind || kindWord(it, /:tv:/.test(String(theme.id)) ? {type: "tv"} : /:movie:/.test(String(theme.id)) ? {type: "movie"} : null);
+  const lang = LANG_NAME[theme.lang || (it && (it.lang || (it.telugu ? "te" : "")))] || "";
+  const year = String(theme.year || (it && it.year) || "").slice(0, 4);
+  return {name, kind, lang, year, full: [name, lang, year, kind].filter(Boolean).join(" ")};
+}
+const isTvKind = theme => /series|anime|show/.test(ytWho(theme).kind);
 async function findTop(theme, mode) {
-  const name = String(theme.title).split(":")[0].trim(), seen = new Set();
-  const kind = theme.kind || kindWord(BY[theme.id], /:tv:/.test(String(theme.id)) ? {type: "tv"} : /:movie:/.test(String(theme.id)) ? {type: "movie"} : null);
-  const q = `${name} ${kind} ${YT_MODES[mode].q}`;                    // e.g. "Vikram movie viral bgm", "Wednesday series viral song"
-  if (theme[mode] && theme[mode].q === q && theme[mode].list.length) return theme[mode].list;
-  const list = (await ytSearch(q)).filter(v => !seen.has(v.key) && seen.add(v.key)).slice(0, 8).map(({key, name, by}) => ({key, name, by}));
+  const w = ytWho(theme), m = YT_MODES[mode];
+  const qs = [`${w.full} ${m.q}`, [w.name, w.lang, w.kind, m.q].filter(Boolean).join(" "), [w.name, w.lang, m.q].filter(Boolean).join(" ")]
+    .filter((q, i, a) => a.indexOf(q) === i);
+  if (theme[mode] && theme[mode].q === qs[0] && theme[mode].list.length) return theme[mode].list;
+  const seen = new Set(); let list = [];
+  // YouTube's own order for the exact search first; looser searches only add backups for videos that can't be embedded
+  for (const q of qs) {
+    (await ytSearch(q)).forEach(v => { if (!seen.has(v.key) && !/#shorts/i.test(v.name) && seen.add(v.key)) list.push({key: v.key, name: v.name, by: v.by}); });
+    if (list.length >= 12) break;
+  }
+  list = list.slice(0, 20);
   if (!list.length) return findBgm(theme);                    // search unavailable: the official theme instead
-  theme[mode] = {q, list};
+  theme[mode] = {q: qs[0], list};
   if (TT.cur && TT.cur.id === theme.id) { TT.cur[mode] = theme[mode]; store.set("titleTheme", TT.cur); }
   return list;
 }
@@ -3297,6 +3452,7 @@ function ytCard(state) {
   box.querySelector("[data-ytmin]").textContent = YTS.collapsed ? "▶ Play" : "Hide";
   const m = YT_MODES[YTS.mode];
   box.querySelector(".yt-kt").textContent = m ? m.label : "Official theme";
+  const intro = box.querySelector('[data-ytmode="intro"]'); if (intro) intro.hidden = !(YTS.theme && isTvKind(YTS.theme));
   box.querySelectorAll("[data-ytmode]").forEach(b => { const on = b.dataset.ytmode === YTS.mode; b.setAttribute("aria-pressed", on); b.textContent = YT_MODES[b.dataset.ytmode].btn; /* lit while playing; tap again for the official theme */ });
   box.querySelector(".yt-t").textContent = state === "searching" ? (m ? `Finding ${m.toast}…` : "Finding the official soundtrack…") : (v.name || "Soundtrack");
   const th = YTS.theme && YTS.theme.poster; box.querySelector(".yt-disc").style.backgroundImage = th ? `url('${th}')` : "";
@@ -3310,15 +3466,22 @@ async function ytPlay(theme, tok) {
   if (!YT || !list.length) return ytFallback(!list.length ? "No official soundtrack found for this title" : "YouTube couldn't load");
   ytLoad();
 }
+function ytWatch() {
+  clearTimeout(YTS.wd);
+  YTS.wd = setTimeout(() => {
+    let st = -1; try { st = YTS.player.getPlayerState(); } catch (e) {}
+    if (st !== 1 && st !== 2 && !YTS.collapsed && (YTS.skips || 0) < 4 && $("#ytcard").classList.contains("on")) { YTS.skips = (YTS.skips || 0) + 1; YTS.i++; ytLoad(); }
+  }, 10000);
+}
 function ytLoad() {
-  const v = YTS.list[YTS.i]; if (!v) return ytFallback("No playable official soundtrack for this title");
-  ytCard();
+  const v = YTS.list[YTS.i]; if (!v) return ytFallback(YT_MODES[YTS.mode] ? "None of the search results can play inside VibeSync" : "No playable official soundtrack for this title");
+  ytCard(); ytWatch();
   if (YTS.player && YTS.player.loadVideoById) { YTS.player.loadVideoById(v.key); ytVolume(); return; }
   YTS.player = new window.YT.Player("ytp", {width: "100%", height: "100%", videoId: v.key,
     playerVars: {autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1, controls: 1, loop: 1, playlist: v.key, iv_load_policy: 3},
     events: {onReady: e => { ytVolume(); e.target.playVideo(); },
-             onError: () => { YTS.i++; ytLoad(); },                       // this one can't be embedded: next candidate
-             onStateChange: e => { if (e.data === 0) e.target.playVideo(); }}});
+             onError: () => { YTS.i++; ytLoad(); },                  // embedding disabled by the uploader: next result                       // this one can't be embedded: next candidate
+             onStateChange: e => { if (e.data === 1) { clearTimeout(YTS.wd); YTS.skips = 0; } if (e.data === 0) e.target.playVideo(); }}});
 }
 function ytFallback(msg) {                                    // nothing official to play: the VibeSync score
   ytStop(); const t = YTS.theme; if (!t || AU.world !== t) return;
@@ -3328,6 +3491,7 @@ function ytVolume() { if (YTS.player && YTS.player.setVolume) try { YTS.player.s
 function ytPause() { if (YTS.player && YTS.player.pauseVideo) try { YTS.player.pauseVideo(); } catch (e) {} }
 function ytResume() { if (YTS.player && YTS.player.playVideo && !YTS.collapsed && $("#ytcard").classList.contains("on")) try { YTS.player.playVideo(); } catch (e) {} }
 function ytStop() {
+  clearTimeout(YTS.wd);
   if (YTS.player && YTS.player.stopVideo) try { YTS.player.stopVideo(); } catch (e) {}
   const box = $("#ytcard"); if (box) box.className = "ytcard";
 }
@@ -3399,7 +3563,7 @@ function fromTmdb(r, typeHint) {
   const it = {id: `tmdb:${type}:${r.id}`, tmdb: {type, id: r.id}, title, kind, year, meta: "", genres: [], synopsis: r.overview || "",
     moods: [], telugu: r.original_language === "te", imdb: null, score: r.vote_average ? Math.round(r.vote_average * 10) / 10 : null,
     poster: null, tmdbPoster: r.poster_path, status: null, note: "", emoji: "🎬", colors: ["#3F2A3A", "#1B1220"], offers: [],
-    trailer: "https://www.youtube.com/results?search_query=" + enc(`${title} ${year} trailer`)};
+    trailer: "https://www.youtube.com/results?search_query=" + enc(`${title} ${year} trailer`), gids: g, lang: r.original_language || ""};
   const twin = curatedTwin(it);
   if (twin) return twin;                                 // prefer our hand-checked version
   if (!BY[it.id]) BY[it.id] = it;
@@ -3412,7 +3576,7 @@ function curatedTwin(it) {
     && (!it.year || !c.year || Math.abs(+c.year - +it.year) <= 1)) || null;
 }
 const slim = it => ({id: it.id, tmdb: it.tmdb, title: it.title, kind: it.kind, year: it.year, score: it.score, tmdbPoster: it.tmdbPoster,
-  synopsis: it.synopsis, telugu: it.telugu, trailer: it.trailer});
+  synopsis: it.synopsis, telugu: it.telugu, trailer: it.trailer, gids: it.gids, lang: it.lang});
 function rehydrate(m) {
   return Object.assign({meta: "", genres: [], moods: [], imdb: null, poster: null, status: null, note: "", emoji: "🎬",
     colors: ["#3F2A3A", "#1B1220"], offers: []}, m);
@@ -3422,6 +3586,7 @@ function rehydrate(m) {
 const liveState = {};
 function liveDef(key) {
   const [a, b, c] = key.split("|");
+  if (a === "taste") return tasteDef(b);
   if (a === "plat") {
     const ids = (T.provIds[b] || []).join("|");
     return {title: `${c === "movie" ? "Movies" : "Series"} on ${D.providers[b].name}`, path: `/discover/${c}`,
@@ -3471,7 +3636,7 @@ async function loadLive(key) {
     const j = await tget(def.path, Object.assign({page: st.page + 1}, def.params));
     st.page = j.page || st.page + 1; st.total = j.total_pages || 1;
     const seen = new Set(st.ids);
-    const fresh = (j.results || []).map(r => fromTmdb(r, def.type)).filter(it => it && !seen.has(it.id) && (seen.add(it.id), true));
+    const fresh = (j.results || []).map(r => fromTmdb(r, def.type)).filter(it => it && !isWatched(it.id) && !seen.has(it.id) && (seen.add(it.id), true));
     fresh.forEach(it => st.ids.push(it.id));
     const el = document.querySelector(`[data-live="${CSS.escape(key)}"]`);
     if (el) {
@@ -3566,7 +3731,7 @@ function tmdbSheetHTML(it) {
   const body = `<div class="tags">${it.telugu ? `<span class="tag tel">Telugu</span>` : ""}${(d ? d.genres : []).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
     <p class="syn">${esc(it.synopsis || "No description yet.")}</p>
     <div class="h3">Where to watch in India</div>${where}
-    <div class="acts"><a class="btn tint" href="${esc(ytLink(it))}" target="_blank" rel="noopener">${ICON.play}Trailer</a>${saveBtn(it)}</div>
+    <div class="acts"><button class="btn tint" data-trailer="${esc(it.id)}">${ICON.play}Trailer</button>${saveBtn(it)}</div>
     <p class="foot2">Streaming data from JustWatch via TMDB. Line-ups change, so the app may differ slightly.</p>`;
   return sheetShell(it, [fact(it.score ? `★ ${it.score.toFixed(1)} TMDB` : "", "sc"), fact(esc(it.year)), d ? fact(esc(d.len)) : "", fact(esc(kindLabel(it)))], body);
 }
@@ -3587,6 +3752,886 @@ function searchTmdb(q, have, forQ = q) {
     box.innerHTML = items.length ? section("More titles", "Live from TMDB") + grid(items) : "";
   }, 350);
 }
+
+/* ───────────── Explore & track: shared state ─────────────
+   status  : {id: {s: "watching"|"watched", at, meta}}   (meta = slim copy for live TMDB titles)
+   taste   : {t: {tag: score}, k: {kind: score}, l: {lang: score}, n}   learned from swipes, saves, watched
+   swiped  : {id: 1 (liked) | -1 (skipped) | 0 (seen)}
+   rt      : {id: runtime minutes}                       (for Wrapped and time filters) */
+const X = {st: store.get("status", {}), taste: Object.assign({t: {}, k: {}, l: {}, n: 0}, store.get("taste", {})),
+           swiped: store.get("swiped", {}), rt: store.get("rt", {}), use: store.get("themeUse", {})};
+const isWatched = id => !!(X.st[id] && X.st[id].s === "watched");
+const statusOf = id => (X.st[id] && X.st[id].s) || "";
+X.st && Object.values(X.st).forEach(v => { if (v.meta && !BY[v.meta.id]) { /* rehydrated at boot */ } });
+
+/* canonical genre tags: TMDB ids per type, words people use, and how curated genres map */
+const TAGS = {
+  action:      {m: "28", t: "10759", label: "Action", e: "💥", rx: /action|heist|superhero|martial|fight/i, w: /\b(action|fights?|fighting|mass|adrenaline|explosive|stunts?)\b/},
+  adventure:   {m: "12", t: "10759", label: "Adventure", e: "🗺️", rx: /adventure|quest|epic|survival/i, w: /\b(adventures?|quest|journey|epic)\b/},
+  animation:   {m: "16", t: "16", label: "Animation", e: "🎨", rx: /anim|anime|shonen|shounen|seinen/i, w: /\b(animated|animation|cartoons?|anime)\b/},
+  comedy:      {m: "35", t: "35", label: "Comedy", e: "😂", rx: /comedy|sitcom|satire/i, w: /\b(comedy|comedies|funny|funnier|funniest|laugh|laughs|hilarious|light[- ]?hearted|lighter|fun|humou?r)\b/},
+  crime:       {m: "80", t: "80", label: "Crime", e: "🕵️", rx: /crime|gangster|mafia|heist|cop/i, w: /\b(crime|gangsters?|mafia|heists?|cops?|police|underworld|drug)\b/},
+  documentary: {m: "99", t: "99", label: "Documentary", e: "🎥", rx: /document/i, w: /\b(documentar(y|ies)|docu|docuseries|true crime)\b/},
+  drama:       {m: "18", t: "18", label: "Drama", e: "🎭", rx: /drama/i, w: /\b(drama|emotional|cry|tearjerker|heartfelt|serious|moving)\b/},
+  family:      {m: "10751", t: "10751", label: "Family", e: "👨‍👩‍👧", rx: /family|kids/i, w: /\b(family|kids|children|wholesome|feel[- ]?good)\b/},
+  fantasy:     {m: "14", t: "10765", label: "Fantasy", e: "🧙", rx: /fantasy|myth|supernatural|magic/i, w: /\b(fantasy|magic|magical|myth|mythology|mythological|dragons?|supernatural)\b/},
+  history:     {m: "36", t: "10768", label: "History", e: "🏛️", rx: /histor|period|biopic|freedom/i, w: /\b(histor(y|ical)|period|biopic|freedom struggle|kings?)\b/},
+  horror:      {m: "27", t: "9648", label: "Horror", e: "👻", rx: /horror/i, w: /\b(horror|scary|scarier|scariest|ghosts?|haunted|creepy|spooky|zombies?)\b/},
+  music:       {m: "10402", t: "10402", label: "Music", e: "🎵", rx: /music/i, w: /\b(musical|musicals|music|songs)\b/},
+  mystery:     {m: "9648", t: "9648", label: "Mystery", e: "🔍", rx: /mystery|whodunit|detective/i, w: /\b(myster(y|ies)|whodunit|detectives?|mind[- ]?bending|puzzles?|twists?|twisty)\b/},
+  romance:     {m: "10749", t: "18", label: "Romance", e: "💘", rx: /romance|love|romcom/i, w: /\b(romance|romantic|love|date night|rom-?com)\b/},
+  scifi:       {m: "878", t: "10765", label: "Sci-Fi", e: "🚀", rx: /sci-?fi|space|science|dystopia|cyber/i, w: /\b(sci-?fi|science fiction|space|future|futuristic|aliens?|time travel|dystopian|robots?)\b/},
+  thriller:    {m: "53", t: "80", label: "Thriller", e: "🔪", rx: /thriller|suspense/i, w: /\b(thrillers?|suspense|gripping|edge of|tense|intense|darker|dark)\b/},
+  war:         {m: "10752", t: "10768", label: "War", e: "🎖️", rx: /war\b|army|military/i, w: /\b(war|army|soldiers?|military)\b/},
+  western:     {m: "37", t: "37", label: "Western", e: "🤠", rx: /western/i, w: /\b(westerns?|cowboys?)\b/},
+  reality:     {m: "", t: "10764", label: "Reality", e: "📸", rx: /reality/i, w: /\b(reality|game show)\b/},
+};
+const GID_TAG = {};
+Object.entries(TAGS).forEach(([k, v]) => { if (v.m && !GID_TAG[v.m]) GID_TAG[v.m] = k; });
+Object.assign(GID_TAG, {"10759": "action", "10765": "scifi", "10768": "war", "10762": "family", "10764": "reality", "10763": "documentary"});
+function tagsOf(it) {
+  if (!it) return [];
+  const out = new Set();
+  (it.gids || []).forEach(g => { const k = GID_TAG[String(g)]; if (k) out.add(k); });
+  (it.genres || []).forEach(g => Object.entries(TAGS).forEach(([k, v]) => { if (v.rx.test(g)) out.add(k); }));
+  if (it.kind === "anime") out.add("animation");
+  if (it.kind === "reality") out.add("reality");
+  return [...out];
+}
+const langOf = it => it.lang || (it.telugu ? "te" : "");
+function learn(it, w) {
+  if (!it) return;
+  const T2 = X.taste;
+  tagsOf(it).forEach(k => T2.t[k] = (T2.t[k] || 0) + w);
+  if (it.kind) T2.k[it.kind] = (T2.k[it.kind] || 0) + w;
+  const l = langOf(it); if (l) T2.l[l] = (T2.l[l] || 0) + w;
+  T2.n++; store.set("taste", T2);
+}
+const topOf = (o, n) => Object.entries(o).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k]) => k);
+function tasteScore(it) {
+  const T2 = X.taste; let s = 0;
+  tagsOf(it).forEach(k => s += T2.t[k] || 0);
+  s += (T2.k[it.kind] || 0) * .6 + (T2.l[langOf(it)] || 0) * .5;
+  return s;
+}
+// keep watched titles' details so Saved and Wrapped can show them even when they came from TMDB
+function setStatus(id, s) {
+  const it = BY[id]; if (!it) return;
+  const cur = statusOf(id);
+  if (cur === s) { delete X.st[id]; toast(s === "watched" ? "Removed from Watched" : "Removed from Watching"); }
+  else {
+    X.st[id] = {s, at: Date.now(), meta: it.tmdb ? slim(Object.assign({}, it, {gids: it.gids, lang: it.lang})) : null};
+    if (s === "watched") { learn(it, 1); toast("Marked as watched ✓ It won't show up in suggestions"); }
+    else toast("Added to Watching 👀");
+  }
+  store.set("status", X.st);
+  refreshSheet(); buzz();
+  if (state.tab === "saved") setTab("saved");
+  $$(`.card[data-open="${CSS.escape(id)}"] .pw`).forEach(pw => { const b = pw.querySelector(".stb"); if (b) b.remove(); if (X.st[id]) pw.insertAdjacentHTML("beforeend", statusBadge(id)); });
+}
+const statusBadge = id => { const s = statusOf(id); return s ? `<span class="stb ${s}">${s === "watched" ? "✓ Watched" : "👀 Watching"}</span>` : ""; };
+function rehydrateAll() {
+  Object.values(X.st).forEach(v => { if (v.meta && !BY[v.meta.id]) BY[v.meta.id] = rehydrate(v.meta); });
+}
+const tvParams = () => Object.assign({}, STREAM);
+
+/* ───────────── generic full-screen page (cast, filters, calendar, plan, Wrapped, sync…) ───────────── */
+const XP = {stack: []};
+function openXP(html, cls, keep) {
+  const x = $("#xp");
+  if (keep && x.classList.contains("on")) XP.stack.push({html: x.innerHTML, cls: x.dataset.cls || "", y: (x.querySelector(".mx-in") || {}).scrollTop || 0});
+  else XP.stack = [];
+  closeSearch(); closeMixer();
+  x.dataset.cls = cls || "";
+  x.className = "xp on " + (cls || "");
+  x.innerHTML = `<div class="mx-in">${html}</div>`;
+  x.querySelector(".mx-in").scrollTop = 0;
+  buzz();
+}
+function closeXP() {
+  const x = $("#xp"), prev = XP.stack.pop();
+  if (prev) { x.className = "xp on " + prev.cls; x.dataset.cls = prev.cls; x.innerHTML = prev.html; x.querySelector(".mx-in").scrollTop = prev.y; return; }
+  x.classList.remove("on");
+  if (DECK.on) DECK.on = false;
+}
+const xpTop = (title, sub, back) => `<div class="mx-top"><div><h2 class="mx-h">${title}</h2>${sub ? `<p class="mx-p">${sub}</p>` : ""}</div>
+  <button class="icon" data-xpclose aria-label="${back ? "Back" : "Close"}">${back ? "←" : ICON.close}</button></div>`;
+const needKey = () => `<div class="empty">This needs the live TMDB library, which isn't connected right now.</div>`;
+const moreBtn = (k) => `<button class="btn soft xmore" data-xmore="${k}">Load more</button>`;
+const gridOf = items => items.length ? `<div class="grid">${items.map(card).join("")}</div>` : "";
+
+/* ───────────── Explore hub on Home ───────────── */
+const TOOLS = [["swipe", "🃏", "Swipe mode", "Right to save, left to skip"], ["describe", "✨", "Describe it", "\"A thriller like Vikram but funnier\""],
+               ["time", "⏱️", "Short on time", "Only what fits your time"], ["lang", "🌐", "Languages", "Telugu, Tamil, Korean…"],
+               ["free", "🆓", "Free to watch", "No subscription needed"], ["kids", "👪", "Kids-safe", "Family-friendly picks"],
+               ["calendar", "📅", "OTT calendar", "What's new this week"], ["plan", "💳", "Which plan?", "Best subscription for your list"],
+               ["wrapped", "🎁", "Wrapped", "Your year on VibeSync"], ["sync", "🔄", "Sync", "Move your data to another device"]];
+function exploreHTML() {
+  return section("Explore", "") + `<div class="xtools">${TOOLS.map(([k, e, t, s]) =>
+    `<button class="tool" data-tool="${k}"><span class="te" aria-hidden="true">${e}</span><b>${t}</b><small>${esc(s)}</small></button>`).join("")}</div>`;
+}
+function openTool(k) {
+  if (k === "swipe") return openDeck();
+  if (k === "describe") return openDescribe();
+  if (k === "time") return openFind({time: 120});
+  if (k === "lang") return openFind({lang: "te"});
+  if (k === "free") return openFind({free: true});
+  if (k === "kids") return openFind({kids: true});
+  if (k === "calendar") return openCalendar();
+  if (k === "plan") return openPlan();
+  if (k === "wrapped") return openWrapped();
+  if (k === "sync") return openSync();
+}
+
+/* ───────────── Find: time, language, free-to-watch and kids-safe filters ───────────── */
+const LANGS = [["", "Any"], ["te", "Telugu"], ["ta", "Tamil"], ["hi", "Hindi"], ["ml", "Malayalam"], ["kn", "Kannada"], ["bn", "Bengali"], ["mr", "Marathi"],
+               ["en", "English"], ["ko", "Korean"], ["ja", "Japanese"], ["es", "Spanish"], ["fr", "French"], ["zh", "Chinese"]];
+const TIMES = [[0, "Any length"], [90, "≤ 90 min"], [120, "≤ 2 hours"], [150, "≤ 2½ hours"]];
+const TV_TIMES = [[0, "Any length"], [25, "≤ 25 min episodes"], [45, "≤ 45 min episodes"], [60, "≤ 1 hour episodes"]];
+const SORTS = [["popularity.desc", "Popular"], ["vote_average.desc", "Top rated"], ["primary_release_date.desc", "Newest"]];
+const F = Object.assign({type: "movie", time: 0, lang: "", free: false, kids: false, sort: "popularity.desc"}, store.get("find", {}));
+F.res = {ids: [], page: 0, total: 1, busy: false, seq: 0};
+function openFind(preset) {
+  Object.assign(F, {time: 0, lang: "", free: false, kids: false}, preset || {});
+  if (preset && preset.time && F.type === "tv" && preset.time > 60) F.time = 45;
+  openXP(`${xpTop("Find something", "Filter everything streaming in India by length, language, price and age.")}<div id="findctl"></div><div id="findres"></div>`, "find");
+  renderFindCtl(); runFind();
+}
+function renderFindCtl() {
+  const chip = (attr, v, label, on) => `<button class="chip" ${attr}="${esc(v)}" aria-pressed="${on}">${esc(label)}</button>`;
+  const times = F.type === "tv" ? TV_TIMES : TIMES;
+  $("#findctl").innerHTML = `<div class="seg two" role="tablist" aria-label="Movies or series">
+      <button role="tab" data-ftype="movie" aria-selected="${F.type === "movie"}">🎬 Movies</button><button role="tab" data-ftype="tv" aria-selected="${F.type === "tv"}">📺 Series</button></div>
+    <div class="h3">⏱️ How much time do you have?</div><div class="chips">${times.map(([v, l]) => chip("data-ftime", v, l, F.time === v)).join("")}</div>
+    <div class="h3">🌐 Language</div><div class="chips">${LANGS.map(([v, l]) => chip("data-flang", v, l, F.lang === v)).join("")}</div>
+    <div class="h3">More</div><div class="chips">${chip("data-ffree", 1, "🆓 Free to watch", F.free)}${chip("data-fkids", 1, "👪 Kids-safe", F.kids)}
+      ${SORTS.map(([v, l]) => chip("data-fsort", v, l, F.sort === v)).join("")}</div>
+    <p class="fnote">Language is the original language. Free means free or with ads in India (YouTube, MX Player, JioHotstar's free titles…).
+      Kids-safe uses U / PG certificates for movies and Kids & Family genres for series.</p>`;
+}
+function findParams() {
+  const p = {watch_region: "IN", with_watch_monetization_types: F.free ? "free|ads" : "flatrate|free|ads", sort_by: F.sort, include_adult: "false"};
+  if (F.type === "tv" && p.sort_by === "primary_release_date.desc") p.sort_by = "first_air_date.desc";
+  if (p.sort_by.startsWith("vote_average")) p["vote_count.gte"] = F.lang && F.lang !== "en" ? 60 : 300;
+  if (p.sort_by.endsWith("date.desc")) p[F.type === "tv" ? "first_air_date.lte" : "primary_release_date.lte"] = new Date().toISOString().slice(0, 10);
+  if (F.time) { p["with_runtime.lte"] = F.time; p["with_runtime.gte"] = F.type === "tv" ? 5 : 40; }
+  if (F.lang) p.with_original_language = F.lang;
+  if (F.kids) {
+    if (F.type === "movie") { p.certification_country = "US"; p["certification.lte"] = "PG"; p.without_genres = "27,53,80"; }
+    else { p.with_genres = "10762|10751"; p.without_genres = "80,9648"; }
+  }
+  return p;
+}
+async function runFind(more) {
+  const R = F.res, seq = more ? R.seq : ++R.seq;
+  if (!more) { R.ids = []; R.page = 0; R.total = 1; }
+  const box = $("#findres"); if (!box) return;
+  store.set("find", {type: F.type, sort: F.sort});
+  if (!T.key || T.failed) {        // offline: the hand-picked library, filtered as far as its data allows
+    const items = D.items.filter(i => i.kind !== "sports" && (F.type === "movie" ? i.kind === "movie" : i.kind !== "movie") && (!F.lang || langOf(i) === F.lang)
+      && (!F.time || (X.rt[i.id] && X.rt[i.id] <= F.time)) && (!F.kids || tagsOf(i).includes("family")) && !isWatched(i.id));
+    box.innerHTML = items.length ? gridOf(items) : `<div class="empty">Nothing in the hand-picked library matches. The live library has far more once TMDB is connected.</div>`;
+    return;
+  }
+  if (R.busy) return; R.busy = true;
+  if (!more) box.innerHTML = `<div class="grid">${skeleton(9)}</div>`;
+  try {
+    const j = await tget(`/discover/${F.type}`, Object.assign({page: R.page + 1}, findParams()));
+    if (seq !== R.seq) { R.busy = false; return; }
+    R.page = j.page || R.page + 1; R.total = Math.min(j.total_pages || 1, 30);
+    const items = (j.results || []).map(r => fromTmdb(r, F.type)).filter(it => it && !isWatched(it.id) && !R.ids.includes(it.id));
+    items.forEach(it => R.ids.push(it.id));
+    const all = R.ids.map(id => BY[id]).filter(Boolean);
+    box.innerHTML = all.length ? `<div class="sec"><h2>${(j.total_results || all.length).toLocaleString("en-IN")} titles</h2></div>` + gridOf(all) + (R.page < R.total ? moreBtn("find") : "")
+      : `<div class="empty">Nothing matches all of that. Try loosening a filter.</div>`;
+  } catch (e) { box.innerHTML = `<div class="empty">Couldn't load results. Check your connection and try again.</div>`; }
+  R.busy = false;
+}
+
+/* ───────────── Describe it: plain-English search, no AI service needed ─────────────
+   Reads genres, moods, "like <title>", comparisons ("but funnier"), language, length, era, platform,
+   free/quality words and "no horror"-style exclusions, then asks TMDB for matching titles in India. */
+const LANG_WORDS = [[/\btelugu|tollywood\b/, "te"], [/\btamil|kollywood\b/, "ta"], [/\bhindi|bollywood\b/, "hi"], [/\bmalayalam|mollywood\b/, "ml"],
+                    [/\bkannada|sandalwood\b/, "kn"], [/\bbengali|bangla\b/, "bn"], [/\bmarathi\b/, "mr"], [/\bkorean|k-?drama\b/, "ko"],
+                    [/\bjapanese\b/, "ja"], [/\benglish|hollywood\b/, "en"], [/\bspanish\b/, "es"], [/\bfrench\b/, "fr"], [/\bchinese|c-?drama\b/, "zh"]];
+const PLAT_WORDS = [[/\bnetflix\b/, "netflix"], [/\bprime( video)?\b|\bamazon\b/, "prime"], [/\b(jio ?)?hotstar\b/, "hotstar"], [/\bapple ?tv\b/, "appletv"],
+                    [/\bcrunchyroll\b/, "crunchyroll"], [/\bsony ?liv\b/, "sonyliv"], [/\bzee ?5\b/, "zee5"], [/\baha\b/, "aha"]];
+const COMPARE = [[/funn(ier|y)|lighter|less serious/, "comedy"], [/scar(ier|y)|creepier/, "horror"], [/dark(er)?|grittier|edgier/, "thriller"],
+                 [/more action|action[- ]?packed/, "action"], [/more romantic|romantic/, "romance"], [/weirder|trippier|mind[- ]?bending/, "mystery"],
+                 [/more emotional|sadder/, "drama"], [/more family|for kids|kid[- ]?friendly/, "family"]];
+function parseDescribe(raw) {
+  let q = " " + raw.toLowerCase().replace(/[“”"]/g, " ").replace(/\s+/g, " ") + " ";
+  const P = {need: [], not: [], like: "", type: "", lang: "", runtime: 0, from: "", to: "", top: false, plat: [], free: false, cmp: []};
+  const m = /\b(?:like|similar to|such as|same as|in the style of|vibes? of|feel of)\s+(.+?)(?=\s+(?:but|except|and|with|in|on|that|which|from|for|under|less|not|without|only|no)\b|[,.;!?]|$)/.exec(q.trim());
+  if (m) { P.like = m[1].trim(); q = q.replace(m[0], " "); }
+  const but = /\b(but|except|only)\b(.*)$/.exec(q);
+  if (but) COMPARE.forEach(([rx, tag]) => { if (rx.test(but[2])) P.cmp.push(tag); });
+  q.replace(/\b(?:no|not|without|nothing|avoid|skip|zero)\s+(?:too\s+|very\s+|any\s+)?([a-z-]+(?:\s[a-z-]+)?)/g, (_, w) => {
+    Object.entries(TAGS).forEach(([k, v]) => { if (v.w.test(" " + w + " ")) P.not.push(k); }); return " ";
+  });
+  const qq = q.replace(/\b(?:no|not|without|nothing|avoid|skip|zero)\s+(?:too\s+|very\s+|any\s+)?[a-z-]+(?:\s[a-z-]+)?/g, " ");
+  Object.entries(TAGS).forEach(([k, v]) => { if (v.w.test(qq) && !P.not.includes(k)) P.need.push(k); });
+  P.cmp.forEach(k => { if (!P.need.includes(k)) P.need.push(k); });
+  if (/\banime\b/.test(q)) { P.type = "tv"; P.lang = "ja"; if (!P.need.includes("animation")) P.need.push("animation"); }
+  if (/\b(movies?|films?|cinema)\b/.test(q)) P.type = "movie";
+  else if (/\b(series|shows?|web ?series|seasons?|binge|episodes?|k-?drama)\b/.test(q)) P.type = "tv";
+  LANG_WORDS.forEach(([rx, l]) => { if (rx.test(q)) P.lang = l; });
+  PLAT_WORDS.forEach(([rx, p]) => { if (rx.test(q)) P.plat.push(p); });
+  const rt = /(?:under|less than|within|max(?:imum)?|below|shorter than|<)\s*(\d+(?:\.\d+)?)\s*(h|hrs?|hours?|m|mins?|minutes?)\b/.exec(q);
+  if (rt) P.runtime = Math.round(+rt[1] * (/^h/.test(rt[2]) ? 60 : 1));
+  else if (/\b(short|quick|shorter)\b/.test(q)) P.runtime = P.type === "tv" ? 30 : 105;
+  const dec = /\b(?:(19|20)?([0-9])0)'?s\b/.exec(q);
+  if (dec) { const c = dec[1] || (+dec[2] >= 3 ? "19" : "20"), y = +(c + dec[2] + "0"); P.from = `${y}-01-01`; P.to = `${y + 9}-12-31`; }
+  const yr = /\b(?:from|in|of)\s+((?:19|20)\d\d)\b/.exec(q), after = /\b(?:after|since|post)\s+((?:19|20)\d\d)\b/.exec(q);
+  if (yr) { P.from = `${yr[1]}-01-01`; P.to = `${yr[1]}-12-31`; }
+  if (after) P.from = `${after[1]}-01-01`;
+  if (/\b(new|latest|recent|newer|this year|fresh)\b/.test(q)) P.from = `${new Date().getFullYear() - 2}-01-01`;
+  if (/\b(old|classic|older|retro|vintage)\b/.test(q) && !P.to) P.to = "1999-12-31";
+  if (/\b(best|top|top[- ]rated|highly rated|masterpieces?|greatest|acclaimed|award)\b/.test(q)) P.top = true;
+  if (/\bfree\b/.test(q)) P.free = true;
+  P.need = P.need.filter((k, i, a) => a.indexOf(k) === i).slice(0, 4);
+  return P;
+}
+function describeChips(P, base) {
+  const c = [];
+  if (base) c.push(`Like ${base.title || base.name} (${(base.release_date || base.first_air_date || "").slice(0, 4)})`);
+  P.need.forEach(k => c.push(`${TAGS[k].e} ${TAGS[k].label}`));
+  P.not.forEach(k => c.push(`🚫 No ${TAGS[k].label.toLowerCase()}`));
+  if (P.type) c.push(P.type === "movie" ? "🎬 Movies" : "📺 Series");
+  if (P.lang) c.push("🌐 " + (LANGS.find(l => l[0] === P.lang) || [, P.lang])[1]);
+  if (P.runtime) c.push(`⏱️ ≤ ${P.runtime} min`);
+  if (P.from || P.to) c.push(`📅 ${P.from ? P.from.slice(0, 4) : "…"}–${P.to ? P.to.slice(0, 4) : "now"}`);
+  if (P.top) c.push("⭐ Top rated");
+  if (P.free) c.push("🆓 Free");
+  P.plat.forEach(p => c.push("📺 " + D.providers[p].name));
+  return c.length ? `<div class="chips understood">${c.map(t => `<span class="chip on">${esc(t)}</span>`).join("")}</div>` : "";
+}
+const DESC_EX = ["A thriller like Vikram but funnier", "Feel-good Telugu movies under 2 hours", "Korean series with romance, no horror",
+                 "Mind-bending sci-fi from the 2010s", "Top rated crime series on Netflix", "Funny anime", "Something like Interstellar"];
+function openDescribe(q) {
+  openXP(`${xpTop("Describe it", "Say what you're in the mood for, the way you'd tell a friend.")}
+    <form class="dform" data-describe><label class="sr" for="dq">Describe what you want</label>
+      <input id="dq" name="q" placeholder="A thriller like Vikram but funnier…" autocomplete="off" enterkeyhint="search" value="${esc(q || "")}">
+      <button class="btn tint" type="submit">✨ Find</button></form>
+    <div class="chips dex">${DESC_EX.map(t => `<button class="chip" data-dex="${esc(t)}">${esc(t)}</button>`).join("")}</div>
+    <div id="dres"></div>`, "describe");
+  if (q) runDescribe(q); else setTimeout(() => { const i = $("#dq"); if (i) i.focus(); }, 300);
+}
+const DSEQ = {n: 0};
+async function runDescribe(q) {
+  const box = $("#dres"); if (!box || !q.trim()) return;
+  const seq = ++DSEQ.n, P = parseDescribe(q);
+  box.innerHTML = describeChips(P) + `<div class="grid">${skeleton(9)}</div>`;
+  // the hand-picked library first: scored on genres, kind, language
+  const local = D.items.filter(i => i.kind !== "sports" && hasPoster(i) && !isWatched(i.id)).map(i => {
+    const tg = tagsOf(i); let s = 0;
+    P.need.forEach(k => { if (tg.includes(k)) s += 2; });
+    if (P.not.some(k => tg.includes(k))) s -= 9;
+    if (P.type) s += (P.type === "movie") === (i.kind === "movie") ? 1 : -9;
+    if (P.lang) s += langOf(i) === P.lang ? 2 : P.lang === "te" ? -9 : -1;
+    if (P.plat.length) s += i.offers.some(o => P.plat.includes(o.p)) ? 1 : -9;
+    if (P.like && twinKey(i.title) === twinKey(P.like)) s -= 99;
+    return [s, i];
+  }).filter(([s]) => s >= Math.max(2, P.need.length * 2)).sort((a, b) => b[0] - a[0]).slice(0, 8).map(([, i]) => i);
+  if (!T.key || T.failed) {
+    box.innerHTML = describeChips(P) + (local.length ? section("From VibeSync picks") + gridOf(local) : `<div class="empty">Nothing in the hand-picked library matches. Connect TMDB for the full library.</div>`);
+    return;
+  }
+  try {
+    let base = null, baseTags = [];
+    if (P.like) {
+      const j = await tget("/search/multi", {query: P.like, include_adult: "false"});
+      base = (j.results || []).find(r => (r.media_type === "movie" || r.media_type === "tv") && r.poster_path && (!P.type || r.media_type === P.type))
+          || (j.results || []).find(r => (r.media_type === "movie" || r.media_type === "tv") && r.poster_path);
+      if (base) baseTags = (base.genre_ids || []).map(g => GID_TAG[String(g)]).filter(Boolean);
+    }
+    if (seq !== DSEQ.n) return;
+    const type = P.type || (base ? base.media_type : (P.need.includes("reality") ? "tv" : "movie"));
+    const gid = k => TAGS[k][type === "tv" ? "t" : "m"];
+    const lang = P.lang || (base && base.original_language !== "en" ? base.original_language : "");
+    await ensureProviders();
+    const common = {watch_region: "IN", with_watch_monetization_types: P.free ? "free|ads" : "flatrate|free|ads", include_adult: "false"};
+    if (P.plat.length) common.with_watch_providers = P.plat.flatMap(p => T.provIds[p] || []).join("|");
+    if (lang) common.with_original_language = lang;
+    if (P.runtime) common["with_runtime.lte"] = P.runtime;
+    const dk = type === "tv" ? "first_air_date" : "primary_release_date";
+    if (P.from) common[dk + ".gte"] = P.from;
+    if (P.to) common[dk + ".lte"] = P.to;
+    const without = P.not.map(gid).filter(Boolean);
+    if (without.length) common.without_genres = [...new Set(without)].join(",");
+    const ok = r => !without.some(g => (r.genre_ids || []).map(String).includes(g));
+    let found = [];
+    if (base) {         // titles TMDB links to it, narrowed by the comparison ("but funnier")
+      const [rec, sim] = await Promise.all([tget(`/${base.media_type}/${base.id}/recommendations`, {}).catch(() => ({})),
+                                             tget(`/${base.media_type}/${base.id}/similar`, {}).catch(() => ({}))]);
+      const want = P.cmp.length ? P.cmp : P.need;
+      found = (rec.results || []).concat(sim.results || []).filter(r => r.poster_path && ok(r) && r.id !== base.id
+        && (!want.length || want.some(k => (r.genre_ids || []).map(String).includes(gid(k))))
+        && (!P.lang || r.original_language === P.lang));
+    }
+    // discover: the asked-for genres (AND), plus the base title's own top genre when there is one
+    const genres = [...new Set(P.need.map(gid).concat(baseTags.slice(0, P.cmp.length ? 1 : 2).map(gid)).filter(Boolean))];
+    const params = Object.assign({sort_by: P.top ? "vote_average.desc" : "popularity.desc", "vote_count.gte": P.top ? (lang && lang !== "en" ? 50 : 300) : 10}, common);
+    let disc = {};
+    if (genres.length) disc = await tget(`/discover/${type}`, Object.assign({with_genres: genres.join(",")}, params));
+    if (!genres.length || (disc.total_results || 0) < 8) {
+      const loose = await tget(`/discover/${type}`, Object.assign(genres.length ? {with_genres: genres.join("|")} : {}, params));
+      disc = {results: (disc.results || []).concat(loose.results || [])};
+    }
+    if (seq !== DSEQ.n) return;
+    const seen = new Set(), items = found.concat(disc.results || []).filter(r => ok(r) && !seen.has(r.id) && seen.add(r.id))
+      .map(r => fromTmdb(r, r.media_type || type)).filter(it => it && !isWatched(it.id) && !local.includes(it));
+    box.innerHTML = describeChips(P, base) + (local.length ? section("From VibeSync picks") + gridOf(local) : "")
+      + (items.length ? section(base ? `Like ${base.title || base.name}${P.cmp.length ? ", " + P.cmp.map(k => TAGS[k].label.toLowerCase()).join(" & ") : ""}` : "Matches streaming in India", `${items.length} titles`) + gridOf(items.slice(0, 40))
+         : local.length ? "" : `<div class="empty">Nothing matches all of that. Try fewer details.</div>`);
+  } catch (e) { box.innerHTML = describeChips(P) + (local.length ? section("From VibeSync picks") + gridOf(local) : "") + `<div class="empty">Couldn't reach the live library right now.</div>`; }
+}
+
+/* ───────────── Swipe mode: learns your taste ───────────── */
+const DECK = {on: false, ids: [], i: 0, page: 0, busy: false, n: 0};
+function deckPool() {
+  const ok = it => it && hasPoster(it) && it.kind !== "sports" && !(it.id in X.swiped) && !favs.has(it.id) && !X.st[it.id];
+  const pool = D.items.filter(ok);
+  Object.values(liveState).forEach(st => st.ids.forEach(id => { const it = BY[id]; if (ok(it) && !pool.includes(it)) pool.push(it); }));
+  return shuffle(pool).sort((a, b) => tasteScore(b) - tasteScore(a) + (Math.random() - .5) * 3).map(it => it.id);
+}
+async function deckRefill() {
+  if (DECK.busy || !T.key || T.failed) return; DECK.busy = true;
+  try {
+    const tags = topOf(X.taste.t, 2), type = Math.random() < .5 ? "movie" : "tv";
+    const p = Object.assign({page: ++DECK.page}, STREAM);
+    if (tags.length) p.with_genres = tags.map(k => TAGS[k][type === "tv" ? "t" : "m"]).filter(Boolean).join("|");
+    const l = topOf(X.taste.l, 1)[0]; if (l && Math.random() < .5) p.with_original_language = l;
+    const j = await tget(`/discover/${type}`, p);
+    (j.results || []).map(r => fromTmdb(r, type)).filter(it => it && !(it.id in X.swiped) && !favs.has(it.id) && !X.st[it.id] && !DECK.ids.includes(it.id))
+      .forEach(it => DECK.ids.push(it.id));
+  } catch (e) {}
+  DECK.busy = false;
+  if (DECK.on) deckRender();
+}
+function openDeck() {
+  DECK.on = true; DECK.ids = deckPool(); DECK.i = 0;
+  openXP(`${xpTop("Swipe mode", "Right to save ♥, left to skip ✕. Seen it already? Tap 👁. Every swipe sharpens For you.")}
+    <div class="deck" id="deck"></div>
+    <div class="dbtns"><button class="db skip" data-dk="-1" aria-label="Skip">✕</button><button class="db seen" data-dk="0" aria-label="Seen it">👁</button>
+      <button class="db like" data-dk="1" aria-label="Save">♥</button></div><p class="fnote" id="dstat"></p>`, "deckp");
+  deckRender(); if (DECK.ids.length < 15) deckRefill();
+}
+function deckCard(it, k) {
+  const tg = tagsOf(it).slice(0, 3).map(t => `<span class="tag">${TAGS[t].label}</span>`).join("");
+  return `<div class="dcard" data-dc="${esc(it.id)}" style="--k:${k}">${poster(it, "s592")}
+    <div class="dtx"><b>${esc(it.title)}</b><small>${esc(it.year || "")} · ${esc(kindLabel(it))}${scoreOf(it) ? ` · ★ ${scoreOf(it).toFixed(1)}` : ""}</small><div class="tags">${tg}</div>
+    <p>${esc((it.synopsis || "").slice(0, 150))}${(it.synopsis || "").length > 150 ? "…" : ""}</p>
+    <button class="btn soft sm" data-open="${esc(it.id)}">Details & where to watch</button></div>
+    <span class="dstamp like">SAVE</span><span class="dstamp skip">SKIP</span><span class="dstamp seen">SEEN</span></div>`;
+}
+function deckRender() {
+  const el = $("#deck"); if (!el) return;
+  const ids = DECK.ids.slice(DECK.i, DECK.i + 3).map(id => BY[id]).filter(Boolean);
+  el.innerHTML = ids.length ? ids.map((it, k) => deckCard(it, k)).reverse().join("")
+    : `<div class="empty">${DECK.busy ? "Finding more titles…" : "You've swiped through everything for now. Come back later for more."}</div>`;
+  const st = $("#dstat"); if (st) st.textContent = DECK.n ? `${DECK.n} swiped this session · VibeSync now leans ${topOf(X.taste.t, 3).map(k => TAGS[k].label).join(", ") || "nowhere yet"}` : "";
+  if (DECK.ids.length - DECK.i < 8) deckRefill();
+}
+function deckDecide(v, el) {
+  const id = DECK.ids[DECK.i]; if (!id) return;
+  const it = BY[id], card = el || $(`.dcard[data-dc="${CSS.escape(id)}"]`);
+  X.swiped[id] = v; store.set("swiped", X.swiped);
+  if (v === 1) { learn(it, 2); if (!favs.has(id)) toggleFav(id); }
+  else if (v === -1) learn(it, -1);
+  else { X.st[id] = {s: "watched", at: Date.now(), meta: it.tmdb ? slim(it) : null}; store.set("status", X.st); learn(it, 1); }
+  DECK.i++; DECK.n++;
+  if (card && !REDUCED) {
+    const dx = v === 1 ? 1 : v === -1 ? -1 : 0;
+    card.style.transition = "transform .4s cubic-bezier(.3,.7,.4,1), opacity .4s";
+    card.style.transform = dx ? `translate(${dx * 130}%, -6%) rotate(${dx * 22}deg)` : "translateY(-120%) scale(.9)";
+    card.style.opacity = "0";
+    setTimeout(deckRender, 320);
+  } else deckRender();
+  if (DECK.n % 10 === 0) toast("For you just got smarter ✨");
+  buzz();
+}
+(() => {
+  let s = null;
+  document.addEventListener("pointerdown", e => {
+    const c = e.target.closest(".dcard"); if (!c || e.target.closest("button") || c.style.getPropertyValue("--k") !== "0") return;
+    s = {c, x: e.clientX, y: e.clientY, dx: 0, dy: 0}; c.setPointerCapture && c.setPointerCapture(e.pointerId); c.style.transition = "none";
+  });
+  document.addEventListener("pointermove", e => {
+    if (!s) return; s.dx = e.clientX - s.x; s.dy = e.clientY - s.y;
+    s.c.style.transform = `translate(${s.dx}px, ${s.dy * .3}px) rotate(${s.dx / 18}deg)`;
+    s.c.dataset.lean = s.dx > 40 ? "like" : s.dx < -40 ? "skip" : s.dy < -70 ? "seen" : "";
+  });
+  document.addEventListener("pointerup", () => {
+    if (!s) return; const {c, dx, dy} = s; s = null; c.dataset.lean = "";
+    if (dx > 110) deckDecide(1, c); else if (dx < -110) deckDecide(-1, c); else if (dy < -120) deckDecide(0, c);
+    else { c.style.transition = "transform .35s var(--spring)"; c.style.transform = ""; }
+  });
+})();
+
+/* "Picked for your taste": live rows at the top of For you once VibeSync has learned something */
+function tasteRowsHTML() {
+  if (!T.key || T.failed || X.taste.n < 3 || !topOf(X.taste.t, 1).length) return "";
+  return liveRowHTML("taste|movie") + liveRowHTML("taste|tv");
+}
+function tasteDef(type) {
+  const tags = topOf(X.taste.t, 2), l = topOf(X.taste.l, 1)[0];
+  const p = Object.assign({with_genres: tags.map(k => TAGS[k][type === "tv" ? "t" : "m"]).filter(Boolean).join("|")}, STREAM);
+  if (l && (X.taste.l[l] || 0) >= 4) p.with_original_language = l;
+  return {title: `${type === "movie" ? "Movies" : "Series"} picked for your taste`, path: `/discover/${type}`, params: p, type};
+}
+
+/* ───────────── detail sheet extras: ratings, watch status, next episode, recap, cast, trailer ───────────── */
+const XD = {};
+const OMDB = {key: ""};
+function certOf(d, type) {
+  const pick = codes => {
+    for (const c of codes) {
+      if (type === "movie") { const r = ((d.release_dates || {}).results || []).find(x => x.iso_3166_1 === c);
+        const v = r && r.release_dates.map(x => x.certification).find(Boolean); if (v) return {c, v}; }
+      else { const r = ((d.content_ratings || {}).results || []).find(x => x.iso_3166_1 === c); if (r && r.rating) return {c, v: r.rating}; }
+    }
+    return null;
+  };
+  return pick(["IN", "US", "GB"]);
+}
+async function loadExtras(it) {
+  if (!it || XD[it.id]) return;
+  XD[it.id] = {busy: true};
+  const ref = it.kind === "sports" ? null : await tmdbRef(it);
+  if (!ref) { XD[it.id] = {none: true}; if (openId === it.id) refreshSheet(); return; }
+  try {
+    const ap = ref.type === "movie" ? "credits,videos,external_ids,release_dates" : "aggregate_credits,videos,external_ids,content_ratings";
+    const d = await tget(`/${ref.type}/${ref.id}`, {append_to_response: ap, include_video_language: "en,null,te,hi,ta,ml,kn,ja,ko"});
+    const cr = d.credits || d.aggregate_credits || {};
+    const cast = (cr.cast || []).slice(0, 14).map(c => ({id: c.id, name: c.name, role: c.character || (c.roles && c.roles[0] && c.roles[0].character) || "", img: c.profile_path}));
+    const crew = ref.type === "movie" ? (cr.crew || []).filter(c => c.job === "Director").slice(0, 2).map(c => ({id: c.id, name: c.name, role: "Director", img: c.profile_path}))
+                                      : (d.created_by || []).slice(0, 2).map(c => ({id: c.id, name: c.name, role: "Creator", img: c.profile_path}));
+    const vids = ((d.videos || {}).results || []).filter(v => v.site === "YouTube" && v.key && /Trailer|Teaser/.test(v.type))
+      .sort((a, b) => (a.type === "Trailer" ? 0 : 1) - (b.type === "Trailer" ? 0 : 1) || (b.official ? 1 : 0) - (a.official ? 1 : 0) || (b.size || 0) - (a.size || 0));
+    const runtime = d.runtime || (d.episode_run_time || [])[0] || (d.last_episode_to_air && d.last_episode_to_air.runtime) || 0;
+    const x = {ref, runtime, score: d.vote_average, votes: d.vote_count, cast: crew.concat(cast), trailer: vids.map(v => v.key),
+               cert: certOf(d, ref.type), next: d.next_episode_to_air || null, last: d.last_episode_to_air || null, tvstatus: d.status || "",
+               seasons: (d.seasons || []).filter(s => s.season_number > 0), imdbId: (d.external_ids || {}).imdb_id || d.imdb_id || "",
+               lang: d.original_language || "", gids: (d.genres || []).map(g => g.id)};
+    if (!it.gids) it.gids = x.gids;
+    if (!it.lang) it.lang = x.lang;
+    if (runtime) { X.rt[it.id] = runtime; store.set("rt", X.rt); }
+    XD[it.id] = x;
+    if (OMDB.key && x.imdbId) {
+      fetch(`https://www.omdbapi.com/?i=${x.imdbId}&apikey=${encodeURIComponent(OMDB.key)}`).then(r => r.json()).then(o => {
+        if (!o || o.Response === "False") return;
+        const rt = (o.Ratings || []).find(r => /rotten/i.test(r.Source));
+        x.omdb = {imdb: o.imdbRating && o.imdbRating !== "N/A" ? o.imdbRating : "", rt: rt ? rt.Value : "", mc: o.Metascore && o.Metascore !== "N/A" ? o.Metascore : ""};
+        if (openId === it.id) refreshSheet();
+      }).catch(() => {});
+    }
+  } catch (e) { XD[it.id] = {none: true}; }
+  if (openId === it.id) refreshSheet();
+}
+const dayMs = 864e5;
+function airDate(s) { return s ? new Date(s + "T18:00:00") : null; }        // TMDB gives a date; assume an evening drop
+function whenText(d) {
+  const days = Math.round((new Date(d.toDateString()) - new Date(new Date().toDateString())) / dayMs);
+  const date = d.toLocaleDateString("en-IN", {weekday: "short", day: "numeric", month: "short"});
+  return days === 0 ? `today · ${date}` : days === 1 ? `tomorrow · ${date}` : days > 1 ? `in ${days} days · ${date}` : date;
+}
+function sheetExtras(it) {
+  if (!it || it.kind === "sports") return "";
+  queueMicrotask(() => loadExtras(it));
+  const x = XD[it.id] || {}, s = statusOf(it.id);
+  const chips = [];
+  if (x.omdb && x.omdb.imdb) chips.push(`<span class="rt imdb">IMDb <b>${esc(x.omdb.imdb)}</b></span>`);
+  else if (it.imdb) chips.push(`<span class="rt imdb">IMDb <b>${it.imdb.toFixed(1)}</b></span>`);
+  if (x.score) chips.push(`<span class="rt tmdb">TMDB <b>${x.score.toFixed(1)}</b><small>${(x.votes || 0).toLocaleString("en-IN")} votes</small></span>`);
+  if (x.omdb && x.omdb.rt) chips.push(`<span class="rt tomato">🍅 <b>${esc(x.omdb.rt)}</b></span>`);
+  if (x.omdb && x.omdb.mc) chips.push(`<span class="rt mc">Metascore <b>${esc(x.omdb.mc)}</b></span>`);
+  if (x.cert) chips.push(`<span class="rt cert">Rated <b>${esc(x.cert.v)}</b>${x.cert.c !== "IN" ? `<small>${x.cert.c}</small>` : ""}</span>`);
+  if (x.runtime) chips.push(`<span class="rt">⏱️ <b>${x.runtime >= 60 ? `${Math.floor(x.runtime / 60)}h ${x.runtime % 60}m` : x.runtime + " min"}</b>${it.tmdb && it.tmdb.type === "tv" || it.kind !== "movie" ? "<small>per episode</small>" : ""}</span>`);
+  let html = chips.length ? `<div class="rts">${chips.join("")}</div>` : x.busy ? `<div class="rts"><span class="rt sk">Loading ratings…</span></div>` : "";
+  html += `<div class="stbtns"><button class="btn soft${s === "watching" ? " on" : ""}" data-status="watching" data-sid="${esc(it.id)}" aria-pressed="${s === "watching"}">👀 ${s === "watching" ? "Watching" : "Mark watching"}</button>
+    <button class="btn soft${s === "watched" ? " on" : ""}" data-status="watched" data-sid="${esc(it.id)}" aria-pressed="${s === "watched"}">✓ ${s === "watched" ? "Watched" : "Mark watched"}</button></div>`;
+  if (x.ref && x.ref.type === "tv") {
+    const nx = x.next, at = nx && airDate(nx.air_date), rem = REM.list[it.id];
+    if (nx && at) html += `<div class="nextep"><span class="ne-i" aria-hidden="true">📅</span><span class="ne-t"><b>S${nx.season_number} E${nx.episode_number}${nx.name && !/^episode \d+$/i.test(nx.name) ? ` · ${esc(nx.name)}` : ""}</b>
+        <small>New episode ${whenText(at)}</small></span><button class="btn ${rem ? "soft" : "tint"} sm" data-remind="${esc(it.id)}">${rem ? "🔔 Reminder on" : "🔔 Remind me"}</button></div>`;
+    else if (/ended|canceled/i.test(x.tvstatus)) html += `<div class="nextep done"><span class="ne-i">🏁</span><span class="ne-t"><b>Series ${x.tvstatus.toLowerCase()}</b><small>${x.seasons.length} season${x.seasons.length === 1 ? "" : "s"} in all</small></span></div>`;
+    else if (x.tvstatus) html += `<div class="nextep done"><span class="ne-i">⏳</span><span class="ne-t"><b>No new episode date yet</b><small>VibeSync checks again whenever you open it</small></span></div>`;
+    const rs = recapSeason(x);
+    if (rs) html += `<details class="recap" data-recap="${esc(it.id)}:${rs.season_number}"><summary>📖 Catch up: Season ${rs.season_number} recap <small>spoiler-light</small></summary><div class="rc-b">Loading…</div></details>`;
+  }
+  if (x.cast && x.cast.length) html += `<div class="h3">Cast & crew</div><div class="castrow">${x.cast.map(c =>
+    `<button class="cast" data-person="${c.id}">${c.img ? `<img src="https://image.tmdb.org/t/p/w185${c.img}" alt="" loading="lazy">` : `<span class="ci">${esc(c.name[0])}</span>`}
+      <b>${esc(c.name)}</b><small>${esc(c.role)}</small></button>`).join("")}</div>`;
+  return `<div class="xs">${html}</div>`;
+}
+// the season to catch up on: the one before an upcoming new season, else the latest aired season
+function recapSeason(x) {
+  if (!x.seasons || !x.seasons.length) return null;
+  const aired = x.seasons.filter(s => s.air_date && new Date(s.air_date) <= new Date());
+  if (!aired.length) return null;
+  if (x.next && x.next.episode_number === 1) return aired.filter(s => s.season_number < x.next.season_number).pop() || null;
+  return aired.pop();
+}
+async function loadRecap(det) {
+  const [id, sn] = det.dataset.recap.split(/:(?=\d+$)/), x = XD[id], box = det.querySelector(".rc-b");
+  if (!x || det.dataset.done) return;
+  det.dataset.done = 1;
+  try {
+    const s = await tget(`/tv/${x.ref.id}/season/${sn}`, {});
+    const eps = (s.episodes || []).filter(e => e.air_date && new Date(e.air_date) <= new Date());
+    const over = s.overview || (await tget(`/tv/${x.ref.id}/season/${sn}`, {language: "en-US"}).catch(() => ({}))).overview || "";
+    box.innerHTML = `<p class="rc-o">${esc(over || "TMDB has no season summary yet. The episode guide below has the details.")}</p>
+      ${eps.length ? `<details class="rc-eps"><summary>Episode by episode <small>contains spoilers</small></summary>${eps.map(e =>
+        `<div class="rc-e"><b>E${e.episode_number} · ${esc(e.name || "")}</b><p>${esc(e.overview || "No summary.")}</p></div>`).join("")}</details>` : ""}`;
+  } catch (e) { box.textContent = "Couldn't load the recap right now."; delete det.dataset.done; }
+}
+document.addEventListener("toggle", e => { const d = e.target; if (d.matches && d.matches("details[data-recap]") && d.open) loadRecap(d); }, true);
+
+/* in-app trailer player (YouTube's own embedded player, full size) */
+async function openTrailer(id) {
+  const it = BY[id]; if (!it) return;
+  if (!XD[id] || XD[id].busy) { toast("Finding the trailer…"); await loadExtras(it); let n = 0; while (XD[id] && XD[id].busy && n++ < 30) await new Promise(r => setTimeout(r, 200)); }
+  const keys = (XD[id] && XD[id].trailer) || [];
+  if (!keys.length) { window.open(ytLink(it), "_blank", "noopener"); return; }
+  const v = $("#trv");
+  v.innerHTML = `<div class="trv-in"><div class="trv-h"><b>${esc(it.title)} · Trailer</b><button class="icon" data-trclose aria-label="Close trailer">${ICON.close}</button></div>
+    <div class="trv-v"><iframe src="https://www.youtube.com/embed/${keys[0]}?autoplay=1&playsinline=1&rel=0&modestbranding=1" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="${esc(it.title)} trailer"></iframe></div>
+    ${keys.length > 1 ? `<div class="chips">${keys.slice(0, 4).map((k, i) => `<button class="chip" data-trkey="${k}" aria-pressed="${i === 0}">${i === 0 ? "Main trailer" : "Trailer " + (i + 1)}</button>`).join("")}</div>` : ""}</div>`;
+  v.classList.add("on");
+  TRV.music = AU.on; ytPause(); if (AU.master && AU.ctx) AU.master.gain.setTargetAtTime(0, AU.ctx.currentTime, .2);   // the trailer has the floor
+}
+const TRV = {music: false};
+function closeTrailer() {
+  const v = $("#trv"); v.classList.remove("on"); v.innerHTML = "";
+  if (AU.master && AU.ctx && AU.on) AU.master.gain.setTargetAtTime(AU.vol.master, AU.ctx.currentTime, .6);
+  ytResume();
+}
+
+/* cast & crew pages */
+async function openPerson(pid) {
+  if (!T.key || T.failed) return toast("Cast pages need the live TMDB library");
+  if (openId) closeSheet();
+  openXP(`<div id="pp"><div class="empty">Loading…</div></div>`, "person", true);
+  try {
+    const p = await tget(`/person/${pid}`, {append_to_response: "combined_credits"});
+    const cc = p.combined_credits || {}, seen = new Set();
+    const credits = (cc.cast || []).concat((cc.crew || []).filter(c => /Director|Creator|Writer|Music|Original Music Composer/.test(c.job || "")))
+      .filter(c => (c.media_type === "movie" || c.media_type === "tv") && c.poster_path && !(c.genre_ids || []).some(g => g === 10767 || g === 10763) && !seen.has(c.media_type + c.id) && seen.add(c.media_type + c.id))
+      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 48);
+    const items = credits.map(c => fromTmdb(c, c.media_type)).filter(Boolean);
+    const age = p.birthday ? Math.floor((Date.now() - new Date(p.birthday)) / (365.25 * dayMs)) : 0;
+    $("#pp").innerHTML = `${xpTop(esc(p.name), [p.known_for_department === "Acting" ? "Actor" : p.known_for_department, age && !p.deathday ? `${age} years old` : "", p.place_of_birth].filter(Boolean).map(esc).join(" · "), true)}
+      <div class="pp-h">${p.profile_path ? `<img src="https://image.tmdb.org/t/p/w342${p.profile_path}" alt="">` : ""}
+        ${p.biography ? `<p class="pp-bio" data-more>${esc(p.biography)}</p>` : ""}</div>
+      <div id="ppin"><div class="sec"><h2>Streaming in India</h2><p class="live-sub"><i></i>Checking</p></div><div class="grid">${skeleton(6)}</div></div>
+      <div id="ppout"></div>`;
+    const inIndia = [], rest = [];
+    for (let i = 0; i < items.length; i += 8) {
+      await Promise.all(items.slice(i, i + 8).map(async it => {
+        try {
+          const w = await tget(`/${it.tmdb.type}/${it.tmdb.id}/watch/providers`, {});
+          const ind = (w.results || {}).IN || {};
+          const subs = ["flatrate", "free", "ads"].flatMap(k => ind[k] || []).filter(pv => !STORE_IDS.has(pv.provider_id));
+          (subs.length || (BY[it.id] && BY[it.id].offers && BY[it.id].offers.length) ? inIndia : rest).push(it);
+        } catch (e) { rest.push(it); }
+      }));
+      const order = it => items.indexOf(it);
+      if (!$("#ppin")) return;
+      $("#ppin").innerHTML = section("Streaming in India", `${inIndia.length} title${inIndia.length === 1 ? "" : "s"}`) + (gridOf(inIndia.sort((a, b) => order(a) - order(b))) || `<div class="empty">Nothing streaming yet.</div>`);
+      $("#ppout").innerHTML = rest.length ? section("Not streaming in India right now", "") + gridOf(rest.sort((a, b) => order(a) - order(b))) : "";
+    }
+  } catch (e) { $("#pp").innerHTML = xpTop("Cast", "", true) + `<div class="empty">Couldn't load this person right now.</div>`; }
+}
+
+/* ───────────── reminders: new-episode alerts (phone notifications in the app) ───────────── */
+const REM = {list: store.get("reminders", {})};
+const bridge = () => (window.VibeSyncApp && typeof window.VibeSyncApp.schedule === "function") ? window.VibeSyncApp : null;
+function saveRem() { store.set("reminders", REM.list); }
+async function toggleRemind(id) {
+  const it = BY[id], x = XD[id]; if (!it) return;
+  if (REM.list[id]) {
+    delete REM.list[id]; saveRem(); const b = bridge(); if (b) try { b.cancel(id); } catch (e) {}
+    toast("Reminder off"); refreshSheet(); return;
+  }
+  if (!x || !x.next) return;
+  const at = airDate(x.next.air_date);
+  REM.list[id] = {title: it.title, s: x.next.season_number, e: x.next.episode_number, at: +at, tv: x.ref.id, poster: it.tmdbPoster || ""};
+  saveRem(); scheduleRem(id);
+  const b = bridge();
+  if (b) { try { b.requestNotify && b.requestNotify(); } catch (e) {} toast(`🔔 You'll get a notification ${whenText(at).split(" · ")[0]}`); }
+  else if ("Notification" in window && Notification.permission === "default") { Notification.requestPermission().catch(() => {}); toast("🔔 Reminder set. VibeSync will remind you when you open it"); }
+  else toast("🔔 Reminder set. VibeSync will remind you when you open it");
+  refreshSheet(); buzz();
+}
+function scheduleRem(id) {
+  const r = REM.list[id], b = bridge(); if (!r || !b) return;
+  try { b.schedule(id, `New episode: ${r.title}`, `S${r.s} E${r.e} is out today. Tap to open VibeSync.`, r.at); } catch (e) {}
+}
+// on every launch: re-arm native alarms, show due reminders, and roll finished ones on to the next episode
+async function checkReminders() {
+  const now = Date.now();
+  for (const [id, r] of Object.entries(REM.list)) {
+    if (r.at > now) { scheduleRem(id); continue; }
+    if (!r.shown && now - r.at < 3 * dayMs) {
+      r.shown = 1; toast(`📺 New episode out: ${r.title} S${r.s} E${r.e}`);
+      if (!bridge() && "Notification" in window && Notification.permission === "granted") try { new Notification(`New episode: ${r.title}`, {body: `S${r.s} E${r.e} is out.`}); } catch (e) {}
+    }
+    if (T.key && !T.failed) try {
+      const d = await tget(`/tv/${r.tv}`, {});
+      const nx = d.next_episode_to_air;
+      if (nx && airDate(nx.air_date) > now) Object.assign(r, {s: nx.season_number, e: nx.episode_number, at: +airDate(nx.air_date), shown: 0});
+      else if (now - r.at > 7 * dayMs) delete REM.list[id];
+      scheduleRem(id);
+    } catch (e) {}
+  }
+  saveRem();
+}
+
+/* ───────────── Saved tab: Coming up · Watching · Saved · Watched ───────────── */
+function savedHTML() {
+  const ids = s => Object.entries(X.st).filter(([, v]) => v.s === s).sort((a, b) => b[1].at - a[1].at).map(([id]) => BY[id]).filter(Boolean);
+  const saved = [...favs].map(id => BY[id]).filter(it => it && !isWatched(it.id)), watching = ids("watching"), watched = ids("watched");
+  const quick = `<div class="chips qk"><button class="chip" data-tool="plan">💳 Which plan?</button><button class="chip" data-tool="calendar">📅 OTT calendar</button>
+    <button class="chip" data-tool="wrapped">🎁 Wrapped</button><button class="chip" data-tool="sync">🔄 Sync</button></div>`;
+  if (!saved.length && !watching.length && !watched.length)
+    return `<div class="sec"><h2>Saved</h2></div>${quick}<div class="empty">Nothing saved yet.<br>Tap the ♡ on any title, or try 🃏 Swipe mode, and it lands here.</div>`;
+  return quick + `<div id="comingup"></div>`
+    + (watching.length ? section("Watching", `${watching.length}`) + row(watching.map(i => i.id)) : "")
+    + (saved.length ? section("Saved", `${saved.length} title${saved.length > 1 ? "s" : ""}`) + grid(saved) : "")
+    + (watched.length ? section("Watched", `${watched.length}`) + row(watched.map(i => i.id)) : "");
+}
+async function fillComingUp() {
+  const box = $("#comingup"); if (!box || !T.key || T.failed) return;
+  const ids = [...new Set([...favs, ...Object.keys(X.st).filter(id => statusOf(id) === "watching")])].map(id => BY[id]).filter(it => it && it.kind !== "movie" && it.kind !== "sports").slice(0, 24);
+  if (!ids.length) return;
+  await Promise.all(ids.map(it => loadExtras(it)));
+  const up = ids.map(it => ({it, x: XD[it.id]})).filter(o => o.x && o.x.next && airDate(o.x.next.air_date) >= new Date(new Date().toDateString()))
+    .sort((a, b) => airDate(a.x.next.air_date) - airDate(b.x.next.air_date));
+  if (!$("#comingup")) return;
+  $("#comingup").innerHTML = up.length ? section("Coming up", "new episodes") + `<div class="cups">${up.map(({it, x}) =>
+    `<button class="cup" data-open="${esc(it.id)}">${poster(it, "s166")}<span><b>${esc(it.title)}</b><small>S${x.next.season_number} E${x.next.episode_number} · ${whenText(airDate(x.next.air_date))}</small></span>
+      <span class="cd">${Math.max(0, Math.round((new Date(airDate(x.next.air_date).toDateString()) - new Date(new Date().toDateString())) / dayMs))}<small>days</small></span></button>`).join("")}</div>` : "";
+}
+
+/* ───────────── OTT release calendar ───────────── */
+const iso = d => d.toISOString().slice(0, 10);
+function openCalendar() {
+  if (!T.key || T.failed) return openXP(xpTop("OTT calendar") + needKey(), "cal");
+  const today = new Date(), wk = new Date(+today - 7 * dayMs), nx = new Date(+today + 7 * dayMs), mo = new Date(+today + 45 * dayMs);
+  const rows = [
+    ["new", "New on OTT this week", "/discover/movie", {region: "IN", watch_region: "IN", with_release_type: "4|6", "release_date.gte": iso(wk), "release_date.lte": iso(today), sort_by: "popularity.desc"}, "movie"],
+    ["eps", "New episodes this week", "/discover/tv", Object.assign({"air_date.gte": iso(today), "air_date.lte": iso(nx)}, STREAM), "tv"],
+    ["soon", "Coming to OTT soon", "/discover/movie", {region: "IN", with_release_type: "4|6", "release_date.gte": iso(new Date(+today + dayMs)), "release_date.lte": iso(mo), sort_by: "popularity.desc"}, "movie"],
+    ["theatre", "In theatres now", "/movie/now_playing", {region: "IN"}, "movie", "Most films reach OTT 4–8 weeks after their theatre release"],
+    ["upcoming", "Coming to theatres", "/movie/upcoming", {region: "IN"}, "movie"],
+  ];
+  openXP(xpTop("OTT calendar", "What's landing on Indian streaming apps and in theatres. Dates from TMDB.")
+    + rows.map(([k, t, , , , sub]) => `<div class="sec"><h2>${t}</h2>${sub ? `<p>${sub}</p>` : ""}</div><div class="row" id="cal-${k}">${skeleton(6)}</div>`).join(""), "cal");
+  rows.forEach(async ([k, , path, params, type]) => {
+    try {
+      const j = await tget(path, params);
+      const el = $("#cal-" + k); if (!el) return;
+      const list = (j.results || []).filter(r => r.poster_path).slice(0, 20);
+      el.innerHTML = list.map(r => { const it = fromTmdb(r, type); if (!it) return "";
+        const d = r.release_date || r.first_air_date || "";
+        const label = k === "eps" ? "New episode" : d ? new Date(d + "T12:00:00").toLocaleDateString("en-IN", {day: "numeric", month: "short"}) : "";
+        return card(it).replace('<div class="ct">', `<div class="cdate">${esc(label)}</div><div class="ct">`); }).join("") || `<div class="empty">Nothing listed for these dates yet.</div>`;
+    } catch (e) { const el = $("#cal-" + k); if (el) el.innerHTML = `<div class="empty">Couldn't load this list.</div>`; }
+  });
+}
+
+/* ───────────── Which plan should I buy? ───────────── */
+// Entry prices in India, approximate (Nov 2026). Plans change often: the page says to check the app.
+const PLAN_PRICE = {netflix: "₹149/mo (Mobile)", prime: "≈ ₹100/mo (Prime Lite, yearly)", hotstar: "₹149/mo (entry)", appletv: "₹99/mo",
+                    sonyliv: "≈ ₹100–150/mo (yearly)", zee5: "≈ ₹100–150/mo (yearly)"};
+async function provsFor(it) {
+  if (it.offers && it.offers.length) return [...new Set(it.offers.map(o => o.p).filter(p => p !== "youtube"))];
+  if (!it.tmdb || !T.key || T.failed) return [];
+  try {
+    const w = await tget(`/${it.tmdb.type}/${it.tmdb.id}/watch/providers`, {});
+    const ind = (w.results || {}).IN || {};
+    return [...new Set(["flatrate", "free", "ads"].flatMap(k => ind[k] || []).filter(p => !STORE_IDS.has(p.provider_id)).map(p => provKey(p.provider_name)).filter(Boolean))];
+  } catch (e) { return []; }
+}
+async function openPlan() {
+  const list = [...new Set([...favs, ...Object.keys(X.st).filter(id => statusOf(id) === "watching")])].map(id => BY[id]).filter(it => it && !isWatched(it.id));
+  openXP(xpTop("Which plan?", "Based on your Saved and Watching titles: the subscriptions that cover the most of them.") + `<div id="planb"><div class="empty">Checking ${list.length} titles…</div></div>`, "plan");
+  if (!list.length) { $("#planb").innerHTML = `<div class="empty">Save a few titles first (♡ or 🃏 Swipe mode). VibeSync then works out the best subscription for them.</div>`; return; }
+  const cov = {}, none = [];
+  const res = await Promise.all(list.map(async it => [it, await provsFor(it)]));
+  res.forEach(([it, ps]) => { if (!ps.length) none.push(it); ps.forEach(p => (cov[p] = cov[p] || []).push(it)); });
+  const ranked = Object.entries(cov).sort((a, b) => b[1].length - a[1].length);
+  // the best pair: the two apps that together cover the most titles
+  let pair = null;
+  for (let i = 0; i < ranked.length; i++) for (let j = i + 1; j < ranked.length; j++) {
+    const n = new Set(ranked[i][1].concat(ranked[j][1]).map(t => t.id)).size;
+    if (!pair || n > pair.n) pair = {a: ranked[i][0], b: ranked[j][0], n};
+  }
+  const pct = n => Math.round(n / list.length * 100);
+  const name = p => (D.providers[p] || {name: p}).name;
+  if (!$("#planb")) return;
+  $("#planb").innerHTML = (ranked.length ? `<div class="planwin" style="--pcol:${(D.providers[ranked[0][0]] || {}).color || "#888"}"><small>Best single subscription</small>
+      <b>${esc(name(ranked[0][0]))}</b><span>covers ${ranked[0][1].length} of your ${list.length} titles (${pct(ranked[0][1].length)}%)</span>
+      ${PLAN_PRICE[ranked[0][0]] ? `<em>from ${PLAN_PRICE[ranked[0][0]]}</em>` : ""}</div>` : "")
+    + (pair && pair.n > (ranked[0] || [0, []])[1].length ? `<div class="planpair">➕ <b>${esc(name(pair.a))} + ${esc(name(pair.b))}</b> together cover ${pair.n} of ${list.length} (${pct(pair.n)}%)</div>` : "")
+    + `<div class="plans">${ranked.map(([p, its]) => `<div class="plan" style="--pcol:${(D.providers[p] || {}).color || "#888"}">
+        <div class="ph"><b>${esc(name(p))}</b><span>${its.length} title${its.length === 1 ? "" : "s"}</span></div>
+        <div class="pbar"><i style="width:${pct(its.length)}%"></i></div>${PLAN_PRICE[p] ? `<small>from ${PLAN_PRICE[p]}</small>` : ""}
+        <div class="pmini">${its.slice(0, 8).map(it => `<button data-open="${esc(it.id)}" aria-label="${esc(it.title)}">${poster(it, "s166")}</button>`).join("")}</div></div>`).join("")}</div>`
+    + (none.length ? `<p class="fnote">Not on any subscription in India right now: ${none.map(i => esc(i.title)).join(", ")}.</p>` : "")
+    + `<p class="fnote">Prices are approximate entry plans as of Nov 2026, not live. Check the app for current plans and offers.</p>`;
+}
+
+/* ───────────── VibeSync Wrapped ───────────── */
+const PERSONA = {action: ["Adrenaline Junkie", "💥"], comedy: ["Laugh Collector", "😂"], thriller: ["Edge-of-the-Seat Detective", "🔪"], crime: ["Case Cracker", "🕵️"],
+                 drama: ["Feels Connoisseur", "🎭"], romance: ["Hopeless Romantic", "💘"], scifi: ["Future Traveller", "🚀"], fantasy: ["World Hopper", "🐉"],
+                 horror: ["Fearless Night Owl", "👻"], animation: ["Anime Spirit", "🎌"], mystery: ["Mind Bender", "🧠"], family: ["Cozy Watcher", "🍿"],
+                 history: ["Time Traveller", "🏛️"], documentary: ["Truth Seeker", "🎥"], reality: ["Drama Insider", "📸"], adventure: ["Explorer", "🗺️"]};
+function wrappedStats() {
+  const yr = new Date().getFullYear(), start = +new Date(yr, 0, 1);
+  const watched = Object.entries(X.st).filter(([, v]) => v.s === "watched" && v.at >= start).map(([id]) => BY[id]).filter(Boolean);
+  const saved = [...favs].map(id => BY[id]).filter(Boolean);
+  const pool = watched.concat(saved, Object.entries(X.st).filter(([, v]) => v.s === "watching").map(([id]) => BY[id]).filter(Boolean));
+  const tags = {}, plats = {}, langs = {};
+  pool.forEach(it => { tagsOf(it).forEach(k => tags[k] = (tags[k] || 0) + 1); (it.offers || []).forEach(o => plats[o.p] = (plats[o.p] || 0) + 1);
+                       const l = langOf(it); if (l) langs[l] = (langs[l] || 0) + 1; });
+  const mins = watched.reduce((s, it) => s + (it.kind === "movie" ? (X.rt[it.id] || 0) : 0), 0);
+  const eps = Object.values(tracker).reduce((s, t) => s + (t.watched || []).filter(d => d.startsWith(String(yr))).length, 0);
+  const themes = Object.values(X.use).sort((a, b) => b.n - a.n);
+  const swipes = Object.values(X.swiped), liked = swipes.filter(v => v === 1).length;
+  return {yr, watched, saved, tags: topOf(tags, 3), plat: topOf(plats, 1)[0], lang: topOf(langs, 1)[0], mins, eps, themes, swipes: swipes.length, liked,
+          movies: watched.filter(i => i.kind === "movie").length, shows: watched.filter(i => i.kind !== "movie").length};
+}
+function openWrapped() {
+  const s = wrappedStats(), top = s.tags[0], per = PERSONA[top] || ["Vibe Explorer", "✨"];
+  const L = l => (LANGS.find(x => x[0] === l) || [, l])[1];
+  const slides = [
+    `<small>VibeSync Wrapped</small><h2>${s.yr}</h2><p>Your year in titles, worlds and vibes.</p><span class="wtap">Tap to continue →</span>`,
+    `<small>You watched</small><h2>${s.watched.length}</h2><p>title${s.watched.length === 1 ? "" : "s"} this year · ${s.movies} movie${s.movies === 1 ? "" : "s"}, ${s.shows} show${s.shows === 1 ? "" : "s"}${s.eps ? ` · ${s.eps} tracked episodes` : ""}</p>
+      <div class="wposters">${s.watched.slice(0, 6).map(it => poster(it, "s166")).join("")}</div>`,
+    s.mins ? `<small>Movie time</small><h2>${Math.floor(s.mins / 60)}h ${s.mins % 60}m</h2><p>of movies you marked as watched${s.mins > 600 ? ". That's a lot of popcorn 🍿" : ""}</p>` : "",
+    top ? `<small>Your top genres</small><h2>${TAGS[top].e} ${TAGS[top].label}</h2><p>${s.tags.slice(1).map(k => `${TAGS[k].e} ${TAGS[k].label}`).join(" · ")}</p>` : "",
+    s.plat ? `<small>Your go-to app</small><h2>${esc(D.providers[s.plat].name)}</h2><p>has the most of what you save and watch${s.lang ? ` · mostly in ${L(s.lang)}` : ""}</p>` : "",
+    s.themes.length ? `<small>Your favourite world</small><h2>${esc(s.themes[0].title)}</h2><p>You themed VibeSync with it ${s.themes[0].n} time${s.themes[0].n === 1 ? "" : "s"}${s.themes.length > 1 ? ` · ${s.themes.length} worlds explored` : ""}</p>` : "",
+    s.swipes ? `<small>Swipe mode</small><h2>${s.swipes}</h2><p>titles swiped · ${s.liked} saved ♥</p>` : "",
+    `<small>Your ${s.yr} vibe</small><h2>${per[1]} ${per[0]}</h2><p>${s.saved.length} saved · ${s.watched.length} watched. Here's to more great watches.</p><span class="wtap">Tap to close</span>`,
+  ].filter(Boolean);
+  openXP(`<div class="wrap-s" data-wrapped>${slides.map((h, i) => `<section class="ws${i === 0 ? " on" : ""}" style="--h:${(i * 47 + 280) % 360}">${h}</section>`).join("")}
+    <div class="wbars">${slides.map((_, i) => `<i class="${i === 0 ? "on" : ""}"></i>`).join("")}</div>
+    <button class="icon wx" data-xpclose aria-label="Close">${ICON.close}</button></div>`, "wrapped");
+  WR.i = 0; WR.n = slides.length;
+}
+const WR = {i: 0, n: 0};
+function wrappedStep(dir) {
+  const ss = $$("#xp .ws"), bars = $$("#xp .wbars i");
+  WR.i += dir; if (WR.i < 0) WR.i = 0;
+  if (WR.i >= WR.n) return closeXP();
+  ss.forEach((s, i) => s.classList.toggle("on", i === WR.i)); bars.forEach((b, i) => b.classList.toggle("on", i <= WR.i));
+}
+
+/* ───────────── Sync: move everything to another device with a code ───────────── */
+async function b64z(str) {
+  const bytes = new TextEncoder().encode(str);
+  let out = bytes, z = "0";
+  if (window.CompressionStream) { out = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer()); z = "1"; }
+  let bin = ""; out.forEach(b => bin += String.fromCharCode(b));
+  return "VS" + z + btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+async function unb64z(code) {
+  code = code.trim().replace(/\s+/g, "");
+  if (!/^VS[01]/.test(code)) throw new Error("bad");
+  const z = code[2] === "1", b = atob(code.slice(3).replace(/-/g, "+").replace(/_/g, "/"));
+  let bytes = Uint8Array.from(b, c => c.charCodeAt(0));
+  if (z) bytes = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+  return new TextDecoder().decode(bytes);
+}
+const SYNC_SKIP = /^vs\.(rt|titleTheme)$/;
+async function openSync() {
+  openXP(xpTop("Sync", "Your Saved list, Watching / Watched, tracker notes, reminders, taste and themes live on this device. Copy the code here and paste it on your other phone or browser.")
+    + `<div class="h3">1 · Copy this device's code</div><textarea id="syncout" class="synct" readonly rows="4">Making your code…</textarea>
+      <div class="acts"><button class="btn tint" data-synccopy>📋 Copy code</button></div>
+      <div class="h3">2 · On the other device, paste it here</div><textarea id="syncin" class="synct" rows="4" placeholder="Paste a VibeSync code (starts with VS)"></textarea>
+      <div class="acts"><button class="btn soft" data-syncmerge>➕ Merge into this device</button><button class="btn soft" data-syncreplace>♻️ Replace this device</button></div>
+      <p class="fnote">The code holds only your VibeSync data, nothing else. Real accounts would need a sign-in service, which VibeSync doesn't have yet.</p>`, "sync");
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith("vs.") && !SYNC_SKIP.test(k)) data[k] = localStorage.getItem(k); }
+  try { $("#syncout").value = await b64z(JSON.stringify({v: 1, at: Date.now(), data})); } catch (e) { $("#syncout").value = "Couldn't make a code on this device."; }
+}
+async function applySync(replace) {
+  let obj;
+  try { obj = JSON.parse(await unb64z($("#syncin").value)); } catch (e) { toast("That doesn't look like a VibeSync code"); return; }
+  const d = obj.data || {};
+  const J = k => { try { return JSON.parse(d[k]); } catch (e) { return null; } };
+  if (replace) Object.entries(d).forEach(([k, v]) => { try { localStorage.setItem(k, v); } catch (e) {} });
+  else {
+    const merge = (k, f) => { const a = store.get(k, null), b = J("vs." + k); if (b != null) store.set(k, a == null ? b : f(a, b)); };
+    merge("favs", (a, b) => [...new Set(a.concat(b))]);
+    ["favMeta", "status", "swiped", "reminders", "themeUse"].forEach(k => merge(k, (a, b) => Object.assign({}, b, a)));
+    merge("tracker", (a, b) => { const o = Object.assign({}, b, a); Object.keys(b).forEach(id => { if (a[id]) o[id] = {watched: [...new Set((a[id].watched || []).concat(b[id].watched || []))], notes: (a[id].notes || []).concat((b[id].notes || []).filter(n => !(a[id].notes || []).some(m => m.ts === n.ts && m.text === n.text)))}; }); return o; });
+    merge("themeRecent", (a, b) => a.concat(b.filter(t => !a.some(x => x.id === t.id))).slice(0, 10));
+    merge("taste", (a, b) => { const o = {t: {}, k: {}, l: {}, n: (a.n || 0) + (b.n || 0)}; ["t", "k", "l"].forEach(g => [a[g] || {}, b[g] || {}].forEach(m => Object.entries(m).forEach(([k, v]) => o[g][k] = (o[g][k] || 0) + v))); return o; });
+  }
+  toast(replace ? "Replaced. Reloading…" : "Merged. Reloading…");
+  setTimeout(() => location.reload(), 700);
+}
+
+/* ───────────── tonight's pick: the Android home-screen widget ───────────── */
+function pickTonight() {
+  const day = new Date().toISOString().slice(0, 10), cur = store.get("tonight", null);
+  if (cur && cur.day === day && BY[cur.id] && !isWatched(cur.id)) return BY[cur.id];
+  const pool = surprisePool().filter(it => !isWatched(it.id) && (it.offers.length || it.tmdb));
+  if (!pool.length) return null;
+  const ranked = pool.map(it => [tasteScore(it) + (favs.has(it.id) ? 3 : 0) + Math.random() * 4, it]).sort((a, b) => b[0] - a[0]);
+  const it = ranked[Math.floor(Math.random() * Math.min(8, ranked.length))][1];
+  store.set("tonight", {day, id: it.id});
+  return it;
+}
+function pushWidget() {
+  const b = window.VibeSyncApp; if (!b || typeof b.setPick !== "function") return;
+  const it = pickTonight(); if (!it) return;
+  const off = it.offers && it.offers[0];
+  const img = it.tmdbPoster ? `https://image.tmdb.org/t/p/w342${it.tmdbPoster}` : hasPoster(it) ? posterURL(it, "s332") : "";
+  try { b.setPick(JSON.stringify({id: it.id, title: it.title, sub: [it.year, kindLabel(it), off ? D.providers[off.p].name : ""].filter(Boolean).join(" · "),
+                                  img, line: (it.synopsis || "").slice(0, 110)})); } catch (e) {}
+}
+
+/* ───────────── events for everything above ───────────── */
+document.addEventListener("click", e => {
+  const t = e.target.closest("button,a,[data-wrapped] section,.pp-bio"); if (!t) return;
+  if (t.closest && t.closest("[data-wrapped]") && t.tagName === "SECTION") { wrappedStep(e.clientX < innerWidth * .3 ? -1 : 1); return; }
+  if (t.classList && t.classList.contains("pp-bio")) { t.classList.toggle("open"); return; }
+  const d = t.dataset || {};
+  if (d.tool) { e.stopPropagation(); openTool(d.tool); return; }
+  if (t.hasAttribute("data-xpclose")) { closeXP(); return; }
+  if (d.ftype) { F.type = d.ftype; F.time = 0; renderFindCtl(); runFind(); buzz(); return; }
+  if (d.ftime !== undefined) { F.time = +d.ftime; renderFindCtl(); runFind(); buzz(); return; }
+  if (d.flang !== undefined) { F.lang = d.flang; renderFindCtl(); runFind(); buzz(); return; }
+  if (d.fsort) { F.sort = d.fsort; renderFindCtl(); runFind(); buzz(); return; }
+  if (t.hasAttribute("data-ffree")) { F.free = !F.free; renderFindCtl(); runFind(); buzz(); return; }
+  if (t.hasAttribute("data-fkids")) { F.kids = !F.kids; renderFindCtl(); runFind(); buzz(); return; }
+  if (d.xmore === "find") { t.textContent = "Loading…"; runFind(true); return; }
+  if (d.dex) { $("#dq").value = d.dex; runDescribe(d.dex); buzz(); return; }
+  if (d.dk !== undefined) { deckDecide(+d.dk); return; }
+  if (d.status) { setStatus(d.sid, d.status); return; }
+  if (d.remind) { toggleRemind(d.remind); return; }
+  if (d.person) { openPerson(+d.person); return; }
+  if (d.trailer) { e.preventDefault(); openTrailer(d.trailer); buzz(); return; }
+  if (t.hasAttribute("data-trclose")) { closeTrailer(); return; }
+  if (d.trkey) { const f = $("#trv iframe"); if (f) f.src = `https://www.youtube.com/embed/${d.trkey}?autoplay=1&playsinline=1&rel=0`; $$("#trv [data-trkey]").forEach(b => b.setAttribute("aria-pressed", b === t)); return; }
+  if (t.hasAttribute("data-synccopy")) { const o = $("#syncout"); o.select(); (navigator.clipboard ? navigator.clipboard.writeText(o.value) : Promise.reject()).then(() => toast("Code copied 📋"), () => { document.execCommand("copy"); toast("Code copied 📋"); }); return; }
+  if (t.hasAttribute("data-syncmerge")) { applySync(false); return; }
+  if (t.hasAttribute("data-syncreplace")) { applySync(true); return; }
+}, true);
+document.addEventListener("submit", e => {
+  if (!e.target.matches("[data-describe]")) return;
+  e.preventDefault(); const q = e.target.q.value; $("#dq").blur(); runDescribe(q);
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if ($("#trv").classList.contains("on")) closeTrailer(); else if ($("#xp").classList.contains("on") && !openId) closeXP();
+});
+
 /* ───────────── boot ───────────── */
 function boot(data) {
   if (D) return;
@@ -3594,16 +4639,20 @@ function boot(data) {
   D.featured = pickFeatured();
   T.key = (args.tmdbKey || new URLSearchParams(location.search).get("tmdb") || "").trim();
   Object.values(store.get("favMeta", {})).forEach(m => { if (!BY[m.id]) BY[m.id] = rehydrate(m); });
+  rehydrateAll();
+  OMDB.key = (args.omdbKey || "").trim();
   applyTheme("cinema", false);                   // the four fixed looks are gone; title themes replace them
   render(); fillLive(document); fitHeight();
   applyTitle(TT.cur, true);
   if (T.key) ensureProviders();
+  setTimeout(() => { checkReminders(); pushWidget(); }, 2500);
 }
 window.addEventListener("message", e => {
   const m = e.data;
   if (!m || m.type !== "streamlit:render") return;
   args = m.args || {};
   if (args.ytKey) YTS.key = String(args.ytKey).trim();
+  if (args.omdbKey) OMDB.key = String(args.omdbKey).trim();
   if (args.catalog) boot(args.catalog);
   if (args.resolved && typeof args.resolved === "object") {
     let fresh = false;
