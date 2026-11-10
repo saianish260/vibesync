@@ -98,6 +98,15 @@ img{display:block}
 .moodbox{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s cubic-bezier(.2,.8,.2,1)}
 .moodbox.open{grid-template-rows:1fr}
 .moodbox>div{overflow:hidden}
+.surprise-cta{display:flex;align-items:center;gap:14px;width:100%;margin:16px 0 0;padding:14px 18px;border-radius:18px;text-align:left;
+  background:var(--accent);color:var(--on-accent);box-shadow:0 8px 28px color-mix(in srgb,var(--accent) 35%,transparent);
+  transition:transform .15s ease,box-shadow .25s ease}
+.surprise-cta:active{transform:scale(.98)}
+@media (hover:hover){.surprise-cta:hover{box-shadow:0 10px 34px color-mix(in srgb,var(--accent) 50%,transparent)}}
+.surprise-cta .die{font-size:30px;line-height:1;transition:transform .5s cubic-bezier(.2,1.4,.4,1)}
+.surprise-cta:active .die{transform:rotate(-200deg)}
+.surprise-cta b{display:block;font-size:19px;font-weight:800;letter-spacing:-.01em}
+.surprise-cta small{display:block;font-size:14px;opacity:.8;margin-top:1px}
 .moodline{font-size:15px;color:var(--muted);margin:12px 0 2px}
 
 /* ── Tabs ── */
@@ -578,6 +587,7 @@ function render() {
       <div class="chips" role="group" aria-label="Mood">${Object.entries(D.moods).map(([k, m]) =>
         `<button class="chip" data-mood="${k}" aria-pressed="false"><span>${m.emoji}</span>${esc(m.label)}</button>`).join("")}</div>
       <div class="moodbox" id="moodbox"><div></div></div>
+      <button class="surprise-cta" data-surprise><span class="die" aria-hidden="true">🎲</span><span><b>Surprise me</b><small>Can't decide? Let VibeSync pick.</small></span></button>
       <nav class="tabs" aria-label="Categories"><div class="tabrow" role="tablist">${TABS.map(([k, l]) =>
         `<button class="tab" role="tab" data-tab="${k}" aria-selected="${k === state.tab}">${l}</button>`).join("")}<span class="ink" id="ink"></span></div><div class="tabline"></div></nav>
       <div id="panel" class="panel"></div>
