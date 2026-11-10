@@ -15,6 +15,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from core.data import catalog_payload
+from core.watchlinks import fetch_watch_links, is_watch_url
 
 DIR = Path(__file__).resolve().parent.parent / "components" / "discover"
 _component = components.declare_component("vibesync_discover", path=str(DIR))
@@ -40,7 +41,27 @@ def tmdb_key() -> str:
     return str(key or os.environ.get("TMDB_API_KEY", "")).strip()
 
 
+@st.cache_data(ttl=6 * 3600, max_entries=400, show_spinner=False)
+def _watch_links(url: str) -> dict[str, str]:
+    try:
+        return fetch_watch_links(url)
+    except Exception:           # offline, blocked or changed page: the buttons keep their fallback link
+        return {}
+
+
 def render(theme: str) -> dict | None:
     payload = catalog_payload()
     _write_catalog(payload)
-    return _component(catalog=payload, theme=theme, tmdbKey=tmdb_key(), key="discover", default=None)
+    resolved = st.session_state.setdefault("vs_resolved", {})
+    value = _component(catalog=payload, theme=theme, tmdbKey=tmdb_key(), resolved=resolved,
+                       key="discover", default=None)
+    # When a live title's sheet opens, the screen asks for that title's exact per-app links.
+    req = value.get("resolve") if isinstance(value, dict) else None
+    if req and value.get("n") != st.session_state.get("_resolve_n"):
+        st.session_state._resolve_n = value.get("n")
+        if is_watch_url(req) and req not in resolved:
+            resolved[req] = _watch_links(req)
+            while len(resolved) > 40:                   # keep the payload small
+                resolved.pop(next(iter(resolved)))
+            st.rerun()
+    return value

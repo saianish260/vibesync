@@ -1494,8 +1494,25 @@ async function loadDetails(it) {
     details[it.id] = {genres: (d.genres || []).map(g => g.name).slice(0, 4),
       len: d.runtime ? `${Math.floor(d.runtime / 60)}h ${d.runtime % 60}m` : d.number_of_seasons ? `${d.number_of_seasons} season${d.number_of_seasons > 1 ? "s" : ""}` : "",
       apps: [...byKey.values()], other, link: ind.link || ""};
+    askExactLinks(details[it.id].link);
   } catch (e) { details[it.id] = {genres: [], len: "", apps: [], other: [], link: "", error: true}; }
   if (openId === it.id) refreshSheet();
+}
+/* Exact per-app links: the VibeSync server reads this title's watch page once and returns the real
+   destination behind each app button, so taps open the title in the app directly. */
+const RESOLVED = {}, ASKED = new Set();
+function askExactLinks(link) {
+  if (!EMBED || !link || RESOLVED[link] || ASKED.has(link)) return;
+  ASKED.add(link);
+  send("streamlit:setComponentValue", {value: {theme: document.documentElement.dataset.theme, resolve: link, n: Date.now()}, dataType: "json"});
+  setTimeout(() => { if (!RESOLVED[link]) { RESOLVED[link] = {}; if (openId && details[openId] && details[openId].link === link) refreshSheet(); } }, 9000);
+}
+function exactLink(d, name) {
+  const map = d && d.link && RESOLVED[d.link]; if (!map) return null;
+  const n = norm(name);
+  if (map[n]) return map[n];
+  const k = Object.keys(map).find(k => k.length > 3 && (k.includes(n) || n.includes(k)));
+  return k ? map[k] : null;
 }
 function tmdbSheetHTML(it) {
   const d = details[it.id];
@@ -1508,12 +1525,14 @@ function tmdbSheetHTML(it) {
   else where = `<div class="offers">` + d.apps.map(p => {
       // TMDB's watch page (powered by JustWatch) links to this exact title on each app.
       // Without it, fall back to searching inside the app.
-      const url = d.link ? d.link : FIND[p.key] ? linkFor(FIND[p.key](it.title), p.key) : linkFor(HOME[p.key], p.key);
-      const sub = d.link ? `Tap ${D.providers[p.key].name} on the next screen to open this title` : FIND[p.key] ? "Opens the app and searches this title" : "Opens the app";
+      const direct = exactLink(d, p.name), pending = d.link && EMBED && !RESOLVED[d.link];
+      const url = direct ? linkFor(direct, p.key) : d.link ? d.link : FIND[p.key] ? linkFor(FIND[p.key](it.title), p.key) : linkFor(HOME[p.key], p.key);
+      const sub = direct ? "Opens this exact title" : pending ? "Finding the exact link…" : d.link ? `Tap ${D.providers[p.key].name} on the next screen to open this title` : FIND[p.key] ? "Opens the app and searches this title" : "Opens the app";
       return `<a class="offer" style="--pcol:${D.providers[p.key].color}" href="${esc(url)}" target="_blank" rel="noopener">${logo(p)}
         <span><b>${esc(D.providers[p.key].name)}</b><small>${sub}</small></span><span class="go">${ICON.play}Watch</span></a>`;
-    }).join("") + d.other.map(p => `<a class="offer" href="${esc(d.link || it.trailer)}" target="_blank" rel="noopener">${logo(p)}
-        <span><b>${esc(p.name)}</b><small>See watch options</small></span><span class="go">View</span></a>`).join("") + `</div>`;
+    }).join("") + d.other.map(p => { const direct = exactLink(d, p.name);
+      return `<a class="offer" href="${esc(direct || d.link || it.trailer)}" target="_blank" rel="noopener">${logo(p)}
+        <span><b>${esc(p.name)}</b><small>${direct ? "Opens this exact title" : "See watch options"}</small></span><span class="go">${direct ? ICON.play + "Watch" : "View"}</span></a>`; }).join("") + `</div>`;
   const body = `<div class="tags">${it.telugu ? `<span class="tag tel">Telugu</span>` : ""}${(d ? d.genres : []).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
     <p class="syn">${esc(it.synopsis || "No description yet.")}</p>
     <div class="h3">Where to watch in India</div>${where}
@@ -1554,6 +1573,11 @@ window.addEventListener("message", e => {
   if (!m || m.type !== "streamlit:render") return;
   args = m.args || {};
   if (args.catalog) boot(args.catalog);
+  if (args.resolved && typeof args.resolved === "object") {
+    let fresh = false;
+    Object.entries(args.resolved).forEach(([k, v]) => { if (!RESOLVED[k] || !Object.keys(RESOLVED[k]).length) { RESOLVED[k] = v || {}; fresh = true; } });
+    if (fresh && openId && BY[openId] && BY[openId].tmdb) refreshSheet();
+  }
   if (D && args.tmdbKey && !T.key) { T.key = args.tmdbKey.trim(); setTab(state.tab); }
   else if (!D) fetch("catalog.json").then(r => r.json()).then(boot).catch(() => {});
   fitHeight();

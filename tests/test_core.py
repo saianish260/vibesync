@@ -157,3 +157,26 @@ class LoungeHtmlTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WatchLinkTests(unittest.TestCase):
+    def test_parse_watch_page(self):
+        from core.watchlinks import parse_watch_page, is_watch_url
+        page = (
+            '<ul class="providers"><li><a href="https://click.justwatch.com/a?cx=abc&amp;r=https%3A%2F%2Fwww.netflix.com%2Ftitle%2F81234567&amp;uct_country=in" '
+            'title="Watch Some Film on Netflix"><img src="/n.jpg" alt="Netflix"></a></li>'
+            '<li><a href="https://click.justwatch.com/a?r=https%3A%2F%2Fwww.hotstar.com%2Fin%2Fmovies%2Fsome-film%2F1271234567&amp;uct_country=in">'
+            '<img alt="JioHotstar" src="/h.jpg"></a></li>'
+            '<li><a href="https://click.justwatch.com/a?r=https%3A%2F%2Fwww.netflix.com%2Fbrowse" title="Rent Some Film on Netflix"></a></li>'
+            '<a href="https://www.themoviedb.org/movie/1" title="Not a provider">x</a>'
+            '<a href="https://click.justwatch.com/a?r=javascript%3Aalert(1)" title="Watch on Evil"></a></ul>')
+        links = parse_watch_page(page)
+        self.assertEqual(links["netflix"], "https://www.netflix.com/title/81234567")       # first listing wins
+        self.assertEqual(links["jiohotstar"], "https://www.hotstar.com/in/movies/some-film/1271234567")
+        self.assertNotIn("evil", links)                                                    # only http(s) destinations
+        self.assertTrue(is_watch_url("https://www.themoviedb.org/movie/1100099-some-film/watch?locale=IN"))
+        self.assertTrue(is_watch_url("https://www.themoviedb.org/tv/1399/watch?locale=IN"))
+        for bad in ["https://evil.example/movie/1/watch", "https://www.themoviedb.org.evil.com/movie/1/watch",
+                    "http://www.themoviedb.org/movie/1/watch", "https://www.themoviedb.org/movie/1/watch?locale=IN&x=1"]:
+            self.assertFalse(is_watch_url(bad), bad)
+
