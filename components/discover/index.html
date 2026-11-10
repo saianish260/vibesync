@@ -358,6 +358,14 @@ img{display:block}
   .bnav{left:50%;right:auto;bottom:16px;width:440px;transform:translateX(-50%);border-radius:26px;padding:8px;box-shadow:0 18px 50px rgba(0,0,0,.4),inset 0 0 0 1px var(--line)}
   .toast{bottom:110px}
 }
+/* In a browser on streamlit.app, Streamlit pins its own badges to the bottom-right corner:
+   float the tab bar above them so every tab stays tappable. (The Android app hides those badges.) */
+@media (max-width:759px){
+  .cloud #app{padding-bottom:180px}
+  .cloud .bnav{left:10px;right:10px;bottom:calc(64px + env(safe-area-inset-bottom));padding:8px 6px 10px;border-radius:26px;
+    box-shadow:0 18px 50px rgba(0,0,0,.4),inset 0 0 0 1px var(--line)}
+  .cloud .toast{bottom:170px}
+}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
@@ -406,6 +414,8 @@ const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp
 const buzz = (ms = 8) => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
 const UA = navigator.userAgent || "";
 const IN_APP = /VibeSyncApp/.test(UA), ANDROID = /Android/i.test(UA);
+const ON_CLOUD = !IN_APP && /(^|\.)streamlit\.app$/.test(location.hostname);
+if (ON_CLOUD) document.documentElement.classList.add("cloud");
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const EASE = "cubic-bezier(.2,.8,.2,1)";
 let D = null, BY = {}, state = {tab: "foryou", mood: null, slide: 0};
