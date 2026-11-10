@@ -862,9 +862,11 @@ function tmdbSheetHTML(it) {
   else if (d.error) where = `<div class="note">Couldn't load streaming info. Try again in a moment.</div>`;
   else if (!d.apps.length && !d.other.length) where = `<div class="note">Not streaming in India right now.</div>`;
   else where = `<div class="offers">` + d.apps.map(p => {
-      const url = FIND[p.key] ? FIND[p.key](it.title) : HOME[p.key];
-      const sub = FIND[p.key] ? "Opens the app and searches this title" : "Opens the app";
-      return `<a class="offer" href="${esc(linkFor(url, p.key))}" target="_blank" rel="noopener">${logo(p)}
+      // TMDB's watch page (powered by JustWatch) links to this exact title on each app.
+      // Without it, fall back to searching inside the app.
+      const url = d.link ? d.link : FIND[p.key] ? linkFor(FIND[p.key](it.title), p.key) : linkFor(HOME[p.key], p.key);
+      const sub = d.link ? `Tap ${D.providers[p.key].name} on the next screen to open this title` : FIND[p.key] ? "Opens the app and searches this title" : "Opens the app";
+      return `<a class="offer" href="${esc(url)}" target="_blank" rel="noopener">${logo(p)}
         <span><b>${esc(D.providers[p.key].name)}</b><small>${sub}</small></span><span class="go">Open</span></a>`;
     }).join("") + d.other.map(p => `<a class="offer" href="${esc(d.link || it.trailer)}" target="_blank" rel="noopener">${logo(p)}
         <span><b>${esc(p.name)}</b><small>See watch options</small></span><span class="go">View</span></a>`).join("") + `</div>`;
@@ -876,7 +878,7 @@ function tmdbSheetHTML(it) {
     <div class="h3">Where to watch in India</div>${where}
     <div class="acts"><a class="btn primary" href="${esc(ytLink(it))}" target="_blank" rel="noopener">${ICON.play}Trailer</a>
     <button class="btn soft ${saved ? "saved" : ""}" data-fav="${it.id}" aria-pressed="${saved}">${ICON.heart}<span>${saved ? "Saved" : "Save"}</span></button></div>
-    <p class="foot">Live data from TMDB and JustWatch. Line-ups change, so the app may differ slightly.</p></div>`;
+    <p class="foot">Streaming data from JustWatch via TMDB. Line-ups change, so the app may differ slightly.</p></div>`;
 }
 
 /* search */
