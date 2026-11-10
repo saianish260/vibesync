@@ -1932,6 +1932,14 @@ function chooseWorld(title, keywords, overview, genres) {
   const gw = GENRE_WORLD.find(([rx]) => rx.test(g));
   return best || (gw ? gw[1] : "glow");
 }
+/* "movie" / "series" / "anime" / "show": used to make YouTube searches unambiguous ("Vikram movie viral bgm") */
+function kindWord(it, ref) {
+  const k = String((it && it.kind) || "");
+  if (/anime/.test(k)) return "anime";
+  if (/reality|show|sports/.test(k)) return "show";
+  if (ref && ref.type) return ref.type === "tv" ? "series" : "movie";
+  return /movie|film/.test(k) ? "movie" : k ? "series" : "movie";
+}
 async function themeFrom(it, srcEl) {
   if (!it || TT.busy) return;
   TT.busy = true;
@@ -1969,7 +1977,7 @@ async function themeFrom(it, srcEl) {
   if (!base) { const [h] = rgb2hsl(...[1, 3, 5].map(i => parseInt(tintOf(it).slice(i, i + 2), 16) / 255 || .5)); base = {bgH: h, bgS: .3, accH: h, accS: .75, acc2H: (h + 40) % 360}; }
   const pal = makePalette(base, pack.hint);
   const theme = {v: 2, id: it.id, title: it.title, year: it.year || "", poster: tposter ? img(tposter, "w185") : hasPoster(it) ? posterURL(it, "s166") : "",
-                 far, near, pal, world, indian, yt, at: Date.now()};
+                 far, near, pal, world, indian, yt, kind: kindWord(it, ref), at: Date.now()};
   TT.cur = theme; store.set("titleTheme", theme);
   const rec = store.get("themeRecent", []).filter(t => t.id !== theme.id);
   store.set("themeRecent", [theme].concat(rec).slice(0, 10));
@@ -3237,30 +3245,32 @@ function rankBgm(list, title) {
   }).filter(v => v.sc >= 4 && !seen.has(v.key) && seen.add(v.key)).sort((a, b) => b.sc - a.sc).slice(0, 6);
 }
 async function findBgm(theme) {
-  if (Array.isArray(theme.bgm)) return theme.bgm;
-  const name = String(theme.title).split(":")[0].trim();
+  if (Array.isArray(theme.bgm2)) return theme.bgm2;
+  const name = String(theme.title).split(":")[0].trim(), kind = theme.kind || kindWord(BY[theme.id], null);
   const anime = /anime|cursed|slayer/.test(theme.world) || /anime/i.test((theme.genres || []).join(" "));
-  const qs = theme.indian ? [`${name} BGM original background score`, `${name} theme music official`]
-           : anime ? [`${name} opening theme official`, `${name} OST main theme`]
-           : [`${name} main theme official soundtrack`, `${name} theme song OST`];
+  const qs = theme.indian ? [`${name} ${kind} BGM original background score`, `${name} ${kind} theme music official`]
+           : anime ? [`${name} anime opening theme official`, `${name} anime OST main theme`]
+           : [`${name} ${kind} main theme official soundtrack`, `${name} ${kind} theme song OST`];
   let found = [];
   for (const q of qs) { found = rankBgm(found.concat(await ytSearch(q)), name); if (found.length >= 3) break; }
   const credits = (theme.yt || []).filter(v => v.type === "Opening Credits").map(v => ({key: v.key, name: v.name, by: "Official"}));
   const list = found.map(({key, name, by}) => ({key, name, by})).concat(credits);
-  theme.bgm = list;
-  if (TT.cur && TT.cur.id === theme.id) { TT.cur.bgm = list; store.set("titleTheme", TT.cur); }      // search once per title
+  theme.bgm2 = list;
+  if (TT.cur && TT.cur.id === theme.id) { TT.cur.bgm2 = list; store.set("titleTheme", TT.cur); }      // search once per title
   return list;
 }
 /* "Viral" BGM and "Song": whatever YouTube ranks first for "<title> viral bgm" / "<title> viral song", in YouTube's own order */
 const YT_MODES = {viral: {q: "viral bgm", label: "VB🔥 Viral BGM", btn: "VB🔥", toast: "the most viral BGM"},
                   song: {q: "viral song", label: "VS🔥 Viral song", btn: "VS🔥", toast: "the most viral song"}};
 async function findTop(theme, mode) {
-  if (theme[mode] && theme[mode].length) return theme[mode];
   const name = String(theme.title).split(":")[0].trim(), seen = new Set();
-  const list = (await ytSearch(`${name} ${YT_MODES[mode].q}`)).filter(v => !seen.has(v.key) && seen.add(v.key)).slice(0, 8).map(({key, name, by}) => ({key, name, by}));
+  const kind = theme.kind || kindWord(BY[theme.id], /:tv:/.test(String(theme.id)) ? {type: "tv"} : /:movie:/.test(String(theme.id)) ? {type: "movie"} : null);
+  const q = `${name} ${kind} ${YT_MODES[mode].q}`;                    // e.g. "Vikram movie viral bgm", "Wednesday series viral song"
+  if (theme[mode] && theme[mode].q === q && theme[mode].list.length) return theme[mode].list;
+  const list = (await ytSearch(q)).filter(v => !seen.has(v.key) && seen.add(v.key)).slice(0, 8).map(({key, name, by}) => ({key, name, by}));
   if (!list.length) return findBgm(theme);                    // search unavailable: the official theme instead
-  theme[mode] = list;
-  if (TT.cur && TT.cur.id === theme.id) { TT.cur[mode] = list; store.set("titleTheme", TT.cur); }
+  theme[mode] = {q, list};
+  if (TT.cur && TT.cur.id === theme.id) { TT.cur[mode] = theme[mode]; store.set("titleTheme", TT.cur); }
   return list;
 }
 function ytMode(mode) {
