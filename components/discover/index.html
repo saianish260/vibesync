@@ -220,9 +220,9 @@ img{display:block}
 .plogo{width:38px;height:38px;border-radius:11px;object-fit:cover;flex:0 0 auto}
 
 /* ── Detail sheet ── */
-.veil{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.6);opacity:0;transition:opacity .35s;pointer-events:none}
+.veil{position:fixed;inset:0;z-index:26;background:rgba(0,0,0,.6);opacity:0;transition:opacity .35s;pointer-events:none}
 .veil.on{opacity:1;pointer-events:auto}
-.sheet{--st:var(--accent);position:fixed;z-index:21;left:0;right:0;bottom:0;background:var(--s1);border-radius:26px 26px 0 0;
+.sheet{--st:var(--accent);position:fixed;z-index:27;left:0;right:0;bottom:0;background:var(--s1);border-radius:26px 26px 0 0;
   max-height:94%;display:flex;flex-direction:column;overflow:hidden;visibility:hidden;transform:translateY(105%)}
 .sheet.on{visibility:visible;transform:none}
 .grab{position:absolute;z-index:4;top:0;left:0;right:0;height:28px;display:grid;place-items:center;cursor:grab;touch-action:none}
@@ -265,7 +265,7 @@ img{display:block}
 .pop{animation:pop .4s var(--spring)}
 @keyframes pop{40%{transform:scale(1.35)}}
 .foot2{font-size:12px;color:var(--muted);margin-top:22px;line-height:1.5}
-.fly{position:fixed;z-index:24;transform-origin:0 0;pointer-events:none;border-radius:14px;overflow:hidden;box-shadow:0 24px 50px rgba(0,0,0,.5)}
+.fly{position:fixed;z-index:28;transform-origin:0 0;pointer-events:none;border-radius:14px;overflow:hidden;box-shadow:0 24px 50px rgba(0,0,0,.5)}
 
 /* tracker inside the sheet */
 .trk{background:var(--s2);border-radius:18px;padding:14px}
@@ -311,7 +311,7 @@ img{display:block}
 .reel-sub{color:var(--muted);font-size:14px;margin-top:4px}
 
 /* ── Look picker ── */
-.pop-menu{position:fixed;z-index:26;top:58px;right:12px;background:var(--s1);border-radius:20px;padding:10px;width:236px;
+.pop-menu{position:fixed;z-index:29;top:58px;right:12px;background:var(--s1);border-radius:20px;padding:10px;width:236px;
   box-shadow:0 24px 60px rgba(0,0,0,.45),inset 0 0 0 1px var(--line);transform-origin:top right;transform:scale(.9);opacity:0;pointer-events:none;
   transition:transform .3s var(--spring),opacity .2s}
 .pop-menu.on{transform:none;opacity:1;pointer-events:auto}
@@ -552,6 +552,25 @@ function top10(ids) {
 }
 
 /* ───────────── hero: story-style spotlight ───────────── */
+/* A fresh, random spotlight every time the app opens: 6 well-rated titles you can actually stream,
+   a mix of kinds (max 2 of each), never the same set as last time. */
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function pickFeatured() {
+  const ok = i => hasPoster(i) && i.offers.length && i.kind !== "sports" && ((i.imdb || 0) >= 7.5 || i.status === "live");
+  const pool = D.items.filter(ok);
+  const last = new Set(store.get("lastHero", []));
+  let fresh = pool.filter(i => !last.has(i.id));
+  if (fresh.length < 6) fresh = pool;
+  const per = {}, out = [];
+  for (const it of shuffle(fresh.slice())) {
+    if ((per[it.kind] || 0) >= 2) continue;
+    per[it.kind] = (per[it.kind] || 0) + 1; out.push(it.id);
+    if (out.length === 6) break;
+  }
+  for (const it of shuffle(fresh.slice())) { if (out.length >= 6) break; if (!out.includes(it.id)) out.push(it.id); }
+  store.set("lastHero", out);
+  return out.length ? out : D.featured;
+}
 function heroHTML() {
   const slides = D.featured.map((id, i) => {
     const it = BY[id], off = it.offers[0], sc = scoreOf(it);
@@ -588,6 +607,7 @@ function showSlide(i) {
   });
   const it = BY[D.featured[state.slide]];
   heroBackdrop(it); setTint(tintOf(it));
+  sampleTint(it).then(c => { if (!openId && BY[D.featured[state.slide]] === it) setTint(c); });
 }
 let heroTimer = null;
 function startHero() {             // the running bar's animation drives the carousel; this is the reduced-motion fallback
@@ -1044,9 +1064,9 @@ const LIVE = {
            ["K-dramas", "/discover/tv", Object.assign({with_original_language: "ko"}, STREAM)]],
   reality: [["More reality shows", "/discover/tv", {with_genres: "10764", with_origin_country: "IN", sort_by: "popularity.desc"}]],
 };
-const PLATS = ["netflix", "prime", "hotstar", "crunchyroll", "sonyliv", "zee5", "aha"];
+const PLATS = ["netflix", "prime", "hotstar", "appletv", "crunchyroll", "sonyliv", "zee5", "aha"];
 const PROV_RX = [[/amazon channel/i, "prime"], [/netflix/i, "netflix"], [/prime video|amazon video/i, "prime"], [/hotstar/i, "hotstar"],
-                 [/crunchyroll/i, "crunchyroll"], [/sony ?liv/i, "sonyliv"], [/zee ?5/i, "zee5"], [/^aha/i, "aha"], [/fancode/i, "fancode"]];
+                 [/apple ?tv/i, "appletv"], [/crunchyroll/i, "crunchyroll"], [/sony ?liv/i, "sonyliv"], [/zee ?5/i, "zee5"], [/^aha/i, "aha"], [/fancode/i, "fancode"]];
 const provKey = name => { for (const [rx, k] of PROV_RX) if (rx.test(name)) return k; return null; };
 const enc = encodeURIComponent;
 const FIND = {   // in-app search where the site supports it; otherwise open the app
@@ -1055,7 +1075,7 @@ const FIND = {   // in-app search where the site supports it; otherwise open the
   crunchyroll: t => `https://www.crunchyroll.com/search?q=${enc(t)}`,
   zee5: t => `https://www.zee5.com/search?q=${enc(t)}`,
 };
-const HOME = {hotstar: "https://www.hotstar.com/in", sonyliv: "https://www.sonyliv.com", aha: "https://www.aha.video", fancode: "https://www.fancode.com"};
+const HOME = {appletv: "https://tv.apple.com/in", hotstar: "https://www.hotstar.com/in", sonyliv: "https://www.sonyliv.com", aha: "https://www.aha.video", fancode: "https://www.fancode.com"};
 const norm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
 async function tget(path, params) {
@@ -1247,6 +1267,7 @@ function searchTmdb(q, have) {
 function boot(data) {
   if (D) return;
   D = data; D.items.forEach(i => BY[i.id] = i);
+  D.featured = pickFeatured();
   T.key = (args.tmdbKey || new URLSearchParams(location.search).get("tmdb") || "").trim();
   Object.values(store.get("favMeta", {})).forEach(m => { if (!BY[m.id]) BY[m.id] = rehydrate(m); });
   applyTheme(store.get("theme", args.theme || "cinema"), true);

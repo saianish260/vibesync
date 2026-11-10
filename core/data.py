@@ -12,7 +12,7 @@ Streaming availability changes. Re-check on justwatch.com/in and edit the offers
 """
 from __future__ import annotations
 
-UPDATED = "9 Nov 2026"
+UPDATED = "10 Nov 2026"
 
 # Provider key -> display name, brand colour, Android package (for "open in app / Play Store")
 PROVIDERS = {
@@ -24,10 +24,14 @@ PROVIDERS = {
     "zee5":        {"name": "ZEE5",        "color": "#8230C6", "pkg": "com.graymatrix.did"},
     "fancode":     {"name": "FanCode",     "color": "#F8A01B", "pkg": "com.dream11sportsguru"},
     "aha":         {"name": "aha",         "color": "#FF6A13", "pkg": "ahaflix.tv"},
+    "appletv":     {"name": "Apple TV",    "color": "#5B5B60", "pkg": "com.apple.atve.androidtv.appletv"},
     "youtube":     {"name": "YouTube",     "color": "#FF0033", "pkg": "com.google.android.youtube"},
 }
 
 KIND_LABELS = {"anime": "Anime", "movie": "Movies", "series": "Series", "reality": "Reality TV", "sports": "Sports"}
+
+
+ATV = "Also on Prime Video through the Apple TV channel add-on."
 
 
 def _p(pid: int, slug: str) -> dict:
@@ -215,6 +219,49 @@ CATALOG: list[dict] = [
          offers=[("netflix", "https://www.netflix.com/title/70143836")]),
 
     # ───────────── Sports (no posters: live events) ─────────────
+    # ── Apple TV (formerly Apple TV+); each is also on Prime Video via the Apple TV channel add-on
+    dict(id="severance", title="Severance", kind="series", year=2022, meta="2 seasons", genres=["Mystery", "Sci-fi", "Thriller"], imdb=8.6,
+         poster=_p(324479701, "severance"), moods=["mind"],
+         synopsis="Office workers have their memories surgically split between work and home, until one of them starts asking what the job really is.",
+         offers=[("appletv", "https://tv.apple.com/in/show/severance/umc.cmc.1srk2goyh2q2zdxcx605w8vtx"),
+                 ("prime", "https://app.primevideo.com/detail?gti=amzn1.dv.gti.92c7e5ed-9cf4-4e34-93a8-3beb40f7b279")], note=ATV),
+    dict(id="ted-lasso", title="Ted Lasso", kind="series", year=2020, meta="4 seasons", genres=["Comedy", "Sports", "Feel-good"], imdb=8.7,
+         poster=_p(304099436, "ted-lasso"), moods=["comfort", "fun"],
+         synopsis="An American college football coach is hired to manage an English Premier League club, armed only with relentless optimism.",
+         offers=[("appletv", "https://tv.apple.com/in/episode/pilot/umc.cmc.zb0yksqtym68hasbq8mj4jwp"),
+                 ("prime", "https://app.primevideo.com/detail?gti=amzn1.dv.gti.2f897020-c26d-4e5b-a0cc-6b123749692e")],
+         note="The first episode is free on Apple TV. " + ATV),
+    dict(id="slow-horses", title="Slow Horses", kind="series", year=2022, meta="6 seasons", genres=["Spy", "Thriller", "Dark comedy"], imdb=8.4,
+         poster=_p(349310634, "slow-horses"), moods=["mind", "drama"],
+         synopsis="Gary Oldman leads MI5's dumping ground of failed spies, who keep stumbling into the cases that matter most.",
+         offers=[("appletv", "https://tv.apple.com/in/show/slow-horses/umc.cmc.2szz3fdt71tl1ulnbp8utgq5o"),
+                 ("prime", "https://app.primevideo.com/detail?gti=amzn1.dv.gti.6bfbde87-5fff-4b2d-9358-81c4dfeddf30")],
+         note="The first episode is free on Apple TV. " + ATV),
+    dict(id="silo", title="Silo", kind="series", year=2023, meta="Ongoing", genres=["Sci-fi", "Mystery", "Dystopia"], imdb=8.1,
+         poster=_p(346669772, "silo"), moods=["mind"],
+         synopsis="Ten thousand people live in a giant underground silo, told the outside is poison. One engineer starts digging for the truth.",
+         offers=[("appletv", "https://tv.apple.com/in/episode/freedom-day/umc.cmc.4v3gat04y129mm0smdu6ea3dh"),
+                 ("prime", "https://app.primevideo.com/detail?gti=amzn1.dv.gti.70f6c0ef-d26b-49f2-804f-3672af2330b4")], note=ATV),
+    dict(id="shrinking", title="Shrinking", kind="series", year=2023, meta="3 seasons", genres=["Comedy", "Drama", "Feel-good"], imdb=8.2,
+         poster=_p(341389773, "shrinking"), moods=["comfort", "fun"],
+         synopsis="A grieving therapist starts telling his patients exactly what he thinks, with messy, funny and moving results.",
+         offers=[("appletv", "https://tv.apple.com/in/show/shrinking/umc.cmc.apzybj6eqf6pzccd97kev7bs"),
+                 ("prime", "https://app.primevideo.com/detail?gti=amzn1.dv.gti.0b86aaec-1882-41ef-b59f-9c75e833d27d")], note=ATV),
+    dict(id="the-studio", title="The Studio", kind="series", year=2025, meta="1 season", genres=["Comedy", "Hollywood", "Satire"], imdb=8.0,
+         poster=_p(336260406, "the-studio"), moods=["fun"],
+         synopsis="Seth Rogen plays the new head of a struggling Hollywood studio, caught between art, egos and the bottom line.",
+         offers=[("appletv", "https://tv.apple.com/in/show/the-studio/umc.cmc.7518algxc4lsoobtsx30dqb52"),
+                 ("prime", "https://app.primevideo.com/detail?gti=amzn1.dv.gti.c759a32c-96db-45e4-9b56-97331ba9f884")], note=ATV),
+    dict(id="pluribus", title="Pluribus", kind="series", year=2025, meta="1 season", genres=["Sci-fi", "Drama", "Mystery"], imdb=7.9,
+         poster=_p(336612324, "pluribus"), moods=["mind"],
+         synopsis="From Breaking Bad's Vince Gilligan: the most miserable woman on Earth must save the world from happiness.",
+         offers=[("appletv", "https://tv.apple.com/in/show/pluribus/umc.cmc.37axgovs2yozlyh3c2cmwzlza"),
+                 ("prime", "https://app.primevideo.com/detail?gti=amzn1.dv.gti.e4ed8e28-5afd-4318-bc40-3b3f4db06fbd")], note=ATV),
+    dict(id="f1-movie", title="F1: The Movie", kind="movie", year=2025, meta="2h 36m", genres=["Sports", "Drama", "Racing"], imdb=7.6,
+         poster=_p(336298604, "f1"), moods=["hype", "action"],
+         synopsis="Brad Pitt is a veteran driver pulled back into Formula 1 to mentor a hotshot rookie and save a failing team.",
+         offers=[("appletv", "https://tv.apple.com/in/movie/f1-the-movie/umc.cmc.3t6dvnnr87zwd4wmvpdx5came"),
+                 ("prime", "https://app.primevideo.com/detail?gti=amzn1.dv.gti.f89a01dd-0f82-4907-af85-359b698bfd00")], note=ATV),
     dict(id="ipl", title="IPL", kind="sports", year=2026, meta="Cricket · T20",
          genres=["Cricket", "T20"], imdb=None, poster=None, emoji="🏏", colors=["#1D4ED8", "#F59E0B"],
          synopsis="Live matches stream on JioHotstar during the season. Off-season, catch last-over finishes and best catches in highlights.",
@@ -468,7 +515,7 @@ ROWS: dict[str, list[tuple[str, list[str]]]] = {
                                         "doraemon-sky-utopia", "doraemon-earth-symphony"])],
     "movie": [("Telugu blockbusters", ["pushpa2", "rrr", "kalki", "baahubali-1", "salaar", "devara", "pushpa-1",
                                        "magadheera", "eega"]),
-              ("New in 2025", ["og", "mirai", "kuberaa", "sankranthiki", "daaku", "game-changer", "kantara-1"]),
+              ("New in 2025", ["og", "mirai", "f1-movie", "kuberaa", "sankranthiki", "daaku", "game-changer", "kantara-1"]),
               ("Feel-good and drama", ["sita-ramam", "hi-nanna", "mahanati", "lucky-baskhar", "arjun-reddy",
                                        "saripodhaa", "tillu-square", "hanuman"]),
               ("Pan-India hits", ["kgf2", "kantara", "jailer", "12th-fail", "laapataa-ladies", "stree-2"]),
@@ -477,7 +524,9 @@ ROWS: dict[str, list[tuple[str, list[str]]]] = {
                                   "aspirants"]),
                ("Global binges", ["arcane", "money-heist", "stranger-things", "wednesday", "squid-game",
                                   "breaking-bad", "peaky-blinders", "the-boys"]),
-               ("Epic worlds", ["got", "hotd", "tlou"])],
+               ("Epic worlds", ["got", "hotd", "tlou"]),
+               ("Apple TV originals", ["severance", "ted-lasso", "slow-horses", "silo", "shrinking", "the-studio",
+                                       "pluribus"])],
     "reality": [("Telugu reality", ["bbt10", "bbjodi2"]), ("Pitch and compete", ["shark-tank"])],
     "sports": [("Cricket", ["ipl", "team-india"]), ("More sports", ["pkl", "epl", "f1"])],
 }

@@ -128,7 +128,7 @@ class CatalogTests(unittest.TestCase):
         text = json.dumps(payload)
         self.assertEqual(len(payload["items"]), len(data.CATALOG))
         self.assertTrue(all(i["trailer"].startswith("https://www.youtube.com/") for i in payload["items"]))
-        self.assertLess(len(text), 60000)
+        self.assertLess(len(text), 90000)
 
 
 class LoungeHtmlTests(unittest.TestCase):
