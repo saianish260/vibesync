@@ -440,17 +440,36 @@ img{display:block}
 .sp-src[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--tint);background:color-mix(in srgb,var(--tint) 16%,var(--s2))}
 .sp-sl{display:grid;grid-template-columns:78px 1fr;align-items:center;gap:10px;margin:8px 2px;font-size:13px;font-weight:650;color:var(--muted)}
 .sp-sl input{width:100%;accent-color:var(--tint);height:28px}
-.ytcard{position:fixed;z-index:16;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));width:min(380px,calc(100vw - 20px));translate:-50% 0;
-  border-radius:20px;overflow:hidden;background:#000;box-shadow:0 20px 50px rgba(0,0,0,.55),0 0 0 1px var(--line);
-  opacity:0;pointer-events:none;transform:translateY(20px) scale(.96);transition:transform .45s var(--spring),opacity .25s}
-.ytcard.on{opacity:1;pointer-events:auto;transform:none}
-.yt-h{display:flex;align-items:center;gap:8px;height:42px;padding:0 6px 0 12px;background:var(--s1);color:var(--text)}
-.yt-i{font-size:16px}.yt-t{flex:1;min-width:0;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.yt-b{flex:0 0 auto;min-width:34px;height:32px;padding:0 10px;border-radius:99px;background:var(--s2);font-size:13px;font-weight:800}
-.yt-v{position:relative;aspect-ratio:16/9;min-height:200px}
+/* official soundtrack: a card in the page itself (top of Home), never floating over the UI.
+   YouTube needs its player visible at 200x200 or more, so "Hide" folds it away and pauses. */
+.ytcard{display:none;grid-template-columns:200px minmax(0,1fr);gap:14px;align-items:center;margin:18px 0 4px;padding:10px;border-radius:22px;
+  background:color-mix(in srgb,var(--s1) 88%,transparent);box-shadow:0 0 0 1px var(--line),0 14px 34px rgba(0,0,0,.3);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.ytcard.on{display:grid;animation:ytin .55s var(--spring) both}
+@keyframes ytin{from{opacity:0;transform:translateY(-14px) scale(.97)}}
+.yt-v{position:relative;width:200px;height:200px;border-radius:14px;overflow:hidden;background:#000}
 .yt-v iframe,#ytp{position:absolute;inset:0;width:100%;height:100%;border:0}
-.ytcard.min .yt-v{display:none}
-.cloud .ytcard{bottom:calc(150px + env(safe-area-inset-bottom))}
+.ytcard.searching .yt-v{background:radial-gradient(circle,var(--s2),#000)}
+.ytcard.searching .yt-v::after{content:"";position:absolute;inset:calc(50% - 16px);border-radius:50%;border:3px solid var(--line);border-top-color:var(--tint);animation:spin .9s linear infinite}
+.yt-h{min-width:0;display:flex;flex-direction:column;gap:6px;align-self:stretch;justify-content:center}
+.yt-k{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--tint)}
+.yt-t{font-size:15px;font-weight:800;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.yt-by{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.yt-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.yt-b{height:32px;padding:0 11px;border-radius:999px;background:var(--s2);font-size:12px;font-weight:800;white-space:nowrap}
+.yt-disc{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:#222 center/cover;box-shadow:0 0 0 2px var(--tint);animation:spin 6s linear infinite}
+.ytcard.min{grid-template-columns:minmax(0,1fr);padding:8px 10px}
+.ytcard.min .yt-v{width:0;height:0;position:absolute;visibility:hidden}
+.ytcard.min .yt-t{-webkit-line-clamp:1;font-size:13px}
+.ytcard.min .yt-by,.ytcard.min [data-ytnext]{display:none}
+.ytcard.min .yt-h{flex-direction:row;align-items:center;flex-wrap:wrap}
+.ytcard.min .yt-k{flex:1 1 100%}
+.ytcard.min .yt-t{flex:1}
+.ytcard.min .yt-btns{margin:0}
+.ytcard.min .yt-disc{animation:none}
+@media (max-width:359px){.ytcard{grid-template-columns:minmax(0,1fr)}.yt-v{margin:0 auto}}
+.sp-mix{display:flex;gap:10px;align-items:center;margin:2px 2px 10px;font-size:13px;color:var(--muted)}
+.sp-mix input{width:18px;height:18px;accent-color:var(--tint)}
 
 /* ── Creatures and what they do to the app ── */
 #cfx{position:fixed;inset:0;width:100%;height:100%;z-index:14;pointer-events:none}
@@ -686,9 +705,14 @@ img{display:block}
   <div class="reel-cap" id="reelcap">Rolling…</div><div class="reel-sub" id="reelsub"></div></div></div>
 <div class="pop-menu" id="themes" role="menu"></div>
 <div class="sndp" id="sndp" role="dialog" aria-label="Sound"></div>
-<div class="ytcard" id="ytcard" role="region" aria-label="Official soundtrack"><div class="yt-h"><span class="yt-i">🎬</span><span class="yt-t"></span>
-  <button class="yt-b" data-ytmin aria-label="Collapse and pause the soundtrack">▾</button><button class="yt-b" data-ytclose aria-label="Use the VibeSync score instead">✕</button></div>
-  <div class="yt-v"><div id="ytp"></div></div></div>
+<div class="ytcard" id="ytcard" role="region" aria-label="Official soundtrack">
+  <div class="yt-v"><div id="ytp"></div></div>
+  <div class="yt-h"><span class="yt-k"><span class="yt-disc" aria-hidden="true"></span>Official soundtrack</span><span class="yt-t"></span><span class="yt-by"></span>
+    <div class="yt-btns"><button class="yt-b" data-ytmin aria-label="Hide (pauses) or play the soundtrack">Hide</button><button class="yt-b" data-ytnext aria-label="Try another official track">⏭ Next</button>
+    <button class="yt-b" data-ytclose aria-label="Use the VibeSync score instead">✕</button></div></div></div>
+  <div class="yt-h"><button class="yt-disc" data-ytmin aria-label="Collapse (pauses) or play the soundtrack"></button><span class="yt-t"></span>
+    <button class="yt-b" data-ytnext aria-label="Try another official track">⏭</button><button class="yt-b" data-ytmin aria-label="Collapse and pause">–</button>
+    <button class="yt-b" data-ytclose aria-label="Use the VibeSync score instead">✕</button></div></div>
 <nav class="bnav" id="bnav" aria-label="Main"></nav>
 <div class="toast" id="toast" role="status"></div>
 
@@ -1328,7 +1352,8 @@ function goLounge() {
 
 /* ───────────── page ───────────── */
 function render() {
-  const boost = D.boosts[Math.floor(Math.random() * D.boosts.length)];
+  const boost = D.boosts[Math.floor(Math.random() * D.boosts.length)], yc = $("#ytcard");
+  if (yc && yc.closest("#app")) document.body.appendChild(yc);   // keep the soundtrack card through a re-render
   $("#app").innerHTML = `
     <header class="top" id="top"><div class="mark">Vibe<i>Sync</i></div><div class="tools">
       <button class="icon" data-sound hidden aria-label="Theme sound"></button>
@@ -1336,6 +1361,7 @@ function render() {
       <button class="icon" data-theme-btn aria-label="Change look" aria-haspopup="menu">${ICON.palette}</button></div></header>
     ${heroHTML()}
     <main class="wrap">
+      <div id="ytslot"></div>
       ${section("What's the mood?", "")}
       <div class="tiles" role="group" aria-label="Mood">${Object.entries(D.moods).map(([k, m]) => { const g = MOOD_GRAD[k] || ["#FFD166", "#FF9F68"];
         return `<button class="tile" data-mood="${k}" aria-pressed="false" style="--m1:${g[0]};--m2:${g[1]}"><span class="e" aria-hidden="true">${m.emoji}</span><b>${esc(m.label)}</b></button>`; }).join("")}</div>
@@ -1349,6 +1375,7 @@ function render() {
       <p class="foot">${esc(boost)}<br>Availability checked on JustWatch India, ${esc(D.updated)}. Posters © their owners, via JustWatch and TMDB. Platforms change often.</p>
     </main>`;
   $("#panel").innerHTML = panelHTML(state.tab);
+  if (yc) $("#ytslot").appendChild(yc);
   $("#bnav").innerHTML = navHTML(); navState();
   themeBtn();
   requestAnimationFrame(() => { movePill(); showSlide(0); startHero(); onScroll(); });
@@ -1420,6 +1447,7 @@ document.addEventListener("click", e => {
   if (t.dataset.sndsrc) { AU.src = t.dataset.sndsrc; store.set("sndsrc", AU.src); AU.scoreKey = ""; unlockAudio(); startSound(TT.cur); soundPanel(); buzz(); return; }
   if (t.hasAttribute("data-sndmute")) { setSound(!AU.on); soundPanel(); buzz(); return; }
   if (t.hasAttribute("data-ytmin")) { ytToggle(); return; }
+  if (t.hasAttribute("data-ytnext")) { ytNext(); return; }
   if (t.hasAttribute("data-ytclose")) { AU.src = "score"; store.set("sndsrc", "score"); AU.scoreKey = ""; startSound(TT.cur); toast("Playing the VibeSync score. Switch back any time from 🔊"); return; }
   if (t.hasAttribute("data-tdefault")) { TT.cur = null; store.set("titleTheme", null); applyTitle(null, true); renderThemer($("#tq").value); toast("Back to the default look"); return; }
   if (t.dataset.trecent) {
@@ -1914,7 +1942,7 @@ async function themeFrom(it, srcEl) {
         tget(`/${ref.type}/${ref.id}/keywords`, {}).catch(() => ({})),
         tget(`/${ref.type}/${ref.id}/videos`, {include_video_language: "en,null,te,hi,ta,ml,ja,ko"}).catch(() => ({}))]);
       const ORDER = ["Opening Credits", "Trailer", "Teaser", "Clip", "Featurette"];      // the real theme first, then the official trailer
-      yt = (vids.results || []).filter(v => v.site === "YouTube" && v.key && ORDER.includes(v.type))
+      yt = (vids.results || []).filter(v => v.site === "YouTube" && v.key && v.type === "Opening Credits")         // never trailers
         .sort((a, b) => ORDER.indexOf(a.type) - ORDER.indexOf(b.type) || (b.official ? 1 : 0) - (a.official ? 1 : 0) || (b.size || 0) - (a.size || 0))
         .slice(0, 6).map(v => ({key: v.key, name: v.name, type: v.type}));
       genres = (det.genres || []).map(g => g.name).concat(genres);
@@ -2674,7 +2702,7 @@ addEventListener("resize", () => { if (W.raf && W.refit) { W.refit(); SURF.dirty
    copyrighted soundtracks. Each world gets an ambience (rain, wind, fire, sea, crowd, bells...) and an
    original generative score in the style of its title, plus sound effects tied to what happens on screen
    (thunder after lightning, dragon fire, bat squeaks, splashes...). */
-const AU = {ctx: null, on: store.get("sound", true), src: store.get("sndsrc", "official"), vol: Object.assign({master: .5, music: .55, amb: .6, sfx: .5}, store.get("vol", {})),
+const AU = {ctx: null, on: store.get("sound", true), src: store.get("sndsrc", "official"), vol: Object.assign({master: .35, music: .5, amb: .5, sfx: .45}, store.get("vol2", {})), mix: store.get("sndmix", false),
   last: {}, unlocked: false, world: null, tok: 0, cache: new Map(), style: null};
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const SCALES = {minor: [0, 2, 3, 5, 7, 8, 10], dorian: [0, 2, 3, 5, 7, 9, 10], major: [0, 2, 4, 5, 7, 9, 11], harm: [0, 2, 3, 5, 7, 8, 11],
@@ -2920,6 +2948,7 @@ const AMB = {
 /* ── sound effects tied to what happens on screen ── */
 function sfx(name, o = {}) {
   if (!AU.on || !AU.ctx || AU.ctx.state !== "running") return;
+  if (AU.excl && !AU.mix) return;                            // official soundtrack playing on its own
   const t = AU.ctx.currentTime + (o.delay || 0), now = performance.now();
   const gap = {thunder: 1500, roar: 2500, coin: 220, squeak: 400, splash: 300}[name] || 150;
   if (AU.last[name] && now - AU.last[name] < gap) return; AU.last[name] = now;
@@ -3100,14 +3129,14 @@ function startSound(theme) {
   const tok = ++AU.tok, {style, amb} = soundFor(theme);
   AU.style = {name: style};
   AU.master.gain.cancelScheduledValues(c.currentTime); AU.master.gain.setTargetAtTime(AU.vol.master, c.currentTime, .6);
-  const ambKey = "amb:" + amb.join(",");
-  if (AU.ambKey !== ambKey) {                                 // same ambience (e.g. two rainy titles) keeps playing untouched
-    AU.ambReady = cached(ambKey, () => renderAmb(amb)).then(b => { if (tok !== AU.tok) return; fadeOut(AU.ambL); AU.ambL = b ? playLoop(b, AU.ambGain) : null; AU.ambKey = ambKey; });
-  } else AU.ambReady = Promise.resolve();
-  const videos = theme.yt || [];
-  if (AU.src === "official" && videos.length) { fadeOut(AU.scoreL); AU.scoreL = null; AU.scoreKey = ""; ytPlay(theme); }
-  else {
-    ytStop();
+  if (AU.src === "official" && !theme.noOfficial) {
+    // the title's own music, on its own: VibeSync's score, ambience and effects go quiet (unless "mix" is on)
+    AU.excl = true; fadeOut(AU.scoreL); AU.scoreL = null; AU.scoreKey = "";
+    if (AU.mix) playAmb(amb, tok); else { fadeOut(AU.ambL); AU.ambL = null; AU.ambKey = ""; }
+    ytPlay(theme, tok);
+  } else {
+    AU.excl = false; ytStop();
+    playAmb(amb, tok);
     if (AU.src === "off") { fadeOut(AU.scoreL); AU.scoreL = null; AU.scoreKey = ""; }
     else if (AU.scoreKey !== "score:" + style) {
       const key = "score:" + style;
@@ -3115,6 +3144,11 @@ function startSound(theme) {
     }
   }
   soundBtn();
+}
+function playAmb(amb, tok) {
+  const ambKey = "amb:" + amb.join(",");
+  if (AU.ambKey === ambKey && AU.ambL) { AU.ambReady = Promise.resolve(); return; }    // same ambience keeps playing untouched
+  AU.ambReady = cached(ambKey, () => renderAmb(amb)).then(b => { if (tok !== AU.tok) return; fadeOut(AU.ambL); AU.ambL = b ? playLoop(b, AU.ambGain) : null; AU.ambKey = ambKey; });
 }
 function setSound(on) { AU.on = on; store.set("sound", on); if (on) { unlockAudio(); AU.ambKey = AU.scoreKey = ""; startSound(TT.cur); } else { stopSound(); AU.ambKey = AU.scoreKey = ""; } soundBtn(); }
 function soundBtn() {
@@ -3127,25 +3161,93 @@ function soundBtn() {
 
 /* ── sound panel ── */
 function soundPanel() {
-  const p = $("#sndp"), t = TT.cur;
+  const p = $("#sndp"), t = TT.cur, found = YTS.theme === t && YTS.list.length ? YTS.list[YTS.i] : null;
   const src = (k, label, sub) => `<button class="sp-src" data-sndsrc="${k}" aria-pressed="${AU.src === k}"><b>${label}</b><small>${sub}</small></button>`;
   const slider = (k, label) => `<label class="sp-sl"><span>${label}</span><input type="range" min="0" max="100" value="${Math.round(AU.vol[k] * 100)}" data-vol="${k}" aria-label="${label} volume"></label>`;
   p.innerHTML = `<div class="sp-h"><b>Sound${t ? ` · ${esc(t.title)}` : ""}</b>
       <button class="sp-mute${AU.on ? "" : " off"}" data-sndmute>${AU.on ? "Sound on" : "Sound off"}</button></div>
-    <div class="sp-srcs">${src("official", "🎬 Official", (t && t.yt && t.yt.length) ? "The title's real theme / trailer" : "Not found for this title")}
-      ${src("score", "🎼 VibeSync score", "Original, offline")}${src("off", "🔇 No music", "Ambience only")}</div>
-    ${slider("master", "Volume")}${slider("music", "Music")}${slider("amb", "Ambience")}${slider("sfx", "Effects")}`;
+    <div class="sp-srcs">${src("official", "🎬 Official soundtrack", found ? esc(found.name).slice(0, 34) : "The title's real theme / BGM")}
+      ${src("score", "🎼 VibeSync score", "Original, offline")}${src("off", "🔇 No music", "World sounds only")}</div>
+    ${AU.src === "official" ? `<label class="sp-mix"><input type="checkbox" data-sndmix ${AU.mix ? "checked" : ""}><span>Mix in world sounds (rain, thunder, creatures)</span></label>` : ""}
+    ${slider("master", "Volume")}${slider("music", "Music")}${AU.src === "official" && !AU.mix ? "" : slider("amb", "Ambience") + slider("sfx", "Effects")}`;
   p.classList.add("on");
 }
+document.addEventListener("change", e => {
+  if (!e.target.matches || !e.target.matches("[data-sndmix]")) return;
+  AU.mix = e.target.checked; store.set("sndmix", AU.mix); AU.ambKey = ""; startSound(TT.cur); soundPanel();
+});
 document.addEventListener("input", e => {
   const k = e.target.dataset && e.target.dataset.vol; if (!k) return;
-  AU.vol[k] = +e.target.value / 100; store.set("vol", AU.vol); applyVolumes();
+  AU.vol[k] = +e.target.value / 100; store.set("vol2", AU.vol); applyVolumes();
 });
 
-/* ── the official soundtrack: the title's own YouTube video (opening credits / trailer), via TMDB ──
-   YouTube's rules require its player to stay visible while playing, so it lives in a small card;
-   collapsing the card pauses it. Rain, thunder and creature sounds keep playing on top. */
-const YTS = {api: null, player: null, list: [], i: 0, theme: null, collapsed: false};
+/* ── the official soundtrack ──
+   Search YouTube for the title's actual music (theme / BGM / OST / opening), preferring official
+   music channels and YouTube's auto-generated "- Topic" soundtrack uploads, never trailers or fan
+   edits. Uses the YouTube Data API when a key is configured, otherwise the open-source Piped and
+   Invidious search APIs; the TMDB "Opening Credits" video is the last resort. Playback always goes
+   through YouTube's own embedded player, at the smallest size YouTube allows (200x200), docked at
+   the top. Collapsing it to the circle pauses it (YouTube doesn't allow a hidden player to play). */
+const YTS = {api: null, player: null, list: [], i: 0, theme: null, collapsed: false, key: ""};
+const PIPED = ["https://pipedapi.kavin.rocks", "https://pipedapi.adminforge.de", "https://api.piped.private.coffee", "https://pipedapi.leptons.xyz"];
+const INVID = ["https://inv.nadeko.net", "https://invidious.nerdvpn.de", "https://yewtu.be", "https://invidious.privacyredirect.com"];
+const timeout = (p, ms) => Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error("timeout")), ms))]);
+const decodeHtml = s => { const t = document.createElement("textarea"); t.innerHTML = s; return t.value; };
+async function ytSearch(q) {
+  const out = [];
+  if (YTS.key) {
+    try {
+      const j = await timeout(fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&maxResults=15&q=${encodeURIComponent(q)}&key=${YTS.key}`).then(r => r.json()), 6000);
+      (j.items || []).forEach(it => it.id && it.id.videoId && out.push({key: it.id.videoId, name: decodeHtml(it.snippet.title), by: it.snippet.channelTitle, dur: 0}));
+      if (out.length) return out;
+    } catch (e) { /* fall through to the open-source APIs */ }
+  }
+  for (const base of PIPED) {
+    try {
+      const j = await timeout(fetch(`${base}/search?q=${encodeURIComponent(q)}&filter=videos`).then(r => r.json()), 5000);
+      (j.items || []).forEach(it => { const m = /v=([\w-]{11})/.exec(it.url || ""); if (m) out.push({key: m[1], name: it.title || "", by: it.uploaderName || "", dur: it.duration || 0}); });
+      if (out.length) return out;
+    } catch (e) { /* next instance */ }
+  }
+  for (const base of INVID) {
+    try {
+      const j = await timeout(fetch(`${base}/api/v1/search?q=${encodeURIComponent(q)}&type=video`).then(r => r.json()), 5000);
+      (Array.isArray(j) ? j : []).forEach(it => it.videoId && out.push({key: it.videoId, name: it.title || "", by: it.author || "", dur: it.lengthSeconds || 0}));
+      if (out.length) return out;
+    } catch (e) { /* next instance */ }
+  }
+  return out;
+}
+const MUSIC = /\b(theme|bgm|b\.g\.m|ost|o\.s\.t|soundtrack|score|main title|title (song|track|theme|music)|opening|intro|end credits|background music)\b/i;
+const NOT_MUSIC = /trailer|teaser|promo|reaction|review|explained|recap|ending explained|scene|clip|behind the scenes|interview|cover|tutorial|how to play|status|whatsapp|ringtone|\bedit\b|8d|slowed|reverb|lo-?fi|mashup|remix|#shorts|\bshorts\b|meme|parody|fan ?made|full movie|episode|gameplay/i;
+const LABEL = /official|records|music|netflix|hbo|prime video|disney|marvel|warner|universal|lahari|t-series|aditya|sony|saregama|zee music|mango|tips|think music|crunchyroll|aniplex|toho|vevo|- topic|soundtrack|lakeshore|milan|watertower|varese/i;
+function rankBgm(list, title) {
+  const want = twinKey(String(title).split(":")[0]), seen = new Set();
+  return list.map(v => {
+    const name = v.name || "", by = v.by || "";
+    let sc = 0;
+    if (MUSIC.test(name)) sc += 4; if (LABEL.test(by)) sc += 3; if (/- topic$/i.test(by)) sc += 3;
+    if (NOT_MUSIC.test(name)) sc -= 9;
+    if (twinKey(name + " " + by).includes(want)) sc += 3; else sc -= 8;
+    if (v.dur && (v.dur < 45 || v.dur > 1200)) sc -= 3;
+    return Object.assign({sc}, v);
+  }).filter(v => v.sc >= 4 && !seen.has(v.key) && seen.add(v.key)).sort((a, b) => b.sc - a.sc).slice(0, 6);
+}
+async function findBgm(theme) {
+  if (Array.isArray(theme.bgm)) return theme.bgm;
+  const name = String(theme.title).split(":")[0].trim();
+  const anime = /anime|cursed|slayer/.test(theme.world) || /anime/i.test((theme.genres || []).join(" "));
+  const qs = theme.indian ? [`${name} BGM original background score`, `${name} theme music official`]
+           : anime ? [`${name} opening theme official`, `${name} OST main theme`]
+           : [`${name} main theme official soundtrack`, `${name} theme song OST`];
+  let found = [];
+  for (const q of qs) { found = rankBgm(found.concat(await ytSearch(q)), name); if (found.length >= 3) break; }
+  const credits = (theme.yt || []).filter(v => v.type === "Opening Credits").map(v => ({key: v.key, name: v.name, by: "Official"}));
+  const list = found.map(({key, name, by}) => ({key, name, by})).concat(credits);
+  theme.bgm = list;
+  if (TT.cur && TT.cur.id === theme.id) { TT.cur.bgm = list; store.set("titleTheme", TT.cur); }      // search once per title
+  return list;
+}
 function ytLoadApi() {
   if (YTS.api) return YTS.api;
   YTS.api = new Promise(res => {
@@ -3156,42 +3258,46 @@ function ytLoadApi() {
   });
   return YTS.api;
 }
-function ytCard() {
+function ytCard(state) {
   const v = YTS.list[YTS.i] || {}, box = $("#ytcard");
-  box.className = "ytcard on" + (YTS.collapsed ? " min" : "");
-  box.querySelector(".yt-t").textContent = `${YTS.theme ? YTS.theme.title : ""} · ${v.name || "Soundtrack"}`;
-  box.querySelector("[data-ytmin]").setAttribute("aria-label", YTS.collapsed ? "Show and play the soundtrack" : "Collapse and pause the soundtrack");
-  box.querySelector("[data-ytmin]").textContent = YTS.collapsed ? "▶ Play" : "▾";
+  box.className = "ytcard on" + (YTS.collapsed ? " min" : "") + (state ? " " + state : "");
+  box.querySelector(".yt-t").textContent = state === "searching" ? "Finding the official soundtrack…" : (v.name || "Soundtrack");
+  box.querySelector(".yt-by").textContent = state === "searching" ? (YTS.theme ? YTS.theme.title : "") : (v.by || "");
+  box.querySelector("[data-ytmin]").textContent = YTS.collapsed ? "▶ Play" : "Hide";
+  const th = YTS.theme && YTS.theme.poster; box.querySelector(".yt-disc").style.backgroundImage = th ? `url('${th}')` : "";
 }
-async function ytPlay(theme) {
-  YTS.theme = theme; YTS.list = theme.yt; YTS.i = 0; YTS.collapsed = false;
-  const box = $("#ytcard"); box.classList.add("on"); ytCard();
-  const YT = await ytLoadApi();
-  if (!YT || AU.world !== theme) { if (!YT) ytFallback(); return; }
+async function ytPlay(theme, tok) {
+  YTS.theme = theme; YTS.i = 0; YTS.collapsed = false; YTS.list = [];
+  ytCard("searching");
+  const [list, YT] = await Promise.all([findBgm(theme), ytLoadApi()]);
+  if (tok !== AU.tok) return;
+  YTS.list = list;
+  if (!YT || !list.length) return ytFallback(!list.length ? "No official soundtrack found for this title" : "YouTube couldn't load");
   ytLoad();
 }
 function ytLoad() {
-  const v = YTS.list[YTS.i]; if (!v) return ytFallback();
+  const v = YTS.list[YTS.i]; if (!v) return ytFallback("No playable official soundtrack for this title");
   ytCard();
   if (YTS.player && YTS.player.loadVideoById) { YTS.player.loadVideoById(v.key); ytVolume(); return; }
   YTS.player = new window.YT.Player("ytp", {width: "100%", height: "100%", videoId: v.key,
-    playerVars: {autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1, controls: 1, loop: 1, playlist: v.key},
+    playerVars: {autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1, controls: 1, loop: 1, playlist: v.key, iv_load_policy: 3},
     events: {onReady: e => { ytVolume(); e.target.playVideo(); },
-             onError: () => { YTS.i++; ytLoad(); },                                         // embedding off for this one: try the next official video
+             onError: () => { YTS.i++; ytLoad(); },                       // this one can't be embedded: next candidate
              onStateChange: e => { if (e.data === 0) e.target.playVideo(); }}});
 }
-function ytFallback() {                                      // no playable official video: use the VibeSync score
-  ytStop(); if (!YTS.theme || AU.world !== YTS.theme) return;
-  const t = Object.assign({}, YTS.theme, {yt: []}); AU.scoreKey = ""; startSound(t); toast("No playable official soundtrack, playing the VibeSync score");
+function ytFallback(msg) {                                    // nothing official to play: the VibeSync score
+  ytStop(); const t = YTS.theme; if (!t || AU.world !== t) return;
+  AU.scoreKey = ""; startSound(Object.assign({}, t, {noOfficial: true})); toast(`${msg}. Playing the VibeSync score`);
 }
-function ytVolume() { if (YTS.player && YTS.player.setVolume) try { YTS.player.setVolume(Math.round(AU.vol.music * AU.vol.master * 160)); } catch (e) {} }
+function ytVolume() { if (YTS.player && YTS.player.setVolume) try { YTS.player.setVolume(Math.round(AU.vol.music * AU.vol.master * 140)); } catch (e) {} }
 function ytPause() { if (YTS.player && YTS.player.pauseVideo) try { YTS.player.pauseVideo(); } catch (e) {} }
 function ytResume() { if (YTS.player && YTS.player.playVideo && !YTS.collapsed && $("#ytcard").classList.contains("on")) try { YTS.player.playVideo(); } catch (e) {} }
 function ytStop() {
   if (YTS.player && YTS.player.stopVideo) try { YTS.player.stopVideo(); } catch (e) {}
-  const box = $("#ytcard"); if (box) box.classList.remove("on", "min");
+  const box = $("#ytcard"); if (box) box.className = "ytcard";
 }
 function ytToggle() { YTS.collapsed = !YTS.collapsed; ytCard(); YTS.collapsed ? ytPause() : ytResume(); }
+function ytNext() { if (YTS.list.length > 1) { YTS.i = (YTS.i + 1) % YTS.list.length; ytLoad(); } }
 
 if (/[?&]vsdebug/.test(location.search)) window.__vs = {AU, YTS, renderScore, renderAmb, audio, level: () => { if (!AU.an) return 0; const d = new Float32Array(2048); AU.an.getFloatTimeDomainData(d); return Math.sqrt(d.reduce((a, v) => a + v * v, 0) / d.length); }};
 
@@ -3462,6 +3568,7 @@ window.addEventListener("message", e => {
   const m = e.data;
   if (!m || m.type !== "streamlit:render") return;
   args = m.args || {};
+  if (args.ytKey) YTS.key = String(args.ytKey).trim();
   if (args.catalog) boot(args.catalog);
   if (args.resolved && typeof args.resolved === "object") {
     let fresh = false;

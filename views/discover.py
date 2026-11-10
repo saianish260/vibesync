@@ -41,6 +41,16 @@ def tmdb_key() -> str:
     return str(key or os.environ.get("TMDB_API_KEY", "")).strip()
 
 
+def youtube_key() -> str:
+    """Optional YouTube Data API key (secret YOUTUBE_API_KEY) for finding each title's official soundtrack.
+    Without it the screen uses the open-source Piped / Invidious search APIs."""
+    try:
+        key = st.secrets.get("YOUTUBE_API_KEY", "")
+    except Exception:
+        key = ""
+    return str(key or os.environ.get("YOUTUBE_API_KEY", "")).strip()
+
+
 @st.cache_data(ttl=6 * 3600, max_entries=400, show_spinner=False)
 def _watch_links(url: str) -> dict[str, str]:
     try:
@@ -53,7 +63,7 @@ def render(theme: str) -> dict | None:
     payload = catalog_payload()
     _write_catalog(payload)
     resolved = st.session_state.setdefault("vs_resolved", {})
-    value = _component(catalog=payload, theme=theme, tmdbKey=tmdb_key(), resolved=resolved,
+    value = _component(catalog=payload, theme=theme, tmdbKey=tmdb_key(), ytKey=youtube_key(), resolved=resolved,
                        key="discover", default=None)
     # When a live title's sheet opens, the screen asks for that title's exact per-app links.
     req = value.get("resolve") if isinstance(value, dict) else None
