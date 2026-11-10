@@ -734,7 +734,7 @@ function liveDef(key) {
 const skeleton = n => Array.from({length: n}, () => `<div class="card sk" aria-hidden="true"><div class="pw"></div><div class="sk-t"></div></div>`).join("");
 function liveRowHTML(key) {
   return `<div data-livebox><div class="sec"><h2>${esc(liveDef(key).title)}</h2><p class="live-sub"><i></i>Live</p></div>` +
-         `<div class="row live" data-live="${esc(key)}">${skeleton(6)}</div></div>`;
+         `<div class="row" data-live="${esc(key)}">${skeleton(6)}</div></div>`;
 }
 function liveRowsHTML(tab) {
   if (!T.key || T.failed || !LIVE[tab]) return "";
