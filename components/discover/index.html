@@ -366,6 +366,19 @@ img{display:block}
     box-shadow:0 18px 50px rgba(0,0,0,.4),inset 0 0 0 1px var(--line)}
   .cloud .toast{bottom:170px}
 }
+/* ── Motion while you scroll (scroll-driven, so it costs nothing when idle) ──
+   Swipe a row: posters swing in from the edge like a coverflow. Scroll the page: sections rise into place. */
+@keyframes swing{0%{opacity:.35;scale:.84;rotate:y -24deg}22%,78%{opacity:1;scale:1;rotate:y 0deg}100%{opacity:.35;scale:.84;rotate:y 24deg}}
+@keyframes riseIn{from{opacity:0;translate:0 46px;scale:.97}to{opacity:1;translate:0 0;scale:1}}
+@keyframes popIn{from{opacity:0;scale:.78;translate:0 18px}to{opacity:1;scale:1;translate:0 0}}
+.fresh{animation:popIn .55s var(--spring) both;animation-delay:calc(min(var(--i,0),8) * 55ms)}
+@supports (animation-timeline:view()){
+  .row>.card,.top10>.t10,.tiles>.tile,.reel-strip>.pw{perspective:700px}
+  .row>.card>.pw,.top10>.t10>.pw{animation:swing linear both;animation-timeline:view(inline);animation-range:cover}
+  .tiles>.tile .e{animation:swing linear both;animation-timeline:view(inline);animation-range:cover}
+  #panel .sec,#panel .row,#panel .top10,#panel .grid,#panel .chips,#panel .empty,.wrap>.sec,.tiles,.surprise,.trkw,.foot,#sres .grid{
+    animation:riseIn linear both;animation-timeline:view();animation-range:entry 0% entry 70%}
+}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
@@ -1067,6 +1080,7 @@ const LIVE = {
 const PLATS = ["netflix", "prime", "hotstar", "appletv", "crunchyroll", "sonyliv", "zee5", "aha"];
 const PROV_RX = [[/amazon channel/i, "prime"], [/netflix/i, "netflix"], [/prime video|amazon video/i, "prime"], [/hotstar/i, "hotstar"],
                  [/apple ?tv/i, "appletv"], [/crunchyroll/i, "crunchyroll"], [/sony ?liv/i, "sonyliv"], [/zee ?5/i, "zee5"], [/^aha/i, "aha"], [/fancode/i, "fancode"]];
+const STORE_IDS = new Set([2, 3, 7, 10, 68, 192]);
 const provKey = name => { for (const [rx, k] of PROV_RX) if (rx.test(name)) return k; return null; };
 const enc = encodeURIComponent;
 const FIND = {   // in-app search where the site supports it; otherwise open the app
@@ -1179,6 +1193,7 @@ async function loadLive(key) {
     if (el) {
       if (st.page === 1) el.innerHTML = fresh.map(card).join("") || `<div class="empty">Nothing here yet.</div>`;
       else el.insertAdjacentHTML("beforeend", fresh.map(card).join(""));
+      [...el.querySelectorAll(".card")].slice(-fresh.length).forEach((c, i) => { c.classList.add("fresh"); c.style.setProperty("--i", i); });
     }
   } catch (e) { tmdbFail(); }
   st.busy = false;
@@ -1195,7 +1210,9 @@ function ensureProviders() {
   T.provReady = Promise.all(["movie", "tv"].map(t => tget(`/watch/providers/${t}`, {watch_region: "IN"}))).then(rs => {
     rs.forEach(r => (r.results || []).forEach(p => {
       const k = provKey(p.provider_name);
-      if (!k || /channel|with ads/i.test(p.provider_name)) return;
+      // Only subscription services: skip rent/buy stores (Apple TV store = 2, Amazon Video = 10, Google Play = 3...)
+      // and add-on channels, or rows fill up with titles you can only rent there.
+      if (!k || STORE_IDS.has(p.provider_id) || /channel|with ads|store|rent|buy/i.test(p.provider_name)) return;
       T.provIds[k] = T.provIds[k] || [];
       if (!T.provIds[k].includes(p.provider_id)) T.provIds[k].push(p.provider_id);
     }));
