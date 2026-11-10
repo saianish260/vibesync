@@ -1196,10 +1196,8 @@ function panelHTML(tab) {
   if (tab === "foryou") {
     const fresh = i => !isWatched(i.id);                     // watched titles drop out of suggestions
     const top = D.items.filter(i => i.imdb && i.offers.length && hasPoster(i) && fresh(i)).sort((a, b) => b.imdb - a.imdb).slice(0, 10).map(i => i.id);
-    const telugu = D.items.filter(i => i.telugu && i.offers.length && fresh(i)).map(i => i.id);
-    const hot = D.items.filter(i => i.offers.some(o => o.p === "hotstar") && i.kind !== "sports" && fresh(i)).map(i => i.id);
     return tasteRowsHTML() + section("Top 10 in VibeSync", "by IMDb") + top10(top) + liveRowsHTML("foryou")
-      + section("Telugu picks", `${telugu.length} titles`) + row(telugu) + section("On JioHotstar") + row(hot) + platformsHTML();
+      + platformsHTML();
   }
   if (tab === "saved") return savedHTML();
   return (D.rows[tab] || []).map(([t, ids]) => { const f = ids.filter(id => !isWatched(id)); return section(t, `${f.length} titles`) + row(f); }).join("") + liveRowsHTML(tab);
@@ -3756,8 +3754,8 @@ async function showPlatform(k) {
   await ensureProviders();
   const box = $("#platbox"); if (!box) return;
   if (!(T.provIds[k] || []).length) { box.innerHTML = `<div class="empty">No catalogue data for ${esc(D.providers[k].name)} right now.</div>`; return; }
-  box.innerHTML = liveRowHTML(`plat|${k}|movie`) + liveRowHTML(`plat|${k}|tv`);
-  fillLive(box);
+  box.innerHTML = liveRowHTML(`plat|${k}|movie`) + liveRowHTML(`plat|${k}|tv`) + platSoonHTML(k);
+  fillLive(box); fillPlatSoon(k);
 }
 function fillLive(root) {
   if (!T.key || T.failed) return;
@@ -5132,6 +5130,57 @@ document.addEventListener("click", e => {
   delete RATE.r[b.dataset.rateclear]; store.set("ratings", RATE.r); toast("Rating removed"); refreshSheet();
   $$(`.card[data-open="${CSS.escape(b.dataset.rateclear)}"] .myr`).forEach(x => x.remove());
 });
+
+/* ───────────── Coming up on each OTT (under Browse by platform) ─────────────
+   Movies: India's upcoming digital releases whose TMDB release note names this app, plus upcoming titles
+   TMDB already lists on it. Series: shows on this app with a new episode due in the next 30 days. */
+const PSOON = {};
+function platSoonHTML(k) {
+  const n = esc(D.providers[k].name);
+  return `<div class="sec"><h2>Coming soon to ${n}</h2><p class="live-sub"><i></i>Movies</p></div><div class="row" id="psoon-m">${skeleton(5)}</div>
+    <div class="sec"><h2>New episodes coming on ${n}</h2><p class="live-sub"><i></i>Next 30 days</p></div><div class="row" id="psoon-t">${skeleton(5)}</div>`;
+}
+const dcard = (it, label) => card(it).replace('<div class="ct">', `<div class="cdate">${esc(label)}</div><div class="ct">`);
+async function fillPlatSoon(k) {
+  const seq = PSOON.seq = (PSOON.seq || 0) + 1;
+  const today = new Date(new Date().toDateString()), ids = (T.provIds[k] || []).join("|");
+  const put = (el, html, empty) => { const e = $(el); if (!e || PSOON.seq !== seq) return; e.className = html ? "row" : ""; e.innerHTML = html || `<div class="empty">${empty}</div>`; };
+  const name = D.providers[k].name;
+  // movies
+  (async () => {
+    try {
+      const soon = [];
+      const [dig, listed] = await Promise.all([
+        Promise.all([1, 2, 3].map(p => tget("/discover/movie", {region: "IN", with_release_type: "4|6", "release_date.gte": iso(today), "release_date.lte": iso(new Date(+today + 75 * dayMs)), sort_by: "popularity.desc", page: p}).catch(() => ({})))),
+        ids ? tget("/discover/movie", {with_watch_providers: ids, watch_region: "IN", "primary_release_date.gte": iso(new Date(+today + dayMs)), sort_by: "popularity.desc"}).catch(() => ({})) : {}]);
+      (listed.results || []).filter(r => r.poster_path && r.release_date && new Date(r.release_date + "T12:00:00") >= today).forEach(r => soon.push({r, date: r.release_date}));
+      const cands = dig.flatMap(j => j.results || []).filter(r => r.poster_path && !soon.some(x => x.r.id === r.id)).slice(0, 48);
+      for (let i = 0; i < cands.length; i += 8) {
+        await Promise.all(cands.slice(i, i + 8).map(async r => {
+          try { const o = ottFrom(await tget(`/movie/${r.id}/release_dates`, {})); if (o && o.app && provKey(o.app) === k && new Date(o.date) >= today) soon.push({r, date: o.date}); } catch (e) {}
+        }));
+        if (PSOON.seq !== seq) return;
+      }
+      soon.sort((a, b) => (a.date || "9").localeCompare(b.date || "9"));
+      put("#psoon-m", soon.map(({r, date}) => { const it = fromTmdb(r, "movie"); return it ? dcard(it, date ? shortDate(date) : "Date not announced") : ""; }).join(""),
+          `Nothing announced for ${esc(name)} yet. New dates show up here as soon as they're announced.`);
+    } catch (e) { put("#psoon-m", "", "Couldn't load upcoming movies right now."); }
+  })();
+  // series with new episodes due
+  (async () => {
+    try {
+      if (!ids) return put("#psoon-t", "", `No catalogue data for ${esc(name)} right now.`);
+      const j = await tget("/discover/tv", {with_watch_providers: ids, watch_region: "IN", "air_date.gte": iso(today), "air_date.lte": iso(new Date(+today + 30 * dayMs)), sort_by: "popularity.desc"});
+      const list = (j.results || []).filter(r => r.poster_path).slice(0, 16);
+      const rows = (await Promise.all(list.map(async r => {
+        try { const d = await tget(`/tv/${r.id}`, {}); const nx = d.next_episode_to_air;
+          return nx && nx.air_date && new Date(nx.air_date) >= today ? {r, nx} : null; } catch (e) { return null; }
+      }))).filter(Boolean).sort((a, b) => a.nx.air_date.localeCompare(b.nx.air_date));
+      put("#psoon-t", rows.map(({r, nx}) => { const it = fromTmdb(r, "tv"); return it ? dcard(it, `S${nx.season_number} E${nx.episode_number} · ${shortDate(nx.air_date)}`) : ""; }).join(""),
+          `No new episodes announced on ${esc(name)} for the next 30 days.`);
+    } catch (e) { put("#psoon-t", "", "Couldn't load upcoming episodes right now."); }
+  })();
+}
 
 /* ───────────── events for everything above ───────────── */
 document.addEventListener("click", e => {
