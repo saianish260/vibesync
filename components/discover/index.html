@@ -3834,6 +3834,7 @@ async function showPlatform(k) {
   document.querySelectorAll("[data-plat]").forEach(c => c.setAttribute("aria-pressed", c.dataset.plat === k));
   await ensureProviders();
   const box = $("#platbox"); if (!box) return;
+  ["movie", "tv"].forEach(t => delete liveState[`plat|${k}|${t}`]);   // a fresh random pick on every open
   if (!(T.provIds[k] || []).length) { box.innerHTML = `<div class="empty">No catalogue data for ${esc(D.providers[k].name)} right now.</div>`; return; }
   box.innerHTML = liveRowHTML(`plat|${k}|movie`) + liveRowHTML(`plat|${k}|tv`) + platSoonHTML(k);
   fillLive(box); fillPlatSoon(k);
@@ -3848,13 +3849,22 @@ function fillLive(root) {
 }
 async function loadLive(key) {
   const st = liveState[key] || (liveState[key] = {ids: [], page: 0, total: 1, busy: false});
-  if (st.busy || st.page >= st.total || st.page >= 20) return;
+  const rnd = key.startsWith("plat|");                 // platform rows: random pages from the top ~300, shuffled
+  if (st.busy || (rnd ? st.order && !st.order.length : (st.page >= st.total || st.page >= 20))) return;
   st.busy = true;
   try {
     if (key.startsWith("plat|")) await ensureProviders();
     const def = liveDef(key);
-    const j = await tget(def.path, Object.assign({page: st.page + 1}, def.params));
-    st.page = j.page || st.page + 1; st.total = j.total_pages || 1;
+    let pg = st.page + 1;
+    if (rnd) pg = st.order ? st.order.shift() : 1 + Math.floor(Math.random() * 5);
+    let j = await tget(def.path, Object.assign({page: pg}, def.params));
+    if (rnd && !st.order) {
+      if (!(j.results || []).length && pg > 1) { pg = 1; j = await tget(def.path, Object.assign({page: 1}, def.params)); }
+      const max = Math.min(j.total_pages || 1, 15);
+      st.order = shuffle(Array.from({length: max}, (_, i) => i + 1).filter(n => n !== pg));
+    }
+    if (rnd) { st.page += 1; st.total = 99; } else { st.page = j.page || st.page + 1; st.total = j.total_pages || 1; }
+    if (rnd && j.results) j = Object.assign({}, j, {results: shuffle(j.results.slice())});
     const seen = new Set(st.ids);
     const fresh = (j.results || []).map(r => fromTmdb(r, def.type)).filter(it => it && !isWatched(it.id) && !seen.has(it.id) && (seen.add(it.id), true));
     // rows filtered to "streaming in India" vouch for their titles; trending lists also carry upcoming films
