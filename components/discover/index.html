@@ -1574,7 +1574,6 @@ function render() {
         return `<button class="tile" data-mood="${k}" aria-pressed="false" style="--m1:${g[0]};--m2:${g[1]}"><span class="e" aria-hidden="true">${m.emoji}</span><b>${esc(m.label)}</b></button>`; }).join("")}</div>
       <div class="moodbox" id="moodbox"><div></div></div>
       <button class="surprise" data-surprise><span class="die" aria-hidden="true">🎲</span><span style="flex:1"><b>Surprise me</b><small id="surprise-sub">Tap and VibeSync picks from the whole library</small></span><span class="go" style="width:22px;height:22px;opacity:.7">${ICON.arrow}</span></button>
-      ${trackerWidget()}
       ${exploreHTML()}
       <nav class="tabs" id="tabs" aria-label="Categories"><div class="tabrow" role="tablist"><span class="pill" id="pill"></span>${TABS.map(([k, l]) =>
         `<button class="tab" role="tab" data-tab="${k}" aria-selected="${k === state.tab}">${l}</button>`).join("")}</div></nav>
@@ -4852,14 +4851,48 @@ function pickTonight() {
   store.set("tonight", {day, id: it.id});
   return it;
 }
+const widgetCard = it => {
+  const off = it.offers && it.offers[0];
+  return {id: it.id, title: it.title, sub: [it.year, kindLabel(it), off ? D.providers[off.p].name : ""].filter(Boolean).join(" · "),
+          img: it.tmdbPoster ? `https://image.tmdb.org/t/p/w342${it.tmdbPoster}` : hasPoster(it) ? posterURL(it, "s332") : "",
+          line: (it.synopsis || "").slice(0, 110)};
+};
+// tonight's pick first, then a queue of backups for the widget's "Watched it" button
 function pushWidget() {
   const b = window.VibeSyncApp; if (!b || typeof b.setPick !== "function") return;
-  const it = pickTonight(); if (!it) return;
-  const off = it.offers && it.offers[0];
-  const img = it.tmdbPoster ? `https://image.tmdb.org/t/p/w342${it.tmdbPoster}` : hasPoster(it) ? posterURL(it, "s332") : "";
-  try { b.setPick(JSON.stringify({id: it.id, title: it.title, sub: [it.year, kindLabel(it), off ? D.providers[off.p].name : ""].filter(Boolean).join(" · "),
-                                  img, line: (it.synopsis || "").slice(0, 110)})); } catch (e) {}
+  const first = pickTonight(); if (!first) return;
+  const pool = surprisePool().filter(it => it !== first && !isWatched(it.id) && (it.offers.length || it.tmdb));
+  const rest = pool.map(it => [tasteScore(it) + (favs.has(it.id) ? 3 : 0) + Math.random() * 5, it]).sort((a, b) => b[0] - a[0]).slice(0, 14).map(([, it]) => it);
+  const queue = [first].concat(rest);
+  const meta = {}; queue.forEach(it => { if (it.tmdb) meta[it.id] = slim(it); }); store.set("widgetMeta", meta);
+  try { b.setPick(JSON.stringify({queue: queue.map(widgetCard)})); } catch (e) {}
 }
+// "Watched it" taps on the widget, made while VibeSync was closed
+function syncWidgetWatched() {
+  const b = window.VibeSyncApp; if (!b || typeof b.takeWidgetWatched !== "function") return;
+  let ids = []; try { ids = JSON.parse(b.takeWidgetWatched() || "[]"); } catch (e) {}
+  if (!ids.length) return;
+  const meta = store.get("widgetMeta", {});
+  ids.forEach(id => { if (!BY[id] && meta[id]) BY[id] = rehydrate(meta[id]); const it = BY[id];
+    X.st[id] = {s: "watched", at: Date.now(), meta: it && it.tmdb ? slim(it) : null}; if (it) learn(it, 1); });
+  store.set("status", X.st);
+  toast(`Marked ${ids.length} widget pick${ids.length > 1 ? "s" : ""} as watched ✓`);
+}
+// a widget or notification tap asked for one title: open its page
+async function openFromApp() {
+  const b = window.VibeSyncApp; if (!b || typeof b.takeOpen !== "function" || !D) return;
+  let id = ""; try { id = b.takeOpen() || ""; } catch (e) {}
+  if (!id) return;
+  if (!BY[id]) { const m = store.get("widgetMeta", {})[id] || (X.st[id] || {}).meta || store.get("favMeta", {})[id]; if (m) BY[id] = rehydrate(m); }
+  const t = /^tmdb:(movie|tv):(\d+)$/.exec(id);
+  if (!BY[id] && t && T.key) { try { const d = await tget(`/${t[1]}/${t[2]}`, {}); fromTmdb(Object.assign({media_type: t[1], genre_ids: (d.genres || []).map(g => g.id)}, d), t[1]); } catch (e) {} }
+  if (!BY[id]) return;
+  closeSearch(); closeMixer(); if ($("#xp").classList.contains("on")) $("#xp").classList.remove("on");
+  scroller().scrollTo({top: 0});
+  openSheet(id);
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { openFromApp(); syncWidgetWatched(); } });
+setInterval(() => { if (!document.hidden) openFromApp(); }, 1500);
 
 /* ───────────── events for everything above ───────────── */
 document.addEventListener("click", e => {
@@ -4965,7 +4998,7 @@ function boot(data) {
   render(); fillLive(document); fitHeight();
   applyTitle(TT.cur, true);
   if (T.key) ensureProviders();
-  setTimeout(() => { checkReminders(); pushWidget(); }, 2500);
+  setTimeout(() => { syncWidgetWatched(); checkReminders(); pushWidget(); openFromApp(); }, 1200);
 }
 window.addEventListener("message", e => {
   const m = e.data;
