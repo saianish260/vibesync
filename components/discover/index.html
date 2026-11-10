@@ -820,6 +820,35 @@ img{display:block}
 .synct{width:100%;border-radius:16px;border:0;padding:12px 14px;background:var(--s1);color:var(--text);box-shadow:inset 0 0 0 1px var(--line);font:12.5px/1.45 ui-monospace,monospace;resize:vertical}
 .xp .acts{margin-top:10px}
 .lowfx .xp,.lowfx .dcard{transition:none}
+
+/* ── Fluid motion: every move glides and settles like water on glass ──
+   One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
+   Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
+:root{--ease:cubic-bezier(.16,1,.3,1);--glide:cubic-bezier(.16,1,.3,1)}
+@supports (transition-timing-function:linear(0, 1)){:root{--spring:linear(0, 0.0359, 0.1245, 0.2419, 0.3704, 0.4977, 0.6156, 0.7194, 0.8068, 0.8776, 0.9327, 0.9735, 1.0024, 1.0212, 1.0323, 1.0374, 1.0383, 1.0363, 1.0326, 1.0279, 1.0229, 1.0181, 1.0137, 1.0099, 1.0067, 1.0041, 1.0021, 1.0007, 0.9997, 0.9991, 0.9987, 0.9985, 0.9985, 0.9986, 0.9988, 0.999, 0.9992, 0.9993, 0.9995, 0.9997, 1)}}
+.panel{animation:panelIn .62s var(--glide)}
+@keyframes panelIn{from{opacity:0;transform:translate3d(var(--dir,20px),0,0)}to{opacity:1;transform:none}}
+.card .pw{transition:transform .5s var(--spring)}
+.card:active .pw{transform:scale(.955);transition-duration:.18s}
+.xtool,.tool,.cup,.cast,.plan,.sp-src,.offer,.trkw,.mixcard,.surprise{transition:transform .5s var(--spring),background-color .3s,box-shadow .3s}
+.tool:active,.cup:active,.cast:active,.offer:active,.trkw:active{transform:scale(.965);transition-duration:.16s}
+.xp,.mixer,.search{transition:opacity .42s var(--glide),transform .62s var(--glide)}
+.xp .mx-in,.mixer .mx-in{will-change:auto}
+.dcard{transition:transform .55s var(--spring),opacity .3s}
+.ytcard.on{animation:ytin .7s var(--spring) both}
+/* rows far off screen skip rendering until you scroll near them: smoother scrolling, same pixels */
+#panel .row,#panel>.grid{content-visibility:auto;contain-intrinsic-size:auto 300px}
+/* water ripple on every tap */
+#ripples{position:fixed;inset:0;z-index:60;pointer-events:none;overflow:hidden;contain:strict}
+#ripples i{position:absolute;left:0;top:0;width:var(--s);height:var(--s);border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,255,255,.10) 0,rgba(255,255,255,.04) 44%,transparent 50%,rgba(255,255,255,.55) 60%,rgba(255,255,255,.16) 66%,transparent 72%);
+  animation:ripple 1s var(--glide) forwards;will-change:transform,opacity}
+#ripples i::after{content:"";position:absolute;inset:0;border-radius:50%;
+  background:radial-gradient(circle,transparent 54%,color-mix(in srgb,var(--tint) 60%,transparent) 63%,transparent 71%);animation:ripple2 1.15s .1s var(--glide) both}
+@keyframes ripple{0%{transform:translate3d(var(--x),var(--y),0) scale(.08);opacity:1}45%{opacity:.75}100%{transform:translate3d(var(--x),var(--y),0) scale(1);opacity:0}}
+@keyframes ripple2{0%{transform:scale(.05);opacity:1}50%{opacity:.7}100%{transform:scale(.8);opacity:0}}
+.lowfx #ripples i::after{display:none}
+@media (prefers-reduced-motion:reduce){#ripples{display:none}}
 </style>
 </head>
 <body>
@@ -887,7 +916,7 @@ const IN_APP = /VibeSyncApp/.test(UA), ANDROID = /Android/i.test(UA);
 const ON_CLOUD = !IN_APP && /(^|\.)streamlit\.app$/.test(location.hostname);
 if (ON_CLOUD) document.documentElement.classList.add("cloud");
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const EASE = "cubic-bezier(.2,.8,.2,1)";
+const EASE = CSS.supports("transition-timing-function", "linear(0, 1)") ? "linear(0, 0.0359, 0.1245, 0.2419, 0.3704, 0.4977, 0.6156, 0.7194, 0.8068, 0.8776, 0.9327, 0.9735, 1.0024, 1.0212, 1.0323, 1.0374, 1.0383, 1.0363, 1.0326, 1.0279, 1.0229, 1.0181, 1.0137, 1.0099, 1.0067, 1.0041, 1.0021, 1.0007, 0.9997, 0.9991, 0.9987, 0.9985, 0.9985, 0.9986, 0.9988, 0.999, 0.9992, 0.9993, 0.9995, 0.9997, 1)" : "cubic-bezier(.16,1,.3,1)";   // a soft spring
 let D = null, BY = {}, state = {tab: "foryou", mood: null, slide: 0};
 let favs = new Set(store.get("favs", []));
 let tracker = store.get("tracker", {});
@@ -1233,7 +1262,7 @@ function openSheet(id, from) {
   if (!REDUCED) {
     if (r && r.width && r.bottom > 0 && r.top < innerHeight) flyPoster(src, r, sh.querySelector(".shead .pw"));   // measure before the sheet starts moving
     sh.animate(isMobile() ? [{translate: "0 100%"}, {translate: "0 0"}] : [{opacity: 0, scale: ".96"}, {opacity: 1, scale: "1"}],
-               {duration: isMobile() ? 480 : 340, easing: EASE});
+               {duration: isMobile() ? 640 : 420, easing: EASE});
   }
   sampleTint(it).then(c => { if (openId === id) { sh.style.setProperty("--st", c); setTint(c); } });
   sh.querySelector("[data-close]").focus({preventScroll: true});
@@ -1247,8 +1276,10 @@ function closeSheet() {
   const done = () => { sh.classList.remove("on"); sh.style.transform = ""; };
   if (REDUCED) done();
   else {
+    const v = SHEETV.v || 0;            // a flick carries its speed into the slide-out
     const a = sh.animate(isMobile() ? [{translate: "0 0"}, {translate: "0 110%"}] : [{opacity: 1}, {opacity: 0, scale: ".96"}],
-                         {duration: 280, easing: "cubic-bezier(.4,0,1,1)", fill: "forwards"});
+                         {duration: v > .4 ? Math.max(160, 340 - v * 120) : 320, easing: v > .4 ? "cubic-bezier(.2,.6,.4,1)" : "cubic-bezier(.5,0,.75,0)", fill: "forwards"});
+    SHEETV.v = 0;
     a.onfinish = () => { done(); a.cancel(); };
   }
   if (!heroOff) pauseHero(false);
@@ -1262,16 +1293,24 @@ function refreshSheet() {
   $("#sheet .sbody").scrollTop = y;
 }
 
-// swipe the sheet down to close
+// swipe the sheet down to close: it follows your finger 1:1, stretches like rubber when pulled up,
+// and a quick flick closes it even from a short drag
+const SHEETV = {v: 0};
 (() => {
-  let y0 = null, dy = 0;
+  let y0 = null, dy = 0, ly = 0, lt = 0, v = 0;
   const sh = () => $("#sheet");
-  document.addEventListener("pointerdown", e => { if (e.target.closest("[data-grab]")) { y0 = e.clientY; dy = 0; e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } });
-  document.addEventListener("pointermove", e => { if (y0 === null) return; dy = Math.max(0, e.clientY - y0); sh().style.transform = `translateY(${dy}px)`; });
+  document.addEventListener("pointerdown", e => { if (e.target.closest("[data-grab]")) { y0 = ly = e.clientY; lt = performance.now(); dy = 0; v = 0; e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } });
+  document.addEventListener("pointermove", e => {
+    if (y0 === null) return;
+    const now = performance.now(), raw = e.clientY - y0;
+    v = v * .7 + .3 * ((e.clientY - ly) / Math.max(1, now - lt)); ly = e.clientY; lt = now;
+    dy = raw >= 0 ? raw : -Math.pow(-raw, .62);
+    sh().style.transform = `translate3d(0,${dy}px,0)`;
+  });
   document.addEventListener("pointerup", () => {
     if (y0 === null) return; y0 = null;
-    if (dy > 90) closeSheet();
-    else { const from = sh().style.transform; sh().style.transform = ""; if (!REDUCED && dy) sh().animate([{transform: from}, {transform: "none"}], {duration: 260, easing: EASE}); }
+    if (dy > 120 || (dy > 24 && v > .45)) { SHEETV.v = v; closeSheet(); }
+    else { const from = sh().style.transform; sh().style.transform = ""; if (!REDUCED && dy) sh().animate([{transform: from}, {transform: "none"}], {duration: 560, easing: EASE}); }
   });
 })();
 
@@ -4133,7 +4172,7 @@ function deckRender() {
   const st = $("#dstat"); if (st) st.textContent = DECK.n ? `${DECK.n} swiped this session · VibeSync now leans ${topOf(X.taste.t, 3).map(k => TAGS[k].label).join(", ") || "nowhere yet"}` : "";
   if (DECK.ids.length - DECK.i < 8) deckRefill();
 }
-function deckDecide(v, el) {
+function deckDecide(v, el, speed) {
   const id = DECK.ids[DECK.i]; if (!id) return;
   const it = BY[id], card = el || $(`.dcard[data-dc="${CSS.escape(id)}"]`);
   X.swiped[id] = v; store.set("swiped", X.swiped);
@@ -4143,8 +4182,9 @@ function deckDecide(v, el) {
   DECK.i++; DECK.n++;
   if (card && !REDUCED) {
     const dx = v === 1 ? 1 : v === -1 ? -1 : 0;
-    card.style.transition = "transform .4s cubic-bezier(.3,.7,.4,1), opacity .4s";
-    card.style.transform = dx ? `translate(${dx * 130}%, -6%) rotate(${dx * 22}deg)` : "translateY(-120%) scale(.9)";
+    const sp = Math.min(2.4, Math.abs(speed || 0)), dur = Math.round(460 - sp * 110);
+    card.style.transition = `transform ${dur}ms cubic-bezier(.2,.7,.3,1), opacity ${dur}ms`;
+    card.style.transform = dx ? `translate(${dx * (130 + sp * 30)}%, ${-6 - sp * 4}%) rotate(${dx * (22 + sp * 6)}deg)` : "translateY(-120%) scale(.9)";
     card.style.opacity = "0";
     setTimeout(deckRender, 320);
   } else deckRender();
@@ -4155,17 +4195,24 @@ function deckDecide(v, el) {
   let s = null;
   document.addEventListener("pointerdown", e => {
     const c = e.target.closest(".dcard"); if (!c || e.target.closest("button") || c.style.getPropertyValue("--k") !== "0") return;
-    s = {c, x: e.clientX, y: e.clientY, dx: 0, dy: 0}; c.setPointerCapture && c.setPointerCapture(e.pointerId); c.style.transition = "none";
+    s = {c, x: e.clientX, y: e.clientY, dx: 0, dy: 0, vx: 0, vy: 0, lx: e.clientX, ly: e.clientY, lt: performance.now()}; c.setPointerCapture && c.setPointerCapture(e.pointerId); c.style.transition = "none";
   });
   document.addEventListener("pointermove", e => {
     if (!s) return; s.dx = e.clientX - s.x; s.dy = e.clientY - s.y;
+    const now = performance.now(), dt = Math.max(1, now - s.lt);
+    s.vx = s.vx * .7 + .3 * (e.clientX - s.lx) / dt; s.vy = s.vy * .7 + .3 * (e.clientY - s.ly) / dt; s.lx = e.clientX; s.ly = e.clientY; s.lt = now;
+    const next = s.c.previousElementSibling;           // the card underneath rises as you drag
+    if (next) { const k = Math.min(1, Math.abs(s.dx) / 160); next.style.transform = `translateY(${12 - 12 * k}px) scale(${.95 + .05 * k})`; }
     s.c.style.transform = `translate(${s.dx}px, ${s.dy * .3}px) rotate(${s.dx / 18}deg)`;
     s.c.dataset.lean = s.dx > 40 ? "like" : s.dx < -40 ? "skip" : s.dy < -70 ? "seen" : "";
   });
   document.addEventListener("pointerup", () => {
-    if (!s) return; const {c, dx, dy} = s; s = null; c.dataset.lean = "";
-    if (dx > 110) deckDecide(1, c); else if (dx < -110) deckDecide(-1, c); else if (dy < -120) deckDecide(0, c);
-    else { c.style.transition = "transform .35s var(--spring)"; c.style.transform = ""; }
+    if (!s) return; const {c, dx, dy, vx, vy} = s; s = null; c.dataset.lean = "";
+    const next = c.previousElementSibling; if (next) next.style.transform = "";
+    // a fast flick counts even when the drag was short
+    if (dx > 110 || (dx > 30 && vx > .5)) deckDecide(1, c, vx); else if (dx < -110 || (dx < -30 && vx < -.5)) deckDecide(-1, c, vx);
+    else if (dy < -120 || (dy < -40 && vy < -.6)) deckDecide(0, c, vy);
+    else { c.style.transition = "transform .6s var(--spring)"; c.style.transform = ""; }
   });
 })();
 
@@ -4631,6 +4678,76 @@ document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
   if ($("#trv").classList.contains("on")) closeTrailer(); else if ($("#xp").classList.contains("on") && !openId) closeXP();
 });
+
+/* ───────────── Fluid motion ───────────── */
+const FLUID = {spring: CSS.supports("transition-timing-function", "linear(0, 1)") ? getComputedStyle(document.documentElement).getPropertyValue("--spring").trim() || "cubic-bezier(.2,1.2,.4,1)" : "cubic-bezier(.2,1.2,.4,1)",
+               glide: "cubic-bezier(.16,1,.3,1)", x: innerWidth / 2, y: innerHeight * .8};
+document.addEventListener("pointerdown", e => { FLUID.x = e.clientX; FLUID.y = e.clientY; }, {capture: true, passive: true});
+// a water ripple spreads from every tap
+(() => {
+  if (REDUCED) return;
+  const layer = document.createElement("div"); layer.id = "ripples"; layer.setAttribute("aria-hidden", "true"); document.body.appendChild(layer);
+  const SEL = ".card,.btn,.xtool,.tool,.chip,.tile,.surprise,.mixcard,.tab,.cup,.db,.cast,.offer,.icon,.gz,.gb,.yt-b,.sp-src,.trkw,.cupx,#bnav button,.cast,.plan";
+  document.addEventListener("pointerdown", e => {
+    const t = e.target.closest && e.target.closest(SEL); if (!t || e.button > 0) return;
+    const r = t.getBoundingClientRect(), s = Math.round(Math.min(300, Math.max(110, Math.hypot(r.width, r.height) * 1.1)));
+    while (layer.childElementCount > 3) layer.firstChild.remove();
+    const i = document.createElement("i");
+    i.style.cssText = `--s:${s}px;--x:${e.clientX - s / 2}px;--y:${e.clientY - s / 2}px`;
+    layer.appendChild(i);
+    setTimeout(() => i.remove(), 1300);
+  }, {passive: true});
+})();
+// full-screen pages pour open from where you tapped, and drain back when closed
+function undrain(el) {              // reopened while still draining: stop the close
+  if (!el || !el._drain) return false;
+  el._drain.cancel(); el._drain = null; el.style.clipPath = ""; return true;
+}
+function liquidIn(el, inner) {
+  if (REDUCED || !el) return;
+  const {x, y} = FLUID, R = Math.ceil(Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))) + 8;
+  el.getAnimations().forEach(a => { if (a.id === "liquid") a.cancel(); });
+  const a = el.animate([{clipPath: `circle(18px at ${x}px ${y}px)`}, {clipPath: `circle(${R}px at ${x}px ${y}px)`}], {duration: 640, easing: FLUID.glide});
+  a.id = "liquid";
+  a.onfinish = () => { el.style.clipPath = ""; };
+  const c = inner || el.firstElementChild;
+  if (c) c.animate([{transform: "translate3d(0,34px,0) scale(.985)", opacity: .2}, {transform: "none", opacity: 1}], {duration: 760, easing: FLUID.spring});
+}
+function liquidOut(el, done) {
+  if (REDUCED || !el) return done();
+  const {x, y} = FLUID, R = Math.ceil(Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))) + 8;
+  const a = el.animate([{clipPath: `circle(${R}px at ${x}px ${y}px)`}, {clipPath: `circle(0px at ${x}px ${y}px)`}], {duration: 420, easing: "cubic-bezier(.5,0,.75,0)", fill: "forwards"});
+  a.id = "liquid"; el._drain = a;
+  a.onfinish = () => {        // stay drained while the page fades out underneath
+    if (el._drain !== a) return;
+    el._drain = null; el.style.clipPath = `circle(0px at ${x}px ${y}px)`; a.cancel(); done();
+    setTimeout(() => { if (!el.classList.contains("on")) el.style.clipPath = ""; }, 520);
+  };
+}
+function slideIn(el, dir) {          // pages stacked on a page (a cast member from a title) slide across
+  if (REDUCED || !el) return;
+  el.animate([{transform: `translate3d(${dir * 46}px,0,0)`, opacity: 0}, {transform: "none", opacity: 1}], {duration: 560, easing: FLUID.glide});
+}
+{
+  const _open = openXP, _close = closeXP;
+  openXP = function (html, cls, keep) {
+    const x = $("#xp"), was = !undrain(x) && x.classList.contains("on");
+    if (openId) closeSheet();                 // a tool opened from anywhere comes to the front
+    _open(html, cls, keep);
+    if (!was) liquidIn(x, x.querySelector(".mx-in")); else slideIn(x.querySelector(".mx-in"), 1);
+  };
+  closeXP = function () {
+    const x = $("#xp");
+    if (x._drain) return;
+    if (XP.stack.length) { _close(); slideIn(x.querySelector(".mx-in"), -1); return; }
+    liquidOut(x, _close);
+  };
+  const _om = openMixer, _cm = closeMixer;
+  openMixer = function () { undrain($("#mixer")); _om.apply(this, arguments); liquidIn($("#mixer"), $("#mixer .mx-in")); };
+  closeMixer = function () { const m = $("#mixer"); if (!m.classList.contains("on") || m._drain) return; liquidOut(m, () => _cm()); };
+  const _os = openSearch;
+  openSearch = function () { _os.apply(this, arguments); liquidIn($("#search"), $("#search .sres")); };
+}
 
 /* ───────────── boot ───────────── */
 function boot(data) {
