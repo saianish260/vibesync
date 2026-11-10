@@ -420,6 +420,42 @@ img{display:block}
 .w-fog,.w-grid,.w-waves,.w-spot,.w-vines,.w-webs{display:none;position:absolute;pointer-events:none}
 #piles{position:fixed;inset:0;z-index:14;pointer-events:none}
 #ffx{position:fixed;inset:0;width:100%;height:100%;z-index:13;pointer-events:none}
+/* ── Creatures and what they do to the app ── */
+#cfx{position:fixed;inset:0;width:100%;height:100%;z-index:14;pointer-events:none}
+#critters{position:fixed;inset:0;z-index:14;pointer-events:none;overflow:hidden}
+.critter{position:absolute;left:0;top:0;line-height:1;will-change:transform;transition:opacity .4s;filter:drop-shadow(0 8px 10px rgba(0,0,0,.45))}
+.critter b{display:block;font-weight:400;font-family:"Noto Color Emoji","Apple Color Emoji",sans-serif;transform-origin:50% 60%}
+.mv-fly b,.mv-buzz b{animation:flap .26s ease-in-out infinite alternate}
+.mv-flutter b{animation:flap .48s ease-in-out infinite alternate}
+.mv-buzz b{animation-duration:.08s}
+.critter.rest b{animation:none}
+.critter.blink b{animation:blinkEye .3s ease-in-out}
+.critter.letter{font-size:24px}
+@keyframes flap{to{scale:1 .74}}
+@keyframes blinkEye{50%{scale:1 .08}}
+.titled :is(.pw,.sec h2,.tile,.mixcard,.surprise){transition:transform .7s var(--spring),filter 1.4s ease,opacity .6s,box-shadow .6s}
+.vs-burn{animation:burnShake .09s linear infinite!important;filter:sepia(1) saturate(3.2) hue-rotate(-22deg) brightness(1.15) contrast(1.2)!important;
+  box-shadow:0 0 30px #ff6a00,0 0 70px #ff3d00aa!important}
+.pw.vs-burn::after{content:"";position:absolute;inset:-6% -2% 0;z-index:6;pointer-events:none;mix-blend-mode:screen;
+  background:radial-gradient(34% 55% at 22% 100%,#ffd36bee,transparent 70%),radial-gradient(30% 70% at 50% 100%,#ff7a1aee,transparent 70%),
+    radial-gradient(34% 52% at 80% 100%,#ffb02eee,transparent 70%),radial-gradient(60% 40% at 50% 100%,#ff3d00cc,transparent 75%);
+  animation:flames .32s ease-in-out infinite alternate}
+.sec h2.vs-burn,.vs-burn :is(b){color:#ffc46b!important;text-shadow:0 0 8px #ff6a00,0 -6px 16px #ff3d00,0 -14px 26px #ffae00!important}
+@keyframes flames{from{transform:scaleY(.82) translateY(4%)}to{transform:scaleY(1.12) translateY(-3%)}}
+@keyframes burnShake{0%{translate:0 0}25%{translate:1px -1px}50%{translate:-1px 1px}75%{translate:1px 1px}}
+.vs-charred{filter:grayscale(.7) brightness(.42) contrast(1.35) sepia(.5)!important}
+.vs-flip{transform:rotate(180deg)!important}
+.pw.vs-web::after{content:"🕸️";position:absolute;inset:0;z-index:6;display:grid;place-items:center;font-size:110px;opacity:.85;pointer-events:none;
+  filter:grayscale(1) brightness(1.9);animation:popIn .5s var(--spring) both;font-family:"Noto Color Emoji",sans-serif}
+.sec h2.vs-web::after{content:"🕸️"!important}
+.vs-lift{transform:translateY(-16px) scale(1.05)!important;box-shadow:0 0 0 2px #a0ffdc,0 0 50px #a0ffdc!important}
+.vs-phase{opacity:.22!important;filter:blur(1.5px) hue-rotate(160deg)!important}
+.vs-glow{box-shadow:0 0 0 3px #ffd36b,0 0 46px #ffd36bcc!important}
+.vs-sink{transform:translateY(40px) scale(.82) rotate(-6deg)!important;opacity:.15!important}
+.vs-squash{animation:squash .45s var(--spring)!important}
+@keyframes squash{30%{scale:1.08 .84}60%{scale:.96 1.05}}
+.vs-shake{animation:shake2 .7s ease!important}
+@keyframes shake2{20%,60%{translate:-4px 0;rotate:-2deg}40%,80%{translate:4px 0;rotate:2deg}}
 #piles i{position:absolute;font-style:normal;font-size:30px;rotate:var(--r);filter:drop-shadow(0 6px 10px rgba(0,0,0,.55));animation:bob 4s ease-in-out infinite;animation-delay:var(--d)}
 @keyframes bob{50%{translate:0 -6px}}
 /* decorations that live on the app's own titles and posters */
@@ -608,6 +644,7 @@ img{display:block}
 <div class="world" id="world" aria-hidden="true"><div class="w-far" id="wfar"></div><div class="w-near" id="wnear"></div><div class="w-fog"></div><div class="w-grid"></div><div class="w-waves"></div><div class="w-spot"></div><svg class="w-vines" viewBox="0 0 100 200" preserveAspectRatio="none"><path d="M-2,200 C6,182 1,168 8,150 S2,122 10,104 S3,78 7,58 S0,30 4,8"/><path d="M8,150 C14,146 16,140 22,141"/><path d="M10,104 C16,100 15,92 21,90"/><path d="M7,58 C12,55 13,49 18,50"/><path d="M102,200 C94,184 99,166 92,148 S98,120 90,100 S97,74 93,52 S100,26 96,4"/><path d="M92,148 C86,144 85,137 79,138"/><path d="M90,100 C84,97 85,89 80,88"/><path d="M93,52 C88,49 88,43 83,44"/><path d="M-2,2 C10,8 18,3 28,10 S40,6 48,13"/><path d="M102,2 C90,9 82,3 72,11 S60,7 52,14"/></svg><div class="w-webs"><i>🕸️</i><i>🕸️</i></div><canvas id="wfx"></canvas><div class="w-shade"></div></div>
 <div id="piles" aria-hidden="true"></div>
 <canvas id="ffx" aria-hidden="true"></canvas>
+<canvas id="cfx" aria-hidden="true"></canvas><div id="critters" aria-hidden="true"></div>
 <div id="app" aria-live="polite"></div>
 <div class="veil" id="veil"></div>
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Title details"></section>
@@ -1876,7 +1913,7 @@ function applyTitle(theme, tell) {
   const root = document.documentElement;
   root.className = root.className.split(" ").filter(c => c && !c.startsWith("pk-") && c !== "titled" && c !== "has-font").join(" ");
   VARS.forEach(v => root.style.removeProperty(v));
-  stopWorld();
+  stopWorld(); stopCritters();
   $("#piles").innerHTML = "";
   if (!theme) {
     $("#wfar").style.backgroundImage = $("#wnear").style.backgroundImage = "";
@@ -1893,6 +1930,7 @@ function applyTitle(theme, tell) {
     $("#piles").innerHTML = (pack.piles || []).map((g, i) => { const [x, y, r] = PILE_SPOTS[i % PILE_SPOTS.length];
       return `<i style="${x};${y};--r:${r}deg;--d:${i * .7}s">${g}</i>`; }).join("");
     startWorld(pack, p);
+    startCritters(Object.assign({}, theme, {world}));
   }
   themeBtn();
   if (tell) {
@@ -2079,6 +2117,286 @@ function startWorld(pack, pal) {
   };
   step();
 }
+
+/* ───────────── Creatures ─────────────
+   Animals (and a few vehicles) that live on top of the app for a title theme. Each has a way of moving
+   and a habit it performs on the app's real posters and titles: dragons breathe fire and the poster
+   burns, bats flip a poster upside down, spiders web a title, owls drop letters, a toad squashes titles
+   as it hops across them, sharks bite... Everything recovers after a few seconds, so the app stays usable. */
+const BEASTS = {
+  dragon:  {g: "🐉", size: [46, 60], move: "fly", habit: "fire", speed: 2.4, every: [5, 9]},
+  bats:    {g: "🦇", size: [18, 26], move: "fly", habit: "flip", speed: 3, every: [8, 13], swarm: 6},
+  bat:     {g: "🦇", size: [18, 26], move: "fly", habit: "land", speed: 3.2, every: [6, 11]},
+  spider:  {g: "🕷️", size: [24, 28], move: "drop", habit: "web", every: [9, 15]},
+  fly:     {g: "🪰", size: [15, 18], move: "buzz", habit: "land", speed: 3.6, every: [4, 8]},
+  rv:      {g: "🚐", size: [40, 44], move: "walk", habit: "drive", speed: 2.6, every: [14, 24]},
+  wolf:    {g: "🐺", size: [34, 40], move: "walk", habit: "run", speed: 4.2, every: [12, 20]},
+  eagle:   {g: "🦅", size: [34, 44], move: "fly", habit: "land", speed: 2.6, every: [7, 12]},
+  bull:    {g: "🐂", size: [38, 44], move: "walk", habit: "charge", speed: 5.2, every: [12, 20]},
+  tiger:   {g: "🐅", size: [40, 46], move: "walk", habit: "charge", speed: 5.6, every: [11, 18]},
+  toad:    {g: "🐸", size: [28, 32], move: "hop", habit: "squash", every: [2, 3]},
+  ball:    {g: "⚽", size: [26, 30], move: "bounce", habit: "squash", every: [5, 9]},
+  owl:     {g: "🦉", size: [32, 38], move: "fly", habit: "letter", speed: 2.2, every: [7, 12]},
+  fish:    {g: "🐟", size: [26, 32], move: "jump", habit: "splash", every: [4, 8]},
+  dolphin: {g: "🐬", size: [34, 40], move: "jump", habit: "splash", every: [7, 12]},
+  gull:    {g: "🐦", size: [24, 28], move: "fly", habit: "land", speed: 2.8, every: [6, 11]},
+  giraffe: {g: "🦒", size: [62, 70], move: "walk", habit: "nibble", speed: 1.1, every: [16, 26]},
+  worm:    {g: "🪱", size: [56, 64], move: "rise", habit: "swallow", every: [12, 18]},
+  shark:   {g: "🦈", size: [44, 50], move: "walk", habit: "bite", speed: 3.4, every: [10, 16]},
+  cow:     {g: "🐄", size: [38, 44], move: "walk", habit: "nibble", speed: 1.2, every: [14, 22]},
+  rooster: {g: "🐓", size: [28, 32], move: "walk", habit: "run", speed: 2.4, every: [12, 20]},
+  goat:    {g: "🐐", size: [32, 36], move: "walk", habit: "nibble", speed: 1.6, every: [12, 20]},
+  eye:     {g: "👁️", size: [34, 34], move: "watch", habit: "blink", every: [3, 6]},
+  dog:     {g: "🐕", size: [34, 40], move: "walk", habit: "run", speed: 3.6, every: [11, 18]},
+  mouse:   {g: "🐁", size: [22, 26], move: "walk", habit: "run", speed: 4.6, every: [10, 16]},
+  cat:     {g: "🐈", size: [30, 34], move: "walk", habit: "nibble", speed: 1.8, every: [12, 20]},
+  butterfly:{g: "🦋", size: [20, 26], move: "flutter", habit: "land", speed: 1.6, every: [5, 9]},
+  crow:    {g: "🐦", size: [24, 28], move: "fly", habit: "land", speed: 3, every: [6, 10]},
+  horse:   {g: "🐎", size: [40, 46], move: "walk", habit: "charge", speed: 4.8, every: [12, 20]},
+  ufo:     {g: "🛸", size: [40, 46], move: "fly", habit: "abduct", speed: 2, every: [8, 14]},
+  ghost:   {g: "👻", size: [32, 40], move: "flutter", habit: "phase", speed: 1.3, every: [7, 12]},
+  dove:    {g: "🕊️", size: [28, 34], move: "fly", habit: "land", speed: 2.2, every: [7, 12]},
+  camel:   {g: "🐪", size: [40, 46], move: "walk", habit: "nibble", speed: 1.2, every: [16, 24]},
+  car:     {g: "🏎️", size: [36, 40], move: "walk", habit: "charge", speed: 7.5, every: [8, 14]},
+  bird:    {g: "🐦", size: [22, 26], move: "fly", habit: "land", speed: 2.6, every: [6, 10]}
+};
+const TITLE_BEASTS = [
+  ["Game of Thrones", ["dragon", "dragon", "wolf"]], ["House of the Dragon", ["dragon", "dragon", "dragon"]],
+  ["Stranger Things", ["bats"]], ["Wednesday", ["bat", "bat", "spider"]], ["Breaking Bad", ["fly", "rv"]], ["Better Call Saul", ["fly"]],
+  ["El Camino", ["fly", "rv"]], ["Baahubali", ["eagle", "bull"]], ["Bāhubali", ["eagle", "bull"]], ["Magadheera", ["horse", "eagle"]],
+  ["RRR", ["tiger", "horse"]], ["Naruto", ["toad"]], ["Boruto", ["toad"]], ["Ted Lasso", ["ball", "ball"]], ["Blue Lock", ["ball", "ball"]],
+  ["Spider-Man", ["spider", "spider"]], ["Harry Potter", ["owl"]], ["One Piece", ["fish", "gull", "gull"]], ["The Last of Us", ["giraffe"]],
+  ["Dune", ["worm"]], ["Shark Tank", ["shark"]], ["Panchayat", ["cow", "rooster"]], ["Severance", ["goat", "goat"]], ["Bigg Boss", ["eye"]],
+  ["BB Jodi", ["eye"]], ["Spy x Family", ["dog"]], ["Frieren", ["butterfly", "butterfly", "butterfly"]], ["Demon Slayer", ["crow"]],
+  ["Doraemon", ["mouse", "bird"]], ["Stand by Me Doraemon", ["mouse", "bird"]], ["Peaky Blinders", ["horse", "crow"]],
+  ["The Dark Knight", ["bat", "bat", "bat"]], ["Suzume", ["cat"]], ["Your Name", ["bird"]], ["Titanic", ["dolphin", "gull"]], ["Avatar", ["fish", "bird"]],
+  ["F1", ["car"]], ["Formula 1", ["car"]], ["Arcane", ["butterfly", "butterfly"]], ["Interstellar", ["ufo"]], ["Kalki", ["ufo"]]
+];
+const WORLD_BEASTS = {dragon: ["dragon", "dragon"], got: ["wolf", "dragon"], upside: ["bats"], wednesday: ["bat", "spider"], rain: ["bat"],
+  breakingbad: ["fly"], heist: ["fly"], stocks: ["fly"], ocean: ["fish", "gull"], space: ["ufo"], ghost: ["ghost", "ghost"], leaves: ["butterfly", "bird"],
+  hearts: ["dove", "dove"], music: ["bird", "bird"], magic: ["owl"], cute: ["cat", "bird"], royal: ["eagle"], desert: ["camel"], football: ["ball"],
+  racing: ["car"], slayer: ["crow"], war: ["eagle"], neon: ["butterfly"], office: ["goat"], spores: ["fly"], fire: ["dragon"], smoke: ["crow", "horse"],
+  comet: ["bird"], glow: ["butterfly"], sparks: ["eagle"], cursed: ["crow"], stage: ["eye"], school: ["bird"], squid: [], cricket: ["bird"]};
+function beastsFor(theme) {
+  const tk = twinKey(theme.title), nk = norm(theme.title), head = norm(String(theme.title).split(":")[0]);
+  const hit = TITLE_BEASTS.find(([t]) => { const k = twinKey(t), n = norm(t);
+    return k === tk || n === nk || n === head || (n.length >= 5 && (nk.startsWith(n) || tk.startsWith(k))); });
+  return (hit ? hit[1] : WORLD_BEASTS[theme.world] || []).filter(b => BEASTS[b]);
+}
+
+/* targets: real posters and titles currently on screen (not under the top bar or the tab bar) */
+function onScreenTargets() {
+  const top = 130, bottom = innerHeight - 120;
+  return $$("#panel .row>.card .pw, #panel .grid>.card .pw, #panel .t10 .pw, .wrap>.sec h2, #panel .sec h2, .slide.on .hp .pw, .tiles .tile, .mixcard, .surprise")
+    .filter(el => { const r = el.getBoundingClientRect(); return r.width > 30 && r.top > top && r.bottom < bottom && r.left > -10 && r.right < innerWidth + 10; });
+}
+function effect(el, cls, ms, after) {
+  if (!el || el.classList.contains(cls)) return;
+  el.classList.add(cls);
+  setTimeout(() => { el.classList.remove(cls); if (after) { el.classList.add(after); setTimeout(() => el.classList.remove(after), 2600); } }, ms);
+}
+const Z = {raf: 0, list: [], fx: [], last: 0};
+function stopCritters() { cancelAnimationFrame(Z.raf); Z.raf = 0; Z.list.forEach(c => c.el.remove()); Z.list = []; Z.fx = [];
+  const cv = $("#cfx"); if (cv) cv.getContext("2d").clearRect(0, 0, cv.width, cv.height);
+  $$(".vs-burn,.vs-charred,.vs-flip,.vs-web,.vs-lift,.vs-phase,.vs-glow,.vs-sink,.vs-squash,.vs-shake").forEach(e => e.classList.remove("vs-burn", "vs-charred", "vs-flip", "vs-web", "vs-lift", "vs-phase", "vs-glow", "vs-sink", "vs-squash", "vs-shake")); }
+function startCritters(theme) {
+  stopCritters();
+  if (REDUCED || !theme) return;
+  const kinds = beastsFor(theme); if (!kinds.length) return;
+  const host = $("#critters"), cv = $("#cfx"), ctx = cv.getContext("2d"), dpr = Math.min(1.5, devicePixelRatio || 1);
+  cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+  const R = (a, b) => a + Math.random() * (b - a);
+  const make = (kind, i, leader) => {
+    const d = BEASTS[kind], el = document.createElement("span");
+    el.className = `critter mv-${d.move}`; el.innerHTML = `<b>${d.g}</b>`;
+    const size = R(...d.size); el.style.fontSize = size + "px"; host.appendChild(el);
+    const c = {kind, d, el, size, x: R(40, innerWidth - 40), y: R(140, innerHeight * .55), vx: R(-1, 1), vy: R(-1, 1), face: 1, state: "wander",
+               timer: R(1.5, d.every[1]) * 60 + i * 50, wx: 0, wy: 0, target: null, act: 0, leader, hidden: false, phase: R(0, 6.3)};
+    if (["walk", "jump", "rise", "drop", "bounce"].includes(d.move)) { c.hidden = true; el.style.opacity = 0; }
+    if (d.move === "watch") { c.x = 34; c.y = 112; }
+    if (d.move === "hop") { c.x = -40; c.y = innerHeight * .5; }
+    pickWander(c);
+    return c;
+  };
+  const pickWander = c => { c.wx = R(30, innerWidth - 30); c.wy = R(120, innerHeight - 170); };
+  kinds.forEach((k, i) => {
+    const d = BEASTS[k];
+    if (d.swarm) { const lead = make(k, i, null); Z.list.push(lead); for (let j = 1; j < d.swarm; j++) Z.list.push(Object.assign(make(k, i + j, lead), {follower: true})); }
+    else Z.list.push(make(k, i, null));
+  });
+  const fire = (x, y, tx, ty, n = 7) => {                     // flame particles from the mouth toward the target
+    for (let i = 0; i < n; i++) {
+      const a = Math.atan2(ty - y, tx - x) + R(-.22, .22), s = R(5, 9);
+      Z.fx.push({x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, r: R(4, 9), k: "fire"});
+    }
+  };
+  const puff = (r, kind, n) => { for (let i = 0; i < n; i++) Z.fx.push({x: R(r.left, r.right), y: R(r.top, r.bottom), vx: R(-.6, .6), vy: R(-2.2, -.6),
+    life: 1, r: R(3, 8), k: kind}); };
+  const start = c => {                                       // begin a habit
+    const t = onScreenTargets(); if (!t.length) { c.timer = 120; return; }
+    c.target = t[Math.floor(Math.random() * t.length)]; c.state = "approach"; c.act = 0;
+    if (c.d.move === "walk") { c.hidden = false; c.el.style.opacity = 1; c.dir = Math.random() < .5 ? 1 : -1; c.x = c.dir > 0 ? -60 : innerWidth + 60;
+      c.y = innerHeight - 104 - c.size * .35; c.state = "cross"; }
+    if (c.d.move === "jump") { const r = c.target.getBoundingClientRect(); c.hidden = false; c.el.style.opacity = 1; c.x = r.left + r.width / 2 + R(-60, 60);
+      c.y = innerHeight - 90; c.vy = -R(13, 17); c.vx = R(-2.5, 2.5); c.state = "airborne"; }
+    if (c.d.move === "rise") { const r = c.target.getBoundingClientRect(); c.hidden = false; c.el.style.opacity = 1; c.x = r.left + r.width / 2; c.y = innerHeight + 40; c.state = "rising"; }
+    if (c.d.move === "drop") { const r = c.target.getBoundingClientRect(); c.hidden = false; c.el.style.opacity = 1; c.x = r.left + r.width * R(.3, .7); c.y = 70; c.state = "descend"; }
+    if (c.d.move === "bounce") { const r = c.target.getBoundingClientRect(); c.hidden = false; c.el.style.opacity = 1; c.x = r.left + r.width / 2; c.y = 60; c.vy = 0; c.vx = R(-1, 1); c.state = "falling"; }
+  };
+  const finish = c => { c.state = "wander"; c.target = null; c.timer = R(...c.d.every) * 60; pickWander(c); };
+  const doHabit = c => {                                     // the moment of contact
+    const el = c.target, h = c.d.habit, r = el.getBoundingClientRect();
+    if (h === "fire") { effect(el, "vs-burn", 2600, "vs-charred"); setTimeout(() => puff(el.getBoundingClientRect(), "smoke", 18), 2600); }
+    else if (h === "flip") effect(el, "vs-flip", 3600);
+    else if (h === "web") effect(el, "vs-web", 5200);
+    else if (h === "letter") { const env = document.createElement("span"); env.className = "critter letter"; env.innerHTML = "<b>✉️</b>";
+      env.style.transform = `translate3d(${c.x}px,${c.y}px,0)`; host.appendChild(env);
+      env.animate([{transform: `translate3d(${c.x}px,${c.y}px,0) rotate(0)`}, {transform: `translate3d(${r.left + r.width / 2 - 12}px,${r.top + r.height / 2 - 12}px,0) rotate(200deg)`}],
+                  {duration: 900, easing: "cubic-bezier(.5,0,.75,.6)", fill: "forwards"}).onfinish = () => { env.remove(); effect(el, "vs-glow", 2200); }; }
+    else if (h === "abduct") effect(el, "vs-lift", 2600);
+    else if (h === "phase") effect(el, "vs-phase", 2200);
+    else if (h === "swallow") effect(el, "vs-sink", 2400);
+    else if (h === "squash") effect(el, "vs-squash", 460);
+    else if (h === "land") effect(el, "vs-squash", 460);
+    else if (h === "bite" || h === "nibble") effect(el, "vs-shake", 700);
+    buzz(6);
+  };
+  let lastT = performance.now();
+  const step = now => {
+    Z.raf = requestAnimationFrame(step);
+    const dt = Math.min(2.5, (now - lastT) / 16.7); lastT = now;
+    if (document.hidden) return;
+    for (const c of Z.list) {
+      const d = c.d; c.phase += .1 * dt;
+      if (c.state === "wander") {
+        if (c.follower && c.leader.state !== "wander") { c.state = "follow"; }
+        else if (!c.follower && (c.timer -= dt) <= 0) start(c);
+      }
+      // movement
+      if (d.move === "watch") {                              // the eye just watches (turns toward the action) and blinks
+        c.el.style.transform = `translate3d(${c.x}px,${c.y}px,0) rotate(${W.tx * 20}deg)`;
+        if (c.state === "approach") { c.el.classList.add("blink"); setTimeout(() => c.el.classList.remove("blink"), 300); finish(c); }
+        continue;
+      }
+      if (c.state === "cross") {                             // walkers run along the bottom of the screen
+        c.x += c.dir * d.speed * dt; c.face = c.dir;
+        if (!c.didAct && c.target && Math.abs(c.x - innerWidth / 2) < d.speed * 2) {
+          c.didAct = true;
+          if (d.habit === "nibble") { c.pause = 110; }
+          if (["bite", "nibble", "charge", "run", "drive"].includes(d.habit)) { const t = onScreenTargets().sort((a, b) => b.getBoundingClientRect().bottom - a.getBoundingClientRect().bottom)[0]; if (t) { c.target = t; doHabit(c); } }
+        }
+        if (c.pause > 0) { c.pause -= dt; c.x -= c.dir * d.speed * dt; }
+        if (c.x < -90 || c.x > innerWidth + 90) { c.hidden = true; c.el.style.opacity = 0; c.didAct = false; finish(c); }
+        const gait = Math.abs(Math.sin(c.phase * (d.speed > 4 ? 2.4 : 1.4))) * -6;
+        c.el.style.transform = `translate3d(${c.x - c.size / 2}px,${c.y + gait}px,0) scaleX(${c.face > 0 ? -1 : 1})`;
+        continue;
+      }
+      if (c.state === "airborne") {                          // fish / dolphins leap out of the bottom edge
+        c.vy += .45 * dt; c.x += c.vx * dt; c.y += c.vy * dt;
+        if (c.vy > 0 && !c.didAct) { c.didAct = true; }
+        if (c.y > innerHeight - 60 && c.vy > 0) { c.hidden = true; c.el.style.opacity = 0; c.didAct = false;
+          for (let i = 0; i < 12; i++) Z.fx.push({x: c.x, y: innerHeight - 70, vx: R(-2.5, 2.5), vy: R(-5, -1.5), life: 1, r: R(2, 4), k: "drop"}); finish(c); }
+        c.el.style.transform = `translate3d(${c.x - c.size / 2}px,${c.y - c.size / 2}px,0) rotate(${Math.atan2(c.vy, Math.abs(c.vx) + 3) * 57 * (c.vx < 0 ? -1 : 1)}deg) scaleX(${c.vx > 0 ? -1 : 1})`;
+        continue;
+      }
+      if (c.state === "rising" || c.state === "sinking") {    // the sandworm surfaces under a poster, swallows it, goes back down
+        const r = c.target.getBoundingClientRect();
+        if (c.state === "rising") { c.y += (r.top + r.height * .6 - c.y) * .06 * dt; if (Math.abs(c.y - (r.top + r.height * .6)) < 6) { doHabit(c); c.state = "sinking"; } }
+        else { c.y += 5 * dt; if (c.y > innerHeight + 60) { c.hidden = true; c.el.style.opacity = 0; finish(c); } }
+        c.el.style.transform = `translate3d(${c.x - c.size / 2}px,${c.y - c.size / 2}px,0) rotate(-20deg)`;
+        continue;
+      }
+      if (c.state === "descend" || c.state === "hang" || c.state === "climb") {   // spider on its silk thread
+        const r = c.target.getBoundingClientRect(), goal = r.top + Math.min(40, r.height * .25);
+        if (c.state === "descend") { c.y += (goal - c.y) * .05 * dt + .6; if (c.y >= goal - 2) { c.state = "hang"; c.act = 330; doHabit(c); } }
+        else if (c.state === "hang") { c.y = goal + Math.sin(c.phase * .6) * 3; if ((c.act -= dt) <= 0) c.state = "climb"; }
+        else { c.y -= 3.4 * dt; if (c.y < 60) { c.hidden = true; c.el.style.opacity = 0; finish(c); } }
+        Z.fx.push({x: c.x, y: 60, y2: c.y - c.size * .3, life: .06, k: "silk"});
+        c.el.style.transform = `translate3d(${c.x - c.size / 2}px,${c.y - c.size / 2}px,0)`;
+        continue;
+      }
+      if (c.state === "falling") {                           // footballs drop onto a poster and bounce off
+        const r = c.target.getBoundingClientRect();
+        c.vy += .55 * dt; c.y += c.vy * dt; c.x += c.vx * dt;
+        if (!c.didAct && c.y + c.size / 2 >= r.top && c.vy > 0) { c.didAct = true; c.vy = -c.vy * .72; c.vx = R(-4, 4); doHabit(c); }
+        if (c.y > innerHeight + 40 || c.x < -40 || c.x > innerWidth + 40) { c.hidden = true; c.el.style.opacity = 0; c.didAct = false; finish(c); }
+        c.el.style.transform = `translate3d(${c.x - c.size / 2}px,${c.y - c.size / 2}px,0) rotate(${c.y * 3}deg)`;
+        continue;
+      }
+      if (d.move === "hop") {                                // the toad hops from title to title
+        if (c.state === "wander") { c.timer -= dt; if (c.timer <= 0) { const t = onScreenTargets(); if (t.length) { c.target = t[Math.floor(Math.random() * t.length)]; c.hop = 0; c.sx = c.x; c.sy = c.y; c.state = "hopping"; } else c.timer = 60; } }
+        if (c.state === "hopping") {
+          const r = c.target.getBoundingClientRect(), tx = r.left + r.width / 2, ty = r.top - c.size * .35;
+          c.hop = Math.min(1, c.hop + .028 * dt);
+          c.x = c.sx + (tx - c.sx) * c.hop; c.y = c.sy + (ty - c.sy) * c.hop - Math.sin(c.hop * Math.PI) * 120; c.face = tx > c.sx ? 1 : -1;
+          if (c.hop >= 1) { doHabit(c); c.state = "wander"; c.timer = R(...d.every) * 60; }
+        } else if (c.target) { const r = c.target.getBoundingClientRect(); c.y = r.top - c.size * .35; c.x = r.left + r.width / 2; if (r.bottom < 0 || r.top > innerHeight) { c.target = null; c.x = -40; } }
+        c.el.style.transform = `translate3d(${c.x - c.size / 2}px,${c.y - c.size / 2}px,0) scaleX(${c.face > 0 ? -1 : 1})`;
+        continue;
+      }
+      // flyers: wander, approach a target, act, then fly off
+      let gx = c.wx, gy = c.wy;
+      if (c.state === "approach" || c.state === "act") {
+        const r = c.target.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        if (d.habit === "fire") { c.side = c.side || (c.x < cx ? -1 : 1); gx = cx + c.side * (r.width / 2 + 70); gy = r.top - 20; }
+        else if (["land", "letter", "abduct"].includes(d.habit)) { gx = d.habit === "land" ? r.right - 14 : cx; gy = d.habit === "land" ? r.top - c.size * .3 : r.top - 54; }
+        else { gx = cx; gy = cy; }
+        if (r.bottom < 60 || r.top > innerHeight) { finish(c); }
+        const dist = Math.hypot(gx - c.x, gy - c.y);
+        if (c.state === "approach" && dist < 22) { c.state = "act"; c.act = {fire: 75, land: 200, letter: 40, abduct: 160, phase: 120, flip: 40}[d.habit] || 50; if (d.habit !== "fire") doHabit(c); }
+        if (c.state === "act") {
+          c.act -= dt;
+          if (d.habit === "fire") { c.face = cx > c.x ? 1 : -1; fire(c.x + c.face * c.size * .42, c.y + c.size * .05, cx, cy, 2); if (c.act <= 30 && !c.burned) { c.burned = true; doHabit(c); } }
+          if (d.habit === "abduct") Z.fx.push({x: c.x, y: c.y + c.size * .3, x2: cx, w: r.width * .6, y2: r.top + r.height * .5, life: .06, k: "beam"});
+          if (c.act <= 0) { c.burned = false; c.side = 0; finish(c); }
+        }
+      }
+      if (c.state === "follow") {                            // swarm members circle the leader's target
+        const L = c.leader;
+        if (L.state === "wander") { c.state = "wander"; pickWander(c); }
+        else if (L.target) { const r = L.target.getBoundingClientRect(), a = c.phase * .5 + Z.list.indexOf(c); gx = r.left + r.width / 2 + Math.cos(a) * r.width * .7; gy = r.top + r.height / 2 + Math.sin(a) * r.height * .45; }
+      }
+      const sp = (d.speed || 2.5) * (c.state === "act" && d.habit === "land" ? 0 : 1) * (d.move === "buzz" ? (1 + Math.sin(c.phase * 3) * .6) : 1);
+      const dx = gx - c.x, dy = gy - c.y, dist = Math.hypot(dx, dy) || 1;
+      const tvx = dx / dist * sp * Math.min(1, dist / 60), tvy = dy / dist * sp * Math.min(1, dist / 60);
+      c.vx += (tvx - c.vx) * .05 * dt; c.vy += (tvy - c.vy) * .05 * dt;
+      if (d.move === "buzz") { c.vx += R(-.5, .5); c.vy += R(-.5, .5); }
+      if (d.move === "flutter") c.vy += Math.sin(c.phase * 1.7) * .08;
+      c.x += c.vx * dt; c.y += c.vy * dt;
+      if (c.state === "wander" && dist < 30) pickWander(c);
+      if (Math.abs(c.vx) > .25 && !(c.state === "act" && d.habit === "fire")) c.face = c.vx > 0 ? 1 : -1;
+      const tilt = clamp(c.vy * 4, -18, 18) * (c.face > 0 ? 1 : -1);
+      c.el.classList.toggle("rest", c.state === "act" && d.habit === "land");
+      c.el.style.transform = `translate3d(${c.x - c.size / 2}px,${c.y - c.size / 2}px,0) rotate(${tilt}deg) scaleX(${c.face > 0 ? -1 : 1})`;
+    }
+    // fire, smoke, splashes, silk and beams
+    const w = cv.width, h = cv.height;
+    ctx.clearRect(0, 0, w, h);
+    for (let i = Z.fx.length - 1; i >= 0; i--) {
+      const p = Z.fx[i];
+      if (p.k === "silk") { ctx.globalAlpha = .7; ctx.strokeStyle = "#e8e8f0"; ctx.lineWidth = dpr; ctx.beginPath(); ctx.moveTo(p.x * dpr, p.y * dpr); ctx.lineTo(p.x * dpr, p.y2 * dpr); ctx.stroke(); Z.fx.splice(i, 1); continue; }
+      if (p.k === "beam") { const g = ctx.createLinearGradient(0, p.y * dpr, 0, p.y2 * dpr); g.addColorStop(0, "rgba(160,255,220,.55)"); g.addColorStop(1, "rgba(160,255,220,.05)");
+        ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo((p.x - 8) * dpr, p.y * dpr); ctx.lineTo((p.x + 8) * dpr, p.y * dpr);
+        ctx.lineTo((p.x2 + p.w / 2) * dpr, p.y2 * dpr); ctx.lineTo((p.x2 - p.w / 2) * dpr, p.y2 * dpr); ctx.closePath(); ctx.fill(); Z.fx.splice(i, 1); continue; }
+      p.x += p.vx * dt; p.y += p.vy * dt; p.life -= (p.k === "fire" ? .035 : p.k === "drop" ? .03 : .012) * dt;
+      if (p.k === "drop") p.vy += .25 * dt;
+      if (p.life <= 0) { Z.fx.splice(i, 1); continue; }
+      if (p.k === "fire") {
+        ctx.globalCompositeOperation = "lighter";
+        const r = p.r * (1.6 - p.life) * dpr, g = ctx.createRadialGradient(p.x * dpr, p.y * dpr, 0, p.x * dpr, p.y * dpr, r);
+        g.addColorStop(0, `rgba(255,${Math.round(200 * p.life + 40)},80,${p.life})`); g.addColorStop(1, "rgba(255,60,0,0)");
+        ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x * dpr, p.y * dpr, r, 0, 6.3); ctx.fill();
+        ctx.globalCompositeOperation = "source-over";
+      } else {
+        ctx.globalAlpha = p.life * (p.k === "smoke" ? .35 : .8); ctx.fillStyle = p.k === "smoke" ? "#9a9090" : "#bfe9ff";
+        ctx.beginPath(); ctx.arc(p.x * dpr, p.y * dpr, p.r * (p.k === "smoke" ? (2 - p.life) : 1) * dpr, 0, 6.3); ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+  };
+  Z.raf = requestAnimationFrame(step);
+}
+addEventListener("resize", () => { const cv = $("#cfx"); if (cv && Z.raf) { const dpr = Math.min(1.5, devicePixelRatio || 1); cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; } });
 
 /* ───────────── TMDB live library (only when a key is configured) ─────────────
    Thousands of titles, posters and India streaming data, fetched straight from the browser.
