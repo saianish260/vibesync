@@ -862,6 +862,13 @@ img{display:block}
 /* rows far off screen skip rendering until you scroll near them: smoother scrolling, same pixels */
 #panel .row,#panel>.grid{content-visibility:auto;contain-intrinsic-size:auto 300px}
 
+
+/* spotlight swipe: the hero handles sideways drags, the page keeps vertical scrolling */
+#hero{touch-action:pan-y}
+#slides .slide{will-change:transform,opacity}
+.slide.peek{visibility:visible;pointer-events:none}
+.slide.peek .hp,.slide.peek .ht{transform:none;opacity:1;transition:none}
+.hbd{transition:opacity .9s var(--glide)}
 </style>
 </head>
 <body>
@@ -1092,7 +1099,7 @@ function heroHTML() {
     const k = [it.status === "live" ? `<span class="live"><i></i>Live now</span>` : "", sc ? `<span class="sc">★ ${sc.toFixed(1)}</span>` : "",
                esc(it.meta || it.year), esc(kindLabel(it))].filter(Boolean).join(`<span aria-hidden="true">·</span>`);
     return `<div class="slide${i === 0 ? " on" : ""}" data-i="${i}" aria-hidden="${i !== 0}">
-      <button class="hp" data-open="${it.id}" aria-label="${esc(it.title)} details" tabindex="-1">${poster(it, "s592")}</button>
+      <button class="hp" data-open="${it.id}" aria-label="${esc(it.title)} details" tabindex="-1">${poster(it, "s592").replace('loading="lazy"', 'loading="eager" fetchpriority="' + (i < 2 ? "high" : "low") + '"')}</button>
       <div class="htx"><div class="hk">${k}</div><h1 class="ht">${esc(it.title)}</h1><p class="hs">${esc(it.synopsis)}</p>
       <div class="btns">${watch}<button class="btn glass dt" data-open="${it.id}" aria-label="Details">${ICON.info}<span>Details</span></button>
       <button class="btn glass round" data-fav="${it.id}" aria-pressed="${favs.has(it.id)}" aria-label="Save">${ICON.heart}</button></div></div></div>`;
@@ -1103,12 +1110,22 @@ function heroHTML() {
     <div class="slides" id="slides">${slides}</div></section>`;
 }
 let bdFlip = 0;
+const bdImage = it => hasPoster(it) ? `url('${posterURL(it, "s332")}')` : `linear-gradient(150deg,${tintOf(it)},#1B1220)`;
 function heroBackdrop(it) {
   const next = $("#hbd" + (bdFlip ^ 1)), cur = $("#hbd" + bdFlip);
   if (!next) return;
-  next.style.backgroundImage = hasPoster(it) ? `url('${posterURL(it, "s332")}')` : `linear-gradient(150deg,${tintOf(it)},#1B1220)`;
+  if (cur.dataset.for === it.id) return;
+  if (next.dataset.for !== it.id) { next.style.backgroundImage = bdImage(it); next.dataset.for = it.id; }
   next.classList.add("on"); cur.classList.remove("on"); bdFlip ^= 1;
+  // once this fade is done, paint the likely next backdrop into the hidden layer, so the next change is just a fade
+  clearTimeout(heroBackdrop.t);
+  heroBackdrop.t = setTimeout(() => {
+    const n = BY[D.featured[(state.slide + 1) % D.featured.length]], idle = $("#hbd" + (bdFlip ^ 1));
+    if (n && idle && idle.dataset.for !== n.id) { idle.style.backgroundImage = bdImage(n); idle.dataset.for = n.id; }
+  }, 1100);
 }
+// warm the cache with every spotlight image right away
+function preloadHero() { D.featured.forEach(id => { const it = BY[id]; if (it && hasPoster(it)) ["s592", "s332"].forEach(sz => { const im = new Image(); im.decoding = "async"; im.referrerPolicy = "no-referrer"; im.src = posterURL(it, sz); }); }); }
 function showSlide(i) {
   const slides = $$(".slide");
   if (!slides.length) return;
@@ -1120,8 +1137,11 @@ function showSlide(i) {
     if (j === state.slide) { void b.offsetWidth; b.classList.add("run"); }
   });
   const it = BY[D.featured[state.slide]];
-  heroBackdrop(it); setTint(tintOf(it));
-  sampleTint(it).then(c => { if (!openId && BY[D.featured[state.slide]] === it) setTint(c); });
+  heroBackdrop(it);
+  // the page-wide accent colour changes after the slide has settled, so it never competes with the slide animation
+  clearTimeout(showSlide.t);
+  showSlide.t = setTimeout(() => { if (BY[D.featured[state.slide]] !== it) return; setTint(tintOf(it));
+    sampleTint(it).then(c => { if (!openId && BY[D.featured[state.slide]] === it) setTint(c); }); }, 650);
 }
 let heroTimer = null;
 function startHero() {             // the running bar's animation drives the carousel; this is the reduced-motion fallback
@@ -1566,7 +1586,7 @@ function render() {
   if (yc) $("#ytslot").appendChild(yc);
   $("#bnav").innerHTML = navHTML(); navState();
   themeBtn();
-  requestAnimationFrame(() => { movePill(); showSlide(0); startHero(); onScroll(); });
+  requestAnimationFrame(() => { movePill(); showSlide(0); startHero(); onScroll(); preloadHero(); });
 }
 
 /* scroll: glass top bar, hero parallax, pause the spotlight when it's off screen */
@@ -1667,16 +1687,56 @@ document.addEventListener("keydown", e => {
   else if ($("#mixer").classList.contains("on")) closeMixer();
   else if ($("#search").classList.contains("on")) closeSearch();
 });
-// hero: swipe to change, press and hold to pause (like stories)
+// hero: the spotlight follows your finger, the next title slides in alongside it, and letting go
+// either carries on (far enough, or a quick flick) or springs back. Press and hold pauses, like stories.
 (() => {
-  let x0 = null, y0 = 0;
-  document.addEventListener("touchstart", e => { if (e.target.closest("#hero")) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; pauseHero(true); } }, {passive: true});
-  document.addEventListener("touchend", e => {
-    if (x0 === null) return;
-    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
-    if (!heroOff && !openId) pauseHero(false);
-    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) { showSlide(state.slide + (dx < 0 ? 1 : -1)); startHero(); }
+  let s = null, swallow = false;
+  const slides = () => $$("#slides .slide");
+  const clear = el => { if (el) { el.style.transform = ""; el.style.opacity = ""; el.style.transition = ""; el.classList.remove("peek"); } };
+  document.addEventListener("pointerdown", e => {
+    const h = e.target.closest("#hero"); if (!h || e.button > 0 || e.target.closest("[data-dot]")) return;
+    const all = slides(); if (all.length < 2) return;
+    s = {x: e.clientX, y: e.clientY, dx: 0, v: 0, lx: e.clientX, lt: performance.now(), drag: false, w: h.clientWidth, cur: all[state.slide], nb: null, dir: 0};
+    pauseHero(true);
   }, {passive: true});
+  document.addEventListener("pointermove", e => {
+    if (!s) return;
+    const dx = e.clientX - s.x, dy = e.clientY - s.y, now = performance.now();
+    if (!s.drag) {
+      if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { s = null; if (!heroOff && !openId) pauseHero(false); return; }   // a scroll
+      if (Math.abs(dx) < 8) return;
+      s.drag = true;
+    }
+    s.v = s.v * .6 + .4 * (e.clientX - s.lx) / Math.max(1, now - s.lt); s.lx = e.clientX; s.lt = now; s.dx = dx;
+    const dir = dx < 0 ? 1 : -1, all = slides();
+    if (dir !== s.dir) { clear(s.nb); s.dir = dir; s.nb = all[(state.slide + dir + all.length) % all.length]; s.nb.classList.add("peek"); }
+    const p = Math.min(1, Math.abs(dx) / s.w);
+    s.cur.style.transition = s.nb.style.transition = "none";
+    s.cur.style.transform = `translate3d(${dx}px,0,0) scale(${1 - p * .06})`; s.cur.style.opacity = Math.max(0, 1 - p * 1.8);
+    s.nb.style.transform = `translate3d(${dx + dir * s.w * .85}px,0,0) scale(${.94 + p * .06})`; s.nb.style.opacity = Math.min(1, p * 1.8);
+  }, {passive: true});
+  const end = () => {
+    if (!s) return;
+    const {drag, dx, v, w, cur, nb, dir} = s; s = null;
+    if (!drag || !nb) { if (!heroOff && !openId) pauseHero(false); return; }
+    swallow = true; setTimeout(() => swallow = false, 60);
+    const go = Math.abs(dx) > w * .2 || (Math.abs(v) > .35 && Math.sign(v) === -dir);
+    const ease = "cubic-bezier(.16,1,.3,1)", dur = Math.round(Math.max(260, 520 - Math.abs(v) * 160));
+    if (go) {
+      cur.style.transition = nb.style.transition = `transform ${dur}ms ${ease}, opacity ${dur}ms ${ease}`;
+      cur.style.transform = `translate3d(${-dir * w * .6}px,0,0) scale(.94)`; cur.style.opacity = 0;
+      nb.style.transform = "translate3d(0,0,0)"; nb.style.opacity = 1;
+      setTimeout(() => { showSlide(state.slide + dir); requestAnimationFrame(() => { clear(cur); clear(nb); }); startHero(); if (!heroOff && !openId) pauseHero(false); }, dur);
+    } else {
+      cur.style.transition = nb.style.transition = `transform 480ms ${EASE}, opacity 380ms ease`;
+      cur.style.transform = ""; cur.style.opacity = ""; nb.style.transform = `translate3d(${dir * w * .85}px,0,0)`; nb.style.opacity = 0;
+      setTimeout(() => clear(nb), 480);
+      if (!heroOff && !openId) pauseHero(false);
+    }
+  };
+  document.addEventListener("pointerup", end);
+  document.addEventListener("pointercancel", end);
+  document.addEventListener("click", e => { if (swallow && e.target.closest("#hero")) { e.stopPropagation(); e.preventDefault(); } }, true);   // a drag isn't a tap
 })();
 document.addEventListener("visibilitychange", () => pauseHero(document.hidden || heroOff || !!openId));
 window.addEventListener("resize", () => requestAnimationFrame(movePill));
