@@ -871,6 +871,8 @@ img{display:block}
 .rate-n{display:block;color:var(--muted);font-size:12px;margin-top:8px;line-height:1.4}
 .myr{position:absolute;z-index:3;right:7px;bottom:7px;font-size:11px;font-weight:900;padding:3px 7px;border-radius:999px;background:rgba(0,0,0,.72);color:#FFD166}
 
+.rate+.acts{margin-top:14px}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -1282,7 +1284,7 @@ function sheetHTML(it) {
     <p class="syn">${esc(it.synopsis)}</p>
     <div class="h3">${it.kind === "sports" ? "Where to watch live" : "Where to watch in India"}</div>${offers}${it.kind === "sports" ? "" : bookHTML(it) + comingHTML(it) + langsHTML(it)}
     ${it.note ? `<div class="note">${esc(it.note)}</div>` : ""}
-    <div class="acts">${it.kind === "sports" || it.kind === "reality" ? `<a class="btn tint" href="${esc(ytLink(it))}" target="_blank" rel="noopener">${ICON.play}${it.kind === "sports" ? "Highlights" : "Latest promos"}</a>`
+    ${rateHTML(it)}<div class="acts">${it.kind === "sports" || it.kind === "reality" ? `<a class="btn tint" href="${esc(ytLink(it))}" target="_blank" rel="noopener">${ICON.play}${it.kind === "sports" ? "Highlights" : "Latest promos"}</a>`
       : `<button class="btn tint" data-trailer="${esc(it.id)}">${ICON.play}Trailer</button>`}${saveBtn(it)}</div>
     ${D.tracker[it.id] ? trackerHTML(it.id) : ""}`;
   return sheetShell(it, [fact(it.imdb ? `★ ${it.imdb.toFixed(1)} IMDb` : "", "sc"), fact(esc(it.meta)), it.kind === "sports" ? "" : fact(esc(it.year)), fact(esc(kindLabel(it)))], body);
@@ -3872,7 +3874,7 @@ function tmdbSheetHTML(it) {
   const body = `<div class="tags">${it.telugu ? `<span class="tag tel">Telugu</span>` : ""}${(d ? d.genres : []).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
     <p class="syn">${esc(it.synopsis || "No description yet.")}</p>
     <div class="h3">Where to watch in India</div>${where}${bookHTML(it)}${comingHTML(it)}${langsHTML(it)}
-    <div class="acts"><button class="btn tint" data-trailer="${esc(it.id)}">${ICON.play}Trailer</button>${saveBtn(it)}</div>
+    ${rateHTML(it)}<div class="acts"><button class="btn tint" data-trailer="${esc(it.id)}">${ICON.play}Trailer</button>${saveBtn(it)}</div>
     <p class="foot2">Streaming data from JustWatch via TMDB. Line-ups change, so the app may differ slightly.</p>`;
   return sheetShell(it, [fact(it.score ? `★ ${it.score.toFixed(1)} TMDB` : "", "sc"), fact(esc(it.year)), d ? fact(esc(d.len)) : "", fact(esc(kindLabel(it)))], body);
 }
@@ -4498,7 +4500,7 @@ function whenText(d) {
 }
 function sheetExtras(it) {
   if (!it) return "";
-  if (it.kind === "sports") return `<div class="xs">${rateHTML(it)}</div>`;
+  if (it.kind === "sports") return "";
   queueMicrotask(() => loadExtras(it));
   const x = XD[it.id] || {}, s = statusOf(it.id);
   const chips = [];
@@ -4515,7 +4517,6 @@ function sheetExtras(it) {
   let html = chips.length ? `<div class="rts">${chips.join("")}</div>` : x.busy ? `<div class="rts"><span class="rt sk">Loading ratings…</span></div>` : "";
   html += `<div class="stbtns"><button class="btn soft${s === "watching" ? " on" : ""}" data-status="watching" data-sid="${esc(it.id)}" aria-pressed="${s === "watching"}">👀 ${s === "watching" ? "Watching" : "Mark watching"}</button>
     <button class="btn soft${s === "watched" ? " on" : ""}" data-status="watched" data-sid="${esc(it.id)}" aria-pressed="${s === "watched"}">✓ ${s === "watched" ? "Watched" : "Mark watched"}</button></div>`;
-  html += rateHTML(it);
   if (x.ref && x.ref.type === "tv") {
     const nx = x.next, at = nx && airDate(nx.air_date), rem = REM.list[it.id];
     if (nx && at) html += `<div class="nextep"><span class="ne-i" aria-hidden="true">📅</span><span class="ne-t"><b>S${nx.season_number} E${nx.episode_number}${nx.name && !/^episode \d+$/i.test(nx.name) ? ` · ${esc(nx.name)}` : ""}</b>
