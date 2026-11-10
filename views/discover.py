@@ -15,6 +15,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from core.data import catalog_payload
+from core.langs import fetch_langs
 from core.watchlinks import fetch_watch_links, is_watch_url
 
 DIR = Path(__file__).resolve().parent.parent / "components" / "discover"
@@ -60,6 +61,14 @@ def omdb_key() -> str:
     return str(key or os.environ.get("OMDB_API_KEY", "")).strip()
 
 
+@st.cache_data(ttl=12 * 3600, max_entries=600, show_spinner=False)
+def _langs(title: str, year: int | None, tmdb_id: int | None, kind: str) -> dict:
+    try:
+        return fetch_langs(title, year, tmdb_id, kind)
+    except Exception:           # JustWatch unreachable: the page says so (and the Android app tries itself)
+        return {"error": True}
+
+
 @st.cache_data(ttl=6 * 3600, max_entries=400, show_spinner=False)
 def _watch_links(url: str) -> dict[str, str]:
     try:
@@ -72,7 +81,8 @@ def render(theme: str) -> dict | None:
     payload = catalog_payload()
     _write_catalog(payload)
     resolved = st.session_state.setdefault("vs_resolved", {})
-    value = _component(catalog=payload, theme=theme, tmdbKey=tmdb_key(), ytKey=youtube_key(), omdbKey=omdb_key(), resolved=resolved,
+    langs = st.session_state.setdefault("vs_langs", {})
+    value = _component(catalog=payload, theme=theme, tmdbKey=tmdb_key(), ytKey=youtube_key(), omdbKey=omdb_key(), resolved=resolved, langs=langs,
                        key="discover", default=None)
     # When a live title's sheet opens, the screen asks for that title's exact per-app links.
     req = value.get("resolve") if isinstance(value, dict) else None
@@ -82,5 +92,20 @@ def render(theme: str) -> dict | None:
             resolved[req] = _watch_links(req)
             while len(resolved) > 40:                   # keep the payload small
                 resolved.pop(next(iter(resolved)))
+            st.rerun()
+    # ...and which audio / subtitle languages each app has it in
+    lq = value.get("langs") if isinstance(value, dict) else None
+    if isinstance(lq, dict) and value.get("n") != st.session_state.get("_langs_n"):
+        st.session_state._langs_n = value.get("n")
+        k = str(lq.get("key", ""))[:80]
+        if k and k not in langs:
+            try:
+                year = int(str(lq.get("year") or "0")[:4]) or None
+            except ValueError:
+                year = None
+            tid = lq.get("tmdb") if isinstance(lq.get("tmdb"), int) else None
+            langs[k] = _langs(str(lq.get("title", ""))[:120], year, tid, "tv" if lq.get("type") == "tv" else "movie")
+            while len(langs) > 30:
+                langs.pop(next(iter(langs)))
             st.rerun()
     return value

@@ -25,6 +25,7 @@ PROVIDERS = {
     "fancode":     {"name": "FanCode",     "color": "#F8A01B", "pkg": "com.dream11sportsguru"},
     "aha":         {"name": "aha",         "color": "#FF6A13", "pkg": "ahaflix.tv"},
     "appletv":     {"name": "Apple TV",    "color": "#5B5B60", "pkg": "com.apple.atve.androidtv.appletv"},
+    "sunnxt":      {"name": "Sun NXT",     "color": "#F58220", "pkg": "com.suntv.sunnxt"},
     "youtube":     {"name": "YouTube",     "color": "#FF0033", "pkg": "com.google.android.youtube"},
 }
 

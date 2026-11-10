@@ -192,3 +192,26 @@ class WatchLinkTests(unittest.TestCase):
         self.assertIsNone(styles.custom_palette({"bg": "#000000"}))
         self.assertIsNone(styles.custom_palette(None))
 
+
+
+class LangsTest(unittest.TestCase):
+    def test_pick_and_summarize(self):
+        from core import langs
+        edges = [{"node": {"content": {"title": "Baahubali: The Beginning", "originalReleaseYear": 2015, "originalReleaseDate": "2015-07-10",
+                                       "externalIds": {"tmdbId": "256040"}},
+                           "offers": [{"monetizationType": "FLATRATE", "audioLanguages": ["te", "hi"], "subtitleLanguages": ["en"],
+                                       "package": {"clearName": "JioHotstar", "technicalName": "jiohotstar"}},
+                                      {"monetizationType": "FLATRATE", "audioLanguages": ["ta", "te"], "subtitleLanguages": [],
+                                       "package": {"clearName": "JioHotstar", "technicalName": "jiohotstar"}},
+                                      {"monetizationType": "RENT", "audioLanguages": [], "subtitleLanguages": [],
+                                       "package": {"clearName": "Apple TV", "technicalName": "itunes"}}]}},
+                 {"node": {"content": {"title": "Baahubali 2", "originalReleaseYear": 2017, "externalIds": {"tmdbId": "350312"}}, "offers": []}}]
+        node = langs.pick(edges, "Bāhubali: The Beginning", 2015, None)
+        self.assertEqual(node["content"]["externalIds"]["tmdbId"], "256040")
+        self.assertEqual(langs.pick(edges, "x", None, 350312)["content"]["title"], "Baahubali 2")
+        s = langs.summarize(node)
+        hot = [a for a in s["apps"] if a["name"] == "JioHotstar"][0]
+        self.assertEqual(hot["audio"], ["te", "hi", "ta"])
+        self.assertEqual(s["date"], "2015-07-10")
+        self.assertFalse(langs.summarize(None)["found"])
+        self.assertEqual(langs.build_request("Vikram", "movie")["variables"]["searchTitlesFilter"]["objectTypes"], ["MOVIE"])

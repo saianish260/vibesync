@@ -844,6 +844,20 @@ img{display:block}
 .bk .chips{margin:0 -18px}
 .dform[hidden]{display:none}
 
+.langs{padding:14px;border-radius:18px;background:var(--s2)}
+.lg-q{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px}
+.langs .chips{margin:0 -14px 10px;padding:2px 14px 6px}.lgc .chip{height:36px;font-size:13.5px}
+.lg-ans{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:14px;font-size:14.5px;line-height:1.4}
+.lg-ans.ok{background:color-mix(in srgb,#22C55E 18%,var(--s1))}.lg-ans.no{background:color-mix(in srgb,#F43F5E 16%,var(--s1))}.lg-ans.unk{background:var(--s1)}
+.lg-sub{font-size:13px;color:var(--muted);margin:8px 2px}
+.lg-list{display:grid;gap:8px;margin-top:10px}
+.lg-row{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:14px;background:var(--s1)}
+.lg-row .logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:900;color:#fff;background:var(--pcol);flex:0 0 auto}
+.lg-row b{display:block;font-size:14px}.lg-row small{display:block;font-size:12.5px;color:var(--muted);line-height:1.4}
+.lg-rent{margin-top:10px}.lg-rent summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:700;padding:6px 2px}
+.lg-rent .lg-row{margin-top:8px}
+.rt.rel b{color:var(--text)}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -1253,7 +1267,7 @@ function sheetHTML(it) {
     : `<div class="note">Not streaming in India right now. Watch the trailer, or check back later.</div>`;
   const body = `<div class="tags">${it.telugu ? `<span class="tag tel">Telugu audio</span>` : ""}${it.status === "live" ? `<span class="live"><i></i>Live now</span>` : ""}${it.genres.filter(g => !(it.telugu && /^telugu$/i.test(g))).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
     <p class="syn">${esc(it.synopsis)}</p>
-    <div class="h3">${it.kind === "sports" ? "Where to watch live" : "Where to watch in India"}</div>${offers}${it.kind === "sports" ? "" : bookHTML(it) + comingHTML(it)}
+    <div class="h3">${it.kind === "sports" ? "Where to watch live" : "Where to watch in India"}</div>${offers}${it.kind === "sports" ? "" : bookHTML(it) + comingHTML(it) + langsHTML(it)}
     ${it.note ? `<div class="note">${esc(it.note)}</div>` : ""}
     <div class="acts">${it.kind === "sports" || it.kind === "reality" ? `<a class="btn tint" href="${esc(ytLink(it))}" target="_blank" rel="noopener">${ICON.play}${it.kind === "sports" ? "Highlights" : "Latest promos"}</a>`
       : `<button class="btn tint" data-trailer="${esc(it.id)}">${ICON.play}Trailer</button>`}${saveBtn(it)}</div>
@@ -3633,9 +3647,9 @@ const LIVE = {
            ["K-dramas", "/discover/tv", Object.assign({with_original_language: "ko"}, STREAM)]],
   reality: [["More reality shows", "/discover/tv", {with_genres: "10764", with_origin_country: "IN", sort_by: "popularity.desc"}]],
 };
-const PLATS = ["netflix", "prime", "hotstar", "appletv", "crunchyroll", "sonyliv", "zee5", "aha"];
+const PLATS = ["netflix", "prime", "hotstar", "appletv", "sunnxt", "crunchyroll", "sonyliv", "zee5", "aha"];
 const PROV_RX = [[/amazon channel/i, "prime"], [/netflix/i, "netflix"], [/prime video|amazon video/i, "prime"], [/hotstar/i, "hotstar"],
-                 [/apple ?tv/i, "appletv"], [/crunchyroll/i, "crunchyroll"], [/sony ?liv/i, "sonyliv"], [/zee ?5/i, "zee5"], [/^aha/i, "aha"], [/fancode/i, "fancode"]];
+                 [/apple ?tv/i, "appletv"], [/crunchyroll/i, "crunchyroll"], [/sony ?liv/i, "sonyliv"], [/zee ?5/i, "zee5"], [/^aha/i, "aha"], [/sun ?nxt/i, "sunnxt"], [/fancode/i, "fancode"]];
 const STORE_IDS = new Set([2, 3, 7, 10, 68, 192]);
 const provKey = name => { for (const [rx, k] of PROV_RX) if (rx.test(name)) return k; return null; };
 const enc = encodeURIComponent;
@@ -3645,7 +3659,7 @@ const FIND = {   // in-app search where the site supports it; otherwise open the
   crunchyroll: t => `https://www.crunchyroll.com/search?q=${enc(t)}`,
   zee5: t => `https://www.zee5.com/search?q=${enc(t)}`,
 };
-const HOME = {appletv: "https://tv.apple.com/in", hotstar: "https://www.hotstar.com/in", sonyliv: "https://www.sonyliv.com", aha: "https://www.aha.video", fancode: "https://www.fancode.com"};
+const HOME = {sunnxt: "https://www.sunnxt.com", appletv: "https://tv.apple.com/in", hotstar: "https://www.hotstar.com/in", sonyliv: "https://www.sonyliv.com", aha: "https://www.aha.video", fancode: "https://www.fancode.com"};
 // Accents are dropped (Bāhubali -> bahubali) and, for matching the same title, doubled letters too (Baahubali -> bahubali)
 const norm = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 const twinKey = s => norm(s).replace(/(.)\1+/g, "$1");
@@ -3714,7 +3728,7 @@ function liveRowHTML(key) {
 }
 function liveRowsHTML(tab) {
   if (!T.key || T.failed || !LIVE[tab]) return "";
-  const extra = {movie: ["plat|appletv|movie"], series: ["plat|appletv|tv"]}[tab] || [];   // endless Apple TV catalogue rows
+  const extra = {movie: ["plat|appletv|movie", "plat|sunnxt|movie"], series: ["plat|appletv|tv", "plat|sunnxt|tv"]}[tab] || [];   // endless Apple TV catalogue rows
   return extra.map(liveRowHTML).join("") + LIVE[tab].map((_, i) => liveRowHTML(`${tab}|${i}`)).join("");
 }
 function platformsHTML() {
@@ -3842,7 +3856,7 @@ function tmdbSheetHTML(it) {
         <span><b>${esc(p.name)}</b><small>${exact ? "Opens this exact title" : "See watch options"}</small></span><span class="go">${exact ? ICON.play + "Watch" : "View"}</span></a>`; }).join("") + `</div>`;
   const body = `<div class="tags">${it.telugu ? `<span class="tag tel">Telugu</span>` : ""}${(d ? d.genres : []).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
     <p class="syn">${esc(it.synopsis || "No description yet.")}</p>
-    <div class="h3">Where to watch in India</div>${where}${bookHTML(it)}${comingHTML(it)}
+    <div class="h3">Where to watch in India</div>${where}${bookHTML(it)}${comingHTML(it)}${langsHTML(it)}
     <div class="acts"><button class="btn tint" data-trailer="${esc(it.id)}">${ICON.play}Trailer</button>${saveBtn(it)}</div>
     <p class="foot2">Streaming data from JustWatch via TMDB. Line-ups change, so the app may differ slightly.</p>`;
   return sheetShell(it, [fact(it.score ? `★ ${it.score.toFixed(1)} TMDB` : "", "sc"), fact(esc(it.year)), d ? fact(esc(d.len)) : "", fact(esc(kindLabel(it)))], body);
@@ -4335,7 +4349,8 @@ async function loadExtras(it) {
                seasons: (d.seasons || []).filter(s => s.season_number > 0), imdbId: (d.external_ids || {}).imdb_id || d.imdb_id || "",
                lang: d.original_language || "", gids: (d.genres || []).map(g => g.id),
                ott: ref.type === "movie" ? ottFrom(d.release_dates) : null, network: (d.networks || []).map(n => n.name).slice(0, 2),
-               premiere: ref.type === "tv" ? d.first_air_date || "" : "", theatre: ref.type === "movie" ? theatreFrom(d.release_dates) : ""};
+               premiere: ref.type === "tv" ? d.first_air_date || "" : "", theatre: ref.type === "movie" ? theatreFrom(d.release_dates) : "",
+               release: releaseOf(d, ref.type)};
     if (ref.type === "movie") await loadNowPlaying();
     if (!it.gids) it.gids = x.gids;
     if (!it.lang) it.lang = x.lang;
@@ -4472,6 +4487,9 @@ function sheetExtras(it) {
   if (x.score) chips.push(`<span class="rt tmdb">TMDB <b>${x.score.toFixed(1)}</b><small>${(x.votes || 0).toLocaleString("en-IN")} votes</small></span>`);
   if (x.omdb && x.omdb.rt) chips.push(`<span class="rt tomato">🍅 <b>${esc(x.omdb.rt)}</b></span>`);
   if (x.omdb && x.omdb.mc) chips.push(`<span class="rt mc">Metascore <b>${esc(x.omdb.mc)}</b></span>`);
+  if (x.release) { const rd = new Date(x.release.date + "T12:00:00"), up = rd > new Date();
+    chips.unshift(`<span class="rt rel">📅 <b>${rd.toLocaleDateString("en-IN", {day: "numeric", month: "short", year: "numeric"})}</b><small>${x.release.tv ? (up ? "premieres" : "first aired") : up ? "releases" : "released"}${x.release.india ? " in India" : ""}</small></span>`); }
+  else if (LG[it.id] && LG[it.id].date) chips.unshift(`<span class="rt rel">📅 <b>${new Date(LG[it.id].date + "T12:00:00").toLocaleDateString("en-IN", {day: "numeric", month: "short", year: "numeric"})}</b><small>released</small></span>`);
   if (x.cert) chips.push(`<span class="rt cert">Rated <b>${esc(x.cert.v)}</b>${x.cert.c !== "IN" ? `<small>${x.cert.c}</small>` : ""}</span>`);
   if (x.runtime) chips.push(`<span class="rt">⏱️ <b>${x.runtime >= 60 ? `${Math.floor(x.runtime / 60)}h ${x.runtime % 60}m` : x.runtime + " min"}</b>${it.tmdb && it.tmdb.type === "tv" || it.kind !== "movie" ? "<small>per episode</small>" : ""}</span>`);
   let html = chips.length ? `<div class="rts">${chips.join("")}</div>` : x.busy ? `<div class="rts"><span class="rt sk">Loading ratings…</span></div>` : "";
@@ -4894,6 +4912,118 @@ async function openFromApp() {
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { openFromApp(); syncWidgetWatched(); } });
 setInterval(() => { if (!document.hidden) openFromApp(); }, 1500);
 
+/* ───────────── Languages: which audio / subtitles each app has, and your language ─────────────
+   From JustWatch (the data behind most "where to watch" apps). Asked directly first, then through the
+   VibeSync server, then from the phone itself in the Android app. Apps that list no languages say so. */
+const LG = {};
+const LANG_FULL = {te: "Telugu", hi: "Hindi", ta: "Tamil", ml: "Malayalam", kn: "Kannada", en: "English", bn: "Bengali", mr: "Marathi",
+  gu: "Gujarati", pa: "Punjabi", or: "Odia", as: "Assamese", ur: "Urdu", ja: "Japanese", ko: "Korean", zh: "Chinese", es: "Spanish",
+  fr: "French", de: "German", it: "Italian", pt: "Portuguese", ru: "Russian", ar: "Arabic", tr: "Turkish", th: "Thai", id: "Indonesian"};
+const PREF_LANGS = ["te", "hi", "ta", "ml", "kn", "en", "bn", "mr", "ko", "ja"];
+const lname = c => LANG_FULL[String(c).slice(0, 2).toLowerCase()] || String(c).toUpperCase();
+const JWQ = `query GetSearchTitles($searchTitlesFilter: TitleFilter!, $country: Country!, $language: Language!, $first: Int!, $filter: OfferFilter!) {
+  popularTitles(country: $country, filter: $searchTitlesFilter, first: $first, sortBy: POPULAR, sortRandomSeed: 0) {
+    edges { node { id objectType content(country: $country, language: $language) { title originalReleaseYear originalReleaseDate externalIds { imdbId tmdbId } }
+      offers(country: $country, platform: WEB, filter: $filter) { monetizationType presentationType audioLanguages subtitleLanguages standardWebURL package { clearName technicalName shortName } } } }
+  }
+}`;
+const jwBody = (title, type) => JSON.stringify({operationName: "GetSearchTitles", query: JWQ, variables: {first: 8, country: "IN", language: "en", filter: {bestOnly: false},
+  searchTitlesFilter: {searchQuery: title, includeTitlesWithoutUrl: true, objectTypes: [type === "tv" ? "SHOW" : "MOVIE"]}}});
+function jwSummary(edges, title, year, tmdb) {       // same rules as core/langs.py
+  const nodes = (edges || []).map(e => e.node || {});
+  let n = tmdb ? nodes.find(x => String(((x.content || {}).externalIds || {}).tmdbId || "") === String(tmdb)) : null;
+  if (!n) n = nodes.find(x => { const c = x.content || {}; return (twinKey(c.title) === twinKey(title) || twinKey((c.title || "").split(":")[0]) === twinKey(title.split(":")[0]))
+    && (!year || !c.originalReleaseYear || Math.abs(+c.originalReleaseYear - +year) <= 1); });
+  if (!n) return {found: false};
+  const apps = {};
+  (n.offers || []).forEach(o => { const p = o.package || {}, nm = p.clearName || p.shortName; if (!nm) return;
+    const a = apps[nm] || (apps[nm] = {name: nm, tech: p.technicalName || "", types: [], audio: [], subs: []});
+    [["types", [o.monetizationType]], ["audio", o.audioLanguages], ["subs", o.subtitleLanguages]].forEach(([k, v]) => (v || []).forEach(x => { if (x && !a[k].includes(x)) a[k].push(x); })); });
+  const c = n.content || {};
+  return {found: true, date: c.originalReleaseDate || "", year: c.originalReleaseYear, apps: Object.values(apps)};
+}
+async function askLangs(it) {
+  const x = XD[it.id]; if (!x || !x.ref || LG[it.id]) return;
+  LG[it.id] = {busy: true};
+  const title = it.title, year = String(it.year || "").slice(0, 4), tmdb = x.ref.id, type = x.ref.type;
+  const done = r => { LG[it.id] = r; if (openId === it.id) refreshSheet(); };
+  try {                                                   // 1. straight from the page
+    const r = await timeout(fetch("https://apis.justwatch.com/graphql", {method: "POST", headers: {"Content-Type": "application/json"}, body: jwBody(title, type)}).then(r => r.json()), 7000);
+    return done(jwSummary((((r || {}).data || {}).popularTitles || {}).edges, title, year, tmdb));
+  } catch (e) { /* usually blocked by the browser (CORS): ask the server */ }
+  if (EMBED) {
+    LG[it.id] = {busy: true, asked: Date.now()};
+    send("streamlit:setComponentValue", {value: {theme: document.documentElement.dataset.theme, langs: {key: it.id, title, year, tmdb, type}, n: Date.now()}, dataType: "json"});
+    setTimeout(() => { if (LG[it.id] && LG[it.id].busy) nativeLangs(it, done); }, 9000);
+  } else nativeLangs(it, done);
+}
+function nativeLangs(it, done) {                          // 3. the Android app asks from the phone
+  const b = window.VibeSyncApp, x = XD[it.id];
+  if (!b || typeof b.jwStart !== "function") return done({error: true});
+  const key = "jw" + Date.now();
+  try { b.jwStart(key, jwBody(it.title, x.ref.type)); } catch (e) { return done({error: true}); }
+  let n = 0;
+  const poll = setInterval(() => {
+    let r = ""; try { r = b.jwTake(key) || ""; } catch (e) {}
+    if (r || ++n > 40) {
+      clearInterval(poll);
+      try { const j = JSON.parse(r); done(jwSummary((((j || {}).data || {}).popularTitles || {}).edges, it.title, String(it.year || "").slice(0, 4), x.ref.id)); }
+      catch (e) { done({error: true}); }
+    }
+  }, 300);
+}
+function gotServerLangs(map) {
+  Object.entries(map || {}).forEach(([k, v]) => {
+    if (!LG[k] || !LG[k].busy) return;
+    if (v && v.error && BY[k]) return nativeLangs(BY[k], r => { LG[k] = r; if (openId === k) refreshSheet(); });
+    LG[k] = v || {error: true}; if (openId === k) refreshSheet();
+  });
+}
+const STREAM_TYPES = ["FLATRATE", "FREE", "ADS"];
+function langsHTML(it) {
+  if (!it || it.kind === "sports") return "";
+  const x = XD[it.id]; if (!x || !x.ref) return "";
+  queueMicrotask(() => askLangs(it));
+  const L = LG[it.id] || {busy: true}, pref = store.get("prefLang", "");
+  const chips = `<div class="chips lgc">${PREF_LANGS.map(c => `<button class="chip" data-preflang="${c}" aria-pressed="${pref === c}">${LANG_FULL[c]}</button>`).join("")}</div>`;
+  let body;
+  if (L.busy) body = `<div class="checking"><i></i>Checking languages on each app…</div>`;
+  else if (L.error) body = `<div class="note">Couldn't reach the language data right now. Try again in a moment.</div>`;
+  else if (!L.found) body = `<div class="note">No language details listed for this title in India yet.</div>`;
+  else {
+    const stream = L.apps.filter(a => a.types.some(t => STREAM_TYPES.includes(t))), rent = L.apps.filter(a => !stream.includes(a));
+    const known = stream.filter(a => a.audio.length), unknown = stream.filter(a => !a.audio.length);
+    const nm = a => esc(appName(a.name));
+    let answer = "";
+    if (pref) {
+      const P = LANG_FULL[pref], has = stream.filter(a => a.audio.some(l => l.slice(0, 2) === pref)), subs = stream.filter(a => !has.includes(a) && a.subs.some(l => l.slice(0, 2) === pref));
+      if (has.length) answer = `<div class="lg-ans ok">✅ <span>Available in <b>${P}</b> on <b>${has.map(nm).join(", ")}</b></span></div>`;
+      else if (!stream.length) answer = `<div class="lg-ans no">❌ <span>Not on any streaming app in India, so not in ${P} either</span></div>`;
+      else if (!known.length) answer = `<div class="lg-ans unk">❓ <span>${unknown.map(nm).join(", ")} ${unknown.length > 1 ? "haven't" : "hasn't"} listed audio languages, so VibeSync can't confirm ${P}</span></div>`;
+      else answer = `<div class="lg-ans no">❌ <span>Not available in <b>${P}</b> on any app in India${unknown.length ? ` (${unknown.map(nm).join(", ")} ${unknown.length > 1 ? "don't" : "doesn't"} list languages)` : ""}</span></div>`;
+      if (!has.length && subs.length) answer += `<div class="lg-sub">${P} subtitles on ${subs.map(nm).join(", ")}</div>`;
+    } else answer = `<div class="lg-sub">Pick your language to check it</div>`;
+    const row = a => `<div class="lg-row"><span class="logo" style="--pcol:${(D.providers[provKey(a.name)] || {}).color || "#666"}">${esc(appName(a.name)[0])}</span>
+      <span><b>${nm(a)}</b>${a.audio.length ? `<small>🔊 ${a.audio.map(lname).join(", ")}</small>` : `<small>Audio languages not listed</small>`}
+      ${a.subs.length ? `<small>💬 ${a.subs.map(lname).join(", ")}</small>` : ""}</span></div>`;
+    body = answer + (stream.length ? `<div class="lg-list">${stream.map(row).join("")}</div>` : "")
+      + (rent.length ? `<details class="lg-rent"><summary>Rent or buy (${rent.length})</summary>${rent.map(row).join("")}</details>` : "");
+  }
+  return `<div class="h3">Languages on each app</div><div class="langs"><div class="lg-q">Your language</div>${chips}${body}
+    <p class="fnote">Audio and subtitle languages as each app lists them on JustWatch (India).</p></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-preflang]"); if (!b) return;
+  const c = b.dataset.preflang; store.set("prefLang", store.get("prefLang", "") === c ? "" : c); refreshSheet(); buzz();
+});
+// release date for the details line: India's theatrical date when TMDB has it, else the first release
+function releaseOf(d, type) {
+  if (type === "tv") return d.first_air_date ? {date: d.first_air_date, india: false, tv: true} : null;
+  const r = ((d.release_dates || {}).results || []).find(x => x.iso_3166_1 === "IN");
+  const t = r && r.release_dates.filter(x => [1, 2, 3].includes(x.type) && x.release_date).map(x => x.release_date.slice(0, 10)).sort()[0];
+  return t ? {date: t, india: true} : d.release_date ? {date: d.release_date, india: false} : null;
+}
+
 /* ───────────── events for everything above ───────────── */
 document.addEventListener("click", e => {
   const t = e.target.closest("button,a,[data-wrapped] section,.pp-bio"); if (!t) return;
@@ -4989,6 +5119,7 @@ function slideIn(el, dir) {          // pages stacked on a page (a cast member f
 function boot(data) {
   if (D) return;
   D = data; D.items.forEach(i => BY[i.id] = i);
+  D.providers.sunnxt = D.providers.sunnxt || {name: "Sun NXT", color: "#F58220", pkg: "com.suntv.sunnxt"};   // older cached catalogues
   D.featured = pickFeatured();
   T.key = (args.tmdbKey || new URLSearchParams(location.search).get("tmdb") || "").trim();
   Object.values(store.get("favMeta", {})).forEach(m => { if (!BY[m.id]) BY[m.id] = rehydrate(m); });
@@ -5006,6 +5137,7 @@ window.addEventListener("message", e => {
   args = m.args || {};
   if (args.ytKey) YTS.key = String(args.ytKey).trim();
   if (args.omdbKey) OMDB.key = String(args.omdbKey).trim();
+  if (args.langs && typeof args.langs === "object" && D) gotServerLangs(args.langs);
   if (args.catalog) boot(args.catalog);
   if (args.resolved && typeof args.resolved === "object") {
     let fresh = false;
@@ -5013,12 +5145,12 @@ window.addEventListener("message", e => {
     if (fresh && openId && BY[openId] && BY[openId].tmdb) refreshSheet();
   }
   if (D && args.tmdbKey && !T.key) { T.key = args.tmdbKey.trim(); setTab(state.tab); }
-  else if (!D) fetch("catalog.json").then(r => r.json()).then(boot).catch(() => {});
+  else if (!D) fetch("catalog.json").then(r => r.json()).then(boot).catch(e => console.error("VibeSync boot:", e && e.stack || e));
   fitHeight();
 });
 send("streamlit:componentReady", {apiVersion: 1});
 // Standalone fallback (opened directly, or if the render message never arrives)
-setTimeout(() => { if (!D) fetch("catalog.json").then(r => r.json()).then(boot).catch(() => {}); }, 900);
+setTimeout(() => { if (!D) fetch("catalog.json").then(r => r.json()).then(boot).catch(e => console.error("VibeSync boot:", e && e.stack || e)); }, 900);
 fitHeight();
 })();
 </script>
