@@ -366,6 +366,15 @@ img{display:block}
     box-shadow:0 18px 50px rgba(0,0,0,.4),inset 0 0 0 1px var(--line)}
   .cloud .toast{bottom:170px}
 }
+/* ── Did you mean ── */
+.dym{display:flex;gap:12px;align-items:flex-start;margin:14px 0 4px;padding:14px 16px;border-radius:20px;
+  background:linear-gradient(120deg,color-mix(in srgb,var(--tint) 24%,var(--s1)),var(--s1) 75%);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint) 35%,transparent);
+  animation:popIn .5s var(--spring) both;font-size:16px;line-height:1.5}
+.dym-i{font-size:22px;line-height:1.2}
+.dym-b{font-weight:850;color:var(--tint);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px;margin:0 2px;font-size:17px;text-align:left}
+.dym-also{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.dym-also .chip{height:34px;font-size:13px;padding:0 12px}
+
 /* ── Genre mixer ── */
 .mixcard{position:relative;display:flex;align-items:center;gap:16px;width:100%;margin:34px 0 0;padding:20px 18px;border-radius:24px;text-align:left;overflow:hidden;
   background:linear-gradient(120deg,#FF7A6B,#C084FC 55%,#7CC4FF);color:#140F1C;transition:transform .15s;box-shadow:0 18px 40px rgba(192,132,252,.25)}
@@ -921,15 +930,82 @@ function openSearch() {
   renderSearch("");
 }
 function closeSearch() { $("#search").classList.remove("on"); }
+/* Typo-tolerant search. Two signals:
+   - edit distance (with swaps) against the whole title, each word and each run of leading words
+   - a consonant "skeleton" (vowels and doubled letters dropped), so Indian titles match however they're
+     spelled in English: bihubali / bahubali / baahubali all become "bhbl". */
+const skel = s => norm(s).replace(/[aeiouyh]/g, "").replace(/(.)\1+/g, "$1");   // h too: dh/bh/th spellings vary
+function lev(a, b) {
+  if (Math.abs(a.length - b.length) > 4) return 99;
+  let p2 = null, p = Array.from({length: b.length + 1}, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const c = [i];
+    for (let j = 1; j <= b.length; j++) {
+      c[j] = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (p2 && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) c[j] = Math.min(c[j], p2[j - 2] + 1);
+    }
+    p2 = p; p = c;
+  }
+  return p[b.length];
+}
+function fuzzy(q, text) {
+  const nq = norm(q); if (nq.length < 3) return 0;
+  const words = String(text).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const targets = new Set([norm(text)]);
+  words.forEach((w, i) => { targets.add(w); targets.add(norm(words.slice(0, i + 1).join(""))); });
+  let best = 0;
+  const sq = skel(q);
+  for (const t of targets) {
+    if (!t) continue;
+    if (t.startsWith(nq) && nq.length >= 4) best = Math.max(best, .95);
+    const d = lev(nq, t);
+    best = Math.max(best, 1 - d / Math.max(nq.length, t.length));
+    if (sq.length >= 3 && skel(t) === sq) best = Math.max(best, .9);
+  }
+  return best;
+}
+function suggestions(q, exclude) {
+  const seen = new Set(), out = [];
+  const pool = Object.values(BY).filter(i => i && i.title && hasPoster(i));
+  pool.forEach(i => { const s = fuzzy(q, i.title); if (s >= .62 && !exclude.has(i.id)) out.push([s, i]); });
+  out.sort((a, b) => b[0] - a[0] || (scoreOf(b[1]) || 0) - (scoreOf(a[1]) || 0));
+  return out.filter(([, i]) => !seen.has(norm(i.title)) && seen.add(norm(i.title)));
+}
+const WORDS = () => [...new Set([...Object.values(D.providers).map(p => p.name), ...D.items.flatMap(i => i.genres), "Anime", "Telugu", "Reality", "Doraemon"])];
 function renderSearch(q) {
   q = q.trim().toLowerCase();
   const hay = i => (i.title + " " + i.genres.join(" ") + " " + i.offers.map(o => D.providers[o.p].name).join(" ") + " " + kindLabel(i) + (i.telugu ? " telugu" : "")).toLowerCase();
   const items = !q ? D.items.filter(i => i.offers.length && hasPoster(i)).sort(() => Math.random() - .5).slice(0, 12) : D.items.filter(i => hay(i).includes(q));
   const quick = !q ? `<div class="quick"><button class="chip mxchip" data-mixer>🎛️ Genre mixer</button>${QUICK.map(w => `<button class="chip" data-q="${esc(w)}">${esc(w)}</button>`).join("")}</div>` : "";
-  $("#sres").innerHTML = (q ? section(`${items.length} result${items.length === 1 ? "" : "s"}`) : section("Try") + quick + section("You might like")) +
-    (items.length ? grid(items) : (T.key && q ? "" : `<div class="empty">No match for “${esc(q)}”.<br>Try a genre like “anime” or a platform like “Netflix”.</div>`)) +
+  // "Did you mean…?" when the typed text finds little, or isn't literally in the best match's title
+  let dym = "", close = [];
+  if (q.length >= 3) {
+    const exact = items.some(i => i.title.toLowerCase().includes(q));
+    const sug = suggestions(q, new Set());
+    const top = sug[0];
+    if (top && !exact && top[0] >= .72) {
+      close = sug.slice(0, 12).map(([, i]) => i);
+      const also = sug.slice(1, 4).filter(([s]) => s >= .78).map(([, i]) => i.title);
+      dym = `<div class="dym"><span class="dym-i" aria-hidden="true">✨</span><div><span>Did you mean</span>
+        <button class="dym-b" data-q="${esc(top[1].title)}">${esc(top[1].title)}</button><span>?</span>
+        ${also.length ? `<div class="dym-also">${also.map(t => `<button class="chip" data-q="${esc(t)}">${esc(t)}</button>`).join("")}</div>` : ""}</div></div>`;
+    } else if (!items.length) {          // maybe a misspelt platform or genre: netflx, comdy, anme...
+      const w = WORDS().map(x => [fuzzy(q, x), x]).sort((a, b) => b[0] - a[0])[0];
+      if (w && w[0] >= .72) {
+        dym = `<div class="dym"><span class="dym-i" aria-hidden="true">✨</span><div><span>Did you mean</span>
+          <button class="dym-b" data-q="${esc(w[1])}">${esc(w[1])}</button><span>?</span></div></div>`;
+        close = D.items.filter(i => hay(i).includes(w[1].toLowerCase()));
+      }
+    }
+  }
+  const shown = items.length ? items : close;
+  $("#sres").innerHTML = dym + (q ? section(items.length ? `${items.length} result${items.length === 1 ? "" : "s"}` : close.length ? "Closest matches" : "No results")
+      : section("Try") + quick + section("You might like")) +
+    (shown.length ? grid(shown) : (T.key && q ? "" : `<div class="empty">No match for “${esc(q)}”.<br>Try a genre like “anime” or a platform like “Netflix”.</div>`)) +
     (T.key && q.length > 1 ? `<div id="tsearch">${section("More titles", "")}<div class="checking"><i></i>Searching TMDB…</div></div>` : "");
-  if (T.key && q.length > 1) searchTmdb(q, items.map(i => i.id));
+  if (!items.length && close.length) $$("#sres .card").forEach((c, i) => { c.classList.add("fresh"); c.style.setProperty("--i", i); });
+  // TMDB search can't fix typos, so when we've corrected one, search for the correction too
+  if (T.key && q.length > 1) searchTmdb(!items.length && close.length ? close[0].title.toLowerCase() : q, shown.map(i => i.id), q);
 }
 
 /* ───────────── surprise ───────────── */
@@ -1548,7 +1624,7 @@ function tmdbSheetHTML(it) {
 
 /* search */
 let searchT = null;
-function searchTmdb(q, have) {
+function searchTmdb(q, have, forQ = q) {
   clearTimeout(searchT);
   searchT = setTimeout(async () => {
     let items = [];
@@ -1558,7 +1634,7 @@ function searchTmdb(q, have) {
       items = (j.results || []).map(r => fromTmdb(r)).filter(it => it && !skip.has(it.id)).slice(0, 24);
     } catch (e) { /* offline or bad key: local results only */ }
     const box = $("#tsearch"), input = $("#q");
-    if (!box || !input || input.value.trim().toLowerCase() !== q) return;
+    if (!box || !input || input.value.trim().toLowerCase() !== forQ) return;
     box.innerHTML = items.length ? section("More titles", "Live from TMDB") + grid(items) : "";
   }, 350);
 }
