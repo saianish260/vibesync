@@ -894,10 +894,19 @@ img{display:block}
 
 /* spotlight swipe: the hero handles sideways drags, the page keeps vertical scrolling */
 #hero{touch-action:pan-y}
-#slides .slide{will-change:transform,opacity}
 .slide.peek{visibility:visible;pointer-events:none}
 .slide.peek .hp,.slide.peek .ht{transform:none;opacity:1;transition:none}
 .hbd{transition:opacity .9s var(--glide)}
+
+/* spotlight parallax + fade on the compositor, tied straight to the scroll position */
+@supports (animation-timeline:scroll()){
+  #app{scroll-timeline:--app block}
+  #slides{animation:heroAway linear both;animation-timeline:--app;animation-range:0px 380px}
+  @keyframes heroAway{to{transform:translate3d(0,120px,0);opacity:0}}
+}
+@media (prefers-reduced-motion:reduce){#slides{animation:none}}
+#slides .slide{will-change:auto}
+.slides{will-change:transform,opacity}
 </style>
 </head>
 <body>
@@ -1602,7 +1611,7 @@ function render() {
       <div class="moodbox" id="moodbox"><div></div></div>
       <button class="surprise" data-surprise><span class="die" aria-hidden="true">🎲</span><span style="flex:1"><b>Surprise me</b><small id="surprise-sub">Tap and VibeSync picks from the whole library</small></span><span class="go" style="width:22px;height:22px;opacity:.7">${ICON.arrow}</span></button>
       ${exploreHTML()}
-      <nav class="tabs" id="tabs" aria-label="Categories"><div class="tabrow" role="tablist"><span class="pill" id="pill"></span>${TABS.map(([k, l]) =>
+      <i id="tabsent" aria-hidden="true" style="display:block;height:1px;margin-bottom:-1px"></i><nav class="tabs" id="tabs" aria-label="Categories"><div class="tabrow" role="tablist"><span class="pill" id="pill"></span>${TABS.map(([k, l]) =>
         `<button class="tab" role="tab" data-tab="${k}" aria-selected="${k === state.tab}">${l}</button>`).join("")}</div></nav>
       <div id="panel" class="panel"></div>
       ${mixCardHTML()}
@@ -1612,23 +1621,42 @@ function render() {
   if (yc) $("#ytslot").appendChild(yc);
   $("#bnav").innerHTML = navHTML(); navState();
   themeBtn();
-  requestAnimationFrame(() => { movePill(); showSlide(0); startHero(); onScroll(); preloadHero(); });
+  requestAnimationFrame(() => { movePill(); showSlide(0); startHero(); onScroll(); preloadHero(); watchTabs(); });
 }
 
 /* scroll: glass top bar, hero parallax, pause the spotlight when it's off screen */
 let heroOff = false, ticking = false;
+// The spotlight's parallax + fade runs on the GPU compositor through a CSS scroll timeline where the
+// browser supports it, so scrolling never waits on script. Otherwise JS drives it, reading layout first
+// and writing after, so a frame never forces an extra layout pass.
+const SCROLL_TL = CSS.supports("animation-timeline", "scroll()");
+const SC = {solid: null, glass: null, h: 0, tabsTop: 0, slideY: -1};
 function onScroll() {
   ticking = false;
   const sc = scroller(), y = sc.scrollTop, hero = $("#hero"), top = $("#top"), slides = $("#slides"), tabs = $("#tabs");
   if (!hero) return;
-  const h = hero.offsetHeight;
-  top.classList.toggle("solid", y > 24);
+  // reads
+  if (!SC.h) SC.h = hero.offsetHeight;
+  const h = SC.h, solid = y > 24;
+  // writes (only when something changed)
+  if (solid !== SC.solid) { SC.solid = solid; top.classList.toggle("solid", solid); }
   W.sy = -y * .12;                                            // read by the world loop (no page-wide style writes)
-  if (!REDUCED && y < h) { slides.style.transform = `translate3d(0,${y * .32}px,0)`; slides.style.opacity = Math.max(0, 1 - y / (h * .55)); }
+  if (!REDUCED && !SCROLL_TL && y < h + 40) {
+    const ty = Math.min(y, h) * .32;
+    if (Math.abs(ty - SC.slideY) > .5) { SC.slideY = ty; slides.style.transform = `translate3d(0,${ty}px,0)`; slides.style.opacity = Math.max(0, 1 - y / (h * .55)); }
+  }
   const off = y > h * .7;
   if (off !== heroOff) { heroOff = off; if (!openId) pauseHero(off); }
-  if (tabs) tabs.classList.toggle("glass", tabs.getBoundingClientRect().top <= 61);
 }
+// the category tabs turn to glass once they stick under the top bar: watched by an observer, not per frame
+function watchTabs() {
+  const s = $("#tabsent"), tabs = $("#tabs"); if (!s || !tabs || !window.IntersectionObserver) return;
+  if (SC.io) SC.io.disconnect();
+  SC.io = new IntersectionObserver(([e]) => tabs.classList.toggle("glass", !e.isIntersecting && e.boundingClientRect.top < 70),
+                                   {root: scroller(), rootMargin: "-61px 0px 100000px 0px", threshold: 0});
+  SC.io.observe(s);
+}
+window.addEventListener("resize", () => { SC.h = 0; });
 document.addEventListener("scroll", e => { if (e.target.id === "app" && !ticking) { ticking = true; requestAnimationFrame(onScroll); } }, true);
 
 /* ───────────── events ───────────── */
@@ -1718,7 +1746,7 @@ document.addEventListener("keydown", e => {
 (() => {
   let s = null, swallow = false;
   const slides = () => $$("#slides .slide");
-  const clear = el => { if (el) { el.style.transform = ""; el.style.opacity = ""; el.style.transition = ""; el.classList.remove("peek"); } };
+  const clear = el => { if (el) { el.style.transform = ""; el.style.opacity = ""; el.style.transition = ""; el.style.willChange = ""; el.classList.remove("peek"); } };
   document.addEventListener("pointerdown", e => {
     const h = e.target.closest("#hero"); if (!h || e.button > 0 || e.target.closest("[data-dot]")) return;
     const all = slides(); if (all.length < 2) return;
@@ -1737,7 +1765,7 @@ document.addEventListener("keydown", e => {
     const dir = dx < 0 ? 1 : -1, all = slides();
     if (dir !== s.dir) { clear(s.nb); s.dir = dir; s.nb = all[(state.slide + dir + all.length) % all.length]; s.nb.classList.add("peek"); }
     const p = Math.min(1, Math.abs(dx) / s.w);
-    s.cur.style.transition = s.nb.style.transition = "none";
+    s.cur.style.transition = s.nb.style.transition = "none"; s.cur.style.willChange = s.nb.style.willChange = "transform,opacity";
     s.cur.style.transform = `translate3d(${dx}px,0,0) scale(${1 - p * .06})`; s.cur.style.opacity = Math.max(0, 1 - p * 1.8);
     s.nb.style.transform = `translate3d(${dx + dir * s.w * .85}px,0,0) scale(${.94 + p * .06})`; s.nb.style.opacity = Math.min(1, p * 1.8);
   }, {passive: true});
