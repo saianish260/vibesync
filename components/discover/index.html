@@ -1139,7 +1139,8 @@ function liveRowHTML(key) {
 }
 function liveRowsHTML(tab) {
   if (!T.key || T.failed || !LIVE[tab]) return "";
-  return LIVE[tab].map((_, i) => liveRowHTML(`${tab}|${i}`)).join("");
+  const extra = {movie: ["plat|appletv|movie"], series: ["plat|appletv|tv"]}[tab] || [];   // endless Apple TV catalogue rows
+  return extra.map(liveRowHTML).join("") + LIVE[tab].map((_, i) => liveRowHTML(`${tab}|${i}`)).join("");
 }
 function platformsHTML() {
   if (!T.key || T.failed) return "";
