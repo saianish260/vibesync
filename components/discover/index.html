@@ -873,6 +873,8 @@ img{display:block}
 
 .rate+.acts{margin-top:14px}
 
+.tool.apk{background:linear-gradient(135deg,color-mix(in srgb,#3DDC84 30%,var(--s1)),var(--s1));box-shadow:inset 0 0 0 1px color-mix(in srgb,#3DDC84 45%,transparent);color:var(--text);text-decoration:none}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -4039,10 +4041,15 @@ const TOOLS = [["swipe", "🃏", "Swipe mode", "Right to save, left to skip"], [
                ["free", "🆓", "Free to watch", "No subscription needed"], ["kids", "👪", "Kids-safe", "Family-friendly picks"],
                ["calendar", "📅", "OTT calendar", "What's new this week"], ["plan", "💳", "Which plan?", "Best subscription for your list"],
                ["wrapped", "🎁", "Wrapped", "Your year on VibeSync"], ["sync", "🔄", "Sync", "Move your data to another device"]];
+const APK_URL = "https://github.com/saianish260/vibesync-android/raw/apk/VibeSync.apk";   // the latest build, published by the APK repo's CI
 function exploreHTML() {
-  return section("Explore", "") + `<div class="xtools">${TOOLS.map(([k, e, t, s]) =>
+  // the Android app download, shown everywhere except inside the Android app itself
+  const apk = IN_APP ? "" : `<a class="tool apk" href="${APK_URL}" download="VibeSync.apk" target="_blank" rel="noopener" data-apk>
+      <span class="te" aria-hidden="true">📲</span><b>Android app</b><small>Download the VibeSync APK</small></a>`;
+  return section("Explore", "") + `<div class="xtools">${apk}${TOOLS.map(([k, e, t, s]) =>
     `<button class="tool" data-tool="${k}"><span class="te" aria-hidden="true">${e}</span><b>${t}</b><small>${esc(s)}</small></button>`).join("")}</div>`;
 }
+document.addEventListener("click", e => { if (e.target.closest("[data-apk]")) toast("Downloading VibeSync.apk. Open it to install (allow installs from your browser if asked)"); });
 function openTool(k) {
   if (k === "swipe") return openDeck();
   if (k === "describe") return openDescribe();
