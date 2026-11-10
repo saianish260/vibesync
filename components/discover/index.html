@@ -875,6 +875,29 @@ img{display:block}
 
 .tool.apk{background:linear-gradient(135deg,color-mix(in srgb,#3DDC84 30%,var(--s1)),var(--s1));box-shadow:inset 0 0 0 1px color-mix(in srgb,#3DDC84 45%,transparent);color:var(--text);text-decoration:none}
 
+/* sign-in screen */
+.auth{position:fixed;inset:0;z-index:55;display:none;place-items:center;padding:24px;overflow-y:auto;
+  background:radial-gradient(90% 60% at 20% 0%,color-mix(in srgb,var(--tint) 32%,transparent),transparent 70%),radial-gradient(80% 60% at 100% 100%,rgba(192,132,252,.25),transparent 70%),var(--bg)}
+.auth.on{display:grid;animation:authIn .6s var(--glide,ease) both}
+@keyframes authIn{from{opacity:0}}
+.au-in{width:min(420px,100%);text-align:center;animation:authUp .8s var(--spring) both}
+@keyframes authUp{from{opacity:0;transform:translateY(24px)}}
+.au-logo{font-size:44px;font-weight:900;letter-spacing:-.04em;font-variation-settings:"wdth" 125}.au-logo i{font-style:normal;color:var(--tint)}
+.au-in h1{font-size:26px;line-height:1.15;margin:18px 0 10px;font-weight:850;letter-spacing:-.02em}
+.au-in p{color:var(--muted);font-size:15px;line-height:1.5;margin:0 auto 22px;max-width:34ch}
+.au-btn{display:grid;place-items:center;min-height:52px;margin-bottom:8px}
+.au-g{display:inline-flex;align-items:center;gap:12px;height:52px;padding:0 26px;border-radius:999px;background:#fff;color:#1f1f1f;font-size:16px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.au-g:disabled{opacity:.7}
+.g-logo{width:20px;height:20px;background:conic-gradient(from -45deg,#EA4335 0 25%,#FBBC05 0 50%,#34A853 0 75%,#4285F4 0);border-radius:50%;
+  -webkit-mask:radial-gradient(circle,transparent 38%,#000 40%);mask:radial-gradient(circle,transparent 38%,#000 40%)}
+.au-load{color:var(--muted);font-size:14px}
+.au-err{color:#FB7185!important;font-weight:650;margin-top:10px!important}
+.au-skip{display:block;margin:16px auto 0;color:var(--muted);font-size:13.5px;text-decoration:underline;text-underline-offset:3px}
+.au-fine{font-size:12px!important;margin-top:26px!important;opacity:.75}
+.acct-card{display:flex;gap:14px;align-items:center;padding:16px;border-radius:20px;background:var(--s1);box-shadow:inset 0 0 0 1px var(--line);margin-bottom:12px}
+.acct-card img,.acct-i{width:56px;height:56px;border-radius:50%;object-fit:cover;background:var(--s2);display:grid;place-items:center;font-size:24px;font-weight:900}
+.acct-card b{display:block;font-size:17px}.acct-card small{color:var(--muted)}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -925,6 +948,7 @@ img{display:block}
 <div class="xp" id="xp" role="dialog" aria-label="Explore"></div>
 <div class="trv" id="trv" role="dialog" aria-label="Trailer"></div>
 <div class="bk" id="bk" role="dialog" aria-label="Book tickets"></div>
+<div class="auth" id="auth" role="dialog" aria-label="Sign in"></div>
 <div class="search themer" id="themer" role="dialog" aria-label="Themes"></div>
 <div class="reel" id="reel" aria-hidden="true"><div class="reel-in"><div class="reel-win"><div class="frame"></div><div class="reel-strip" id="strip"></div></div>
   <div class="reel-cap" id="reelcap">Rolling…</div><div class="reel-sub" id="reelsub"></div></div></div>
@@ -4694,7 +4718,7 @@ function savedHTML() {
   const rated = Object.entries(RATE.r).sort((a, b) => b[1].r - a[1].r).map(([id]) => BY[id]).filter(Boolean);
   const saved = [...favs].map(id => BY[id]).filter(it => it && !isWatched(it.id)), watching = ids("watching"), watched = ids("watched");
   const quick = `<div class="chips qk"><button class="chip" data-tool="plan">💳 Which plan?</button><button class="chip" data-tool="calendar">📅 OTT calendar</button>
-    <button class="chip" data-tool="wrapped">🎁 Wrapped</button><button class="chip" data-tool="sync">🔄 Sync</button></div>`;
+    <button class="chip" data-tool="wrapped">🎁 Wrapped</button>${AUTH.cfg ? `<button class="chip" data-account>👤 Account</button>` : ""}<button class="chip" data-tool="sync">🔄 Sync</button></div>`;
   if (!saved.length && !watching.length && !watched.length && !rated.length)
     return `<div class="sec"><h2>Saved</h2></div>${quick}<div class="empty">Nothing saved yet.<br>Tap the ♡ on any title, or try 🃏 Swipe mode, and it lands here.</div>`;
   return quick + `<div id="comingup"></div>`
@@ -5308,6 +5332,207 @@ function slideIn(el, dir) {          // pages stacked on a page (a cast member f
   openSearch = function () { _os.apply(this, arguments); liquidIn($("#search"), $("#search .sres")); };
 }
 
+/* ───────────── Google sign-in + cloud save (Firebase) ─────────────
+   Sign in with Google at the start; everything VibeSync keeps on this device (Saved, Watching/Watched,
+   ratings, tracker notes, reminders, taste, themes, subscriptions, settings) is merged with your account
+   and saved to Firestore, so it follows you to any phone or browser.
+   No SDKs: Google's sign-in button (web) or Android's own Google sign-in (app) gives a Google ID token,
+   Firebase's REST API turns it into a Firebase session, and Firestore's REST API stores one document per user.
+   Turns on only when the Firebase settings are in the Streamlit secrets. */
+const AUTH = {cfg: null, user: store.get("auth", null), dirty: false, t: null, started: false, offline: false, last: store.get("authSaved", 0)};
+const CLOUD_SKIP = /^vs\.(auth|authSaved|rt|widgetMeta|tonight)$/;
+function setAuthConfig(c) {
+  if (c && c.apiKey && c.projectId && c.clientId) AUTH.cfg = {apiKey: String(c.apiKey).trim(), projectId: String(c.projectId).trim(), clientId: String(c.clientId).trim()};
+}
+// every save to this device marks the account copy as out of date
+{
+  const _set = store.set.bind(store);
+  store.set = (k, v) => { _set(k, v); if (!/^(auth|authSaved|rt|widgetMeta|tonight)$/.test(k)) cloudDirty(); };
+}
+const fbUrl = path => `${path}${path.includes("?") ? "&" : "?"}key=${encodeURIComponent(AUTH.cfg.apiKey)}`;
+const fsDoc = () => `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(AUTH.cfg.projectId)}/databases/(default)/documents/users/${encodeURIComponent(AUTH.user.uid)}`;
+async function postJSON(url, body, form) {
+  const r = await fetch(url, {method: "POST", headers: {"Content-Type": form ? "application/x-www-form-urlencoded" : "application/json"}, body: form ? body : JSON.stringify(body)});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error((j.error && (j.error.message || j.error)) || "HTTP " + r.status);
+  return j;
+}
+function saveUser(u) { AUTH.user = u; store.set("auth", u); }
+// a fresh Firebase ID token (they last an hour)
+async function idToken() {
+  const u = AUTH.user; if (!u) throw new Error("signed out");
+  if (u.id && u.exp - Date.now() > 60000) return u.id;
+  const j = await postJSON(fbUrl("https://securetoken.googleapis.com/v1/token"), `grant_type=refresh_token&refresh_token=${encodeURIComponent(u.refresh)}`, true);
+  saveUser(Object.assign({}, u, {id: j.id_token, refresh: j.refresh_token || u.refresh, exp: Date.now() + (+j.expires_in || 3600) * 1000}));
+  return AUTH.user.id;
+}
+// Google ID token -> Firebase session
+async function firebaseSignIn(googleIdToken) {
+  const j = await postJSON(fbUrl("https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp"),
+    {postBody: `id_token=${encodeURIComponent(googleIdToken)}&providerId=google.com`, requestUri: location.origin || "http://localhost", returnSecureToken: true, returnIdpCredential: true});
+  saveUser({uid: j.localId, email: j.email || "", name: j.displayName || j.fullName || (j.email || "").split("@")[0], photo: j.photoUrl || "",
+            id: j.idToken, refresh: j.refreshToken, exp: Date.now() + (+j.expiresIn || 3600) * 1000, isNew: !!j.isNewUser});
+}
+function localData() {
+  const d = {};
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith("vs.") && !CLOUD_SKIP.test(k)) d[k] = localStorage.getItem(k); }
+  return d;
+}
+async function cloudLoad() {
+  const r = await fetch(fsDoc(), {headers: {Authorization: "Bearer " + await idToken()}});
+  if (r.status === 404) return null;                    // first sign-in: nothing saved yet
+  if (!r.ok) throw new Error("Firestore " + r.status);
+  const j = await r.json(), f = j.fields || {};
+  try { return JSON.parse((f.data && f.data.stringValue) || "{}"); } catch (e) { return {}; }
+}
+async function cloudSave(keepalive) {
+  if (!AUTH.cfg || !AUTH.user || AUTH.offline) return;
+  clearTimeout(AUTH.t); AUTH.dirty = false;
+  try {
+    const body = {fields: {data: {stringValue: JSON.stringify(localData())}, updatedAt: {timestampValue: new Date().toISOString()},
+                           email: {stringValue: AUTH.user.email || ""}}};
+    const r = await fetch(fsDoc() + "?updateMask.fieldPaths=data&updateMask.fieldPaths=updatedAt&updateMask.fieldPaths=email",
+      {method: "PATCH", keepalive: !!keepalive, headers: {"Content-Type": "application/json", Authorization: "Bearer " + await idToken()}, body: JSON.stringify(body)});
+    if (!r.ok) throw new Error("Firestore " + r.status);
+    AUTH.last = Date.now(); try { localStorage.setItem("vs.authSaved", JSON.stringify(AUTH.last)); } catch (e) {}
+  } catch (e) { AUTH.dirty = true; AUTH.t = setTimeout(cloudSave, 20000); }      // try again shortly
+}
+function cloudDirty() {
+  if (!AUTH.cfg || !AUTH.user) return;
+  AUTH.dirty = true; clearTimeout(AUTH.t); AUTH.t = setTimeout(cloudSave, 2500);
+}
+document.addEventListener("visibilitychange", () => { if (document.hidden && AUTH.dirty) cloudSave(true); });
+// account + this device -> one set of data (nothing on either side is lost)
+function mergeCloud(remote) {
+  if (!remote) return false;
+  const before = JSON.stringify(localData());
+  const J = (d, k) => { try { return JSON.parse(d[k]); } catch (e) { return null; } };
+  const raw = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  const local = localData();
+  // keys only the account has: take them
+  Object.entries(remote).forEach(([k, v]) => { if (!(k in local) && !CLOUD_SKIP.test(k)) raw(k, v); });
+  const merge = (k, f) => { const a = J(localData(), "vs." + k), b = J(remote, "vs." + k); if (a != null && b != null) raw("vs." + k, JSON.stringify(f(a, b))); };
+  merge("favs", (a, b) => [...new Set(b.concat(a))]);
+  merge("mysubs", (a, b) => [...new Set(b.concat(a))]);
+  ["favMeta", "status", "swiped", "reminders", "themeUse", "ratings"].forEach(k => merge(k, (a, b) => Object.assign({}, b, a)));
+  merge("tracker", (a, b) => { const o = Object.assign({}, b, a); Object.keys(b).forEach(id => { if (a[id]) o[id] = {watched: [...new Set((a[id].watched || []).concat(b[id].watched || []))],
+    notes: (a[id].notes || []).concat((b[id].notes || []).filter(n => !(a[id].notes || []).some(m => m.ts === n.ts && m.text === n.text)))}; }); return o; });
+  merge("themeRecent", (a, b) => a.concat(b.filter(t => !a.some(x => x.id === t.id))).slice(0, 10));
+  merge("taste", (a, b) => { const o = {t: {}, k: {}, l: {}, n: Math.max(a.n || 0, b.n || 0)};
+    ["t", "k", "l"].forEach(g => [a[g] || {}, b[g] || {}].forEach(m => Object.entries(m).forEach(([k, v]) => o[g][k] = Math.max(o[g][k] || -1e9, v)))); return o; });
+  return JSON.stringify(localData()) !== before;
+}
+// after a merge that changed this device, reload once so every screen shows the account's data
+async function syncAfterSignIn() {
+  let remote = null;
+  try { remote = await cloudLoad(); }
+  catch (e) { toast("Signed in, but couldn't reach your saved data. VibeSync keeps trying"); AUTH.t = setTimeout(syncAfterSignIn, 30000); return; }
+  const changed = mergeCloud(remote);
+  await cloudSave();
+  if (changed) { try { sessionStorage.setItem("vs.synced", "1"); } catch (e) {} location.reload(); }
+}
+
+/* the sign-in screen */
+function authGate(msg, failed) {
+  const g = $("#auth"); if (!g) return;
+  const inApp = IN_APP, native = inApp && window.VibeSyncApp && typeof window.VibeSyncApp.googleSignIn === "function";
+  g.innerHTML = `<div class="au-in">
+      <div class="au-logo">Vibe<i>Sync</i></div>
+      <h1>Sign in to keep your vibe</h1>
+      <p>Your Saved list, watch history, ratings, themes, reminders and subscriptions are saved to your Google account and follow you to every phone and browser.</p>
+      <div class="au-btn" id="gsib">${inApp ? (native ? `<button class="au-g" data-gsi><span class="g-logo" aria-hidden="true"></span>Continue with Google</button>`
+        : `<p class="au-err">Update the VibeSync app to sign in.</p><a class="btn tint" href="${APK_URL}" target="_blank" rel="noopener">📲 Get the latest app</a>`) : `<div class="au-load">Loading Google sign-in…</div>`}</div>
+      ${msg ? `<p class="au-err" role="alert">${esc(msg)}</p>` : ""}
+      ${failed ? `<button class="au-skip" data-authoffline>Continue without signing in for now</button>` : ""}
+      <p class="au-fine">VibeSync only gets your name, email and profile picture from Google.</p></div>`;
+  g.classList.add("on");
+  if (!inApp) renderGoogleButton();
+}
+function loadGis() {
+  if (AUTH.gis) return AUTH.gis;
+  AUTH.gis = new Promise((res, rej) => {
+    if (window.google && google.accounts && google.accounts.id) return res();
+    const s = document.createElement("script"); s.src = "https://accounts.google.com/gsi/client"; s.async = true;
+    s.onload = () => res(); s.onerror = () => { AUTH.gis = null; rej(new Error("gis")); }; document.head.appendChild(s);
+  });
+  return AUTH.gis;
+}
+async function renderGoogleButton() {
+  try {
+    await loadGis();
+    google.accounts.id.initialize({client_id: AUTH.cfg.clientId, callback: r => gotGoogleToken(r.credential), ux_mode: "popup", auto_select: false, itp_support: true});
+    const box = $("#gsib"); if (!box) return;
+    box.innerHTML = "";
+    google.accounts.id.renderButton(box, {theme: "filled_black", size: "large", shape: "pill", text: "continue_with", logo_alignment: "left", width: Math.min(320, innerWidth - 64)});
+  } catch (e) { authGate("Couldn't load Google sign-in. Check your connection and try again.", true); }
+}
+function nativeGoogle() {
+  const b = window.VibeSyncApp, key = "g" + Date.now();
+  try { b.googleSignIn(AUTH.cfg.clientId, key); } catch (e) { return authGate("Couldn't start Google sign-in.", true); }
+  const btn = $("[data-gsi]"); if (btn) { btn.disabled = true; btn.lastChild.textContent = "Signing in…"; }
+  let n = 0;
+  const poll = setInterval(() => {
+    let r = ""; try { r = b.authTake(key) || ""; } catch (e) {}
+    if (!r && ++n < 400) return;
+    clearInterval(poll);
+    if (!r || r.startsWith("error:")) {
+      const why = r.slice(6);
+      authGate(/Cancel/i.test(why) ? "Sign-in was cancelled." : /NoCredential/i.test(why) ? "No Google account on this phone. Add one in Settings → Accounts, then try again."
+               : "Google sign-in didn't work. Try again.", !/Cancel/i.test(why));
+    } else gotGoogleToken(r);
+  }, 150);
+}
+async function gotGoogleToken(t) {
+  const g = $("#auth"); if (g) g.querySelector("#gsib").innerHTML = `<div class="au-load">Signing you in…</div>`;
+  try { await firebaseSignIn(t); }
+  catch (e) { return authGate(/OPERATION_NOT_ALLOWED|CONFIGURATION/i.test(e.message) ? "Google sign-in isn't switched on in Firebase yet." : "Couldn't sign you in. Try again.", true); }
+  if (g) g.classList.remove("on");
+  toast(`Signed in as ${AUTH.user.name || AUTH.user.email} ✓`);
+  syncAfterSignIn();
+}
+async function authBoot() {
+  if (!AUTH.cfg || AUTH.started) return;
+  AUTH.started = true;
+  let justSynced = false; try { justSynced = sessionStorage.getItem("vs.synced") === "1"; sessionStorage.removeItem("vs.synced"); } catch (e) {}
+  if (!AUTH.user) return authGate();
+  try { await idToken(); }
+  catch (e) {
+    if (/TOKEN_EXPIRED|INVALID_REFRESH_TOKEN|USER_NOT_FOUND|USER_DISABLED/i.test(e.message)) { saveUser(null); return authGate("Please sign in again."); }
+    AUTH.offline = true; setTimeout(() => { AUTH.started = false; AUTH.offline = false; authBoot(); }, 30000); return;     // offline: keep going on this device
+  }
+  if (justSynced) { if (AUTH.dirty) cloudSave(); return; }
+  syncAfterSignIn();                                     // pick up changes made on your other devices
+}
+function signOut(clear) {
+  try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch (e) {}
+  try { window.VibeSyncApp && window.VibeSyncApp.googleSignOut && window.VibeSyncApp.googleSignOut(); } catch (e) {}
+  const save = AUTH.dirty ? cloudSave() : Promise.resolve();
+  save.then(() => {
+    if (clear) { const ks = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith("vs.")) ks.push(k); } ks.forEach(k => localStorage.removeItem(k)); }
+    AUTH.user = null; try { localStorage.removeItem("vs.auth"); } catch (e) {}
+    location.reload();
+  });
+}
+function openAccount() {
+  const u = AUTH.user;
+  if (!AUTH.cfg) return openXP(xpTop("Account", "") + `<div class="empty">Accounts aren't switched on for this VibeSync yet. Use 🔄 Sync to move your data between devices.</div>`, "acct");
+  if (!u) return authGate();
+  openXP(xpTop("Account", "") + `<div class="acct-card">${u.photo ? `<img src="${esc(u.photo)}" alt="" referrerpolicy="no-referrer">` : `<span class="acct-i">${esc((u.name || u.email || "?")[0].toUpperCase())}</span>`}
+      <div><b>${esc(u.name || "")}</b><small>${esc(u.email || "")}</small></div></div>
+    <div class="note">☁️ Saved to your Google account${AUTH.last ? ` · last saved ${new Date(AUTH.last).toLocaleString("en-IN", {day: "numeric", month: "short", hour: "numeric", minute: "2-digit"})}` : ""}. Sign in on any phone or browser to get it all back.</div>
+    <div class="acts"><button class="btn tint" data-acctsave>☁️ Save now</button><button class="btn soft" data-signout>Sign out</button></div>
+    <button class="au-skip" data-signoutclear>Sign out and remove my data from this device</button>`, "acct");
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-gsi],[data-authoffline],[data-signout],[data-signoutclear],[data-acctsave],[data-account]"); if (!t) return;
+  if (t.hasAttribute("data-gsi")) { nativeGoogle(); return; }
+  if (t.hasAttribute("data-authoffline")) { $("#auth").classList.remove("on"); toast("Using VibeSync on this device only. Sign in any time from Saved → 👤 Account"); return; }
+  if (t.hasAttribute("data-signout")) { signOut(false); return; }
+  if (t.hasAttribute("data-signoutclear")) { signOut(true); return; }
+  if (t.hasAttribute("data-acctsave")) { cloudSave().then(() => { toast("Saved to your account ☁️"); openAccount(); }); return; }
+  if (t.hasAttribute("data-account")) { openAccount(); return; }
+});
+
 /* ───────────── boot ───────────── */
 function boot(data) {
   if (D) return;
@@ -5323,6 +5548,7 @@ function boot(data) {
   applyTitle(TT.cur, true);
   if (T.key) ensureProviders();
   setTimeout(() => { syncWidgetWatched(); checkReminders(); pushWidget(); openFromApp(); }, 1200);
+  setAuthConfig(args.firebase); authBoot();
 }
 window.addEventListener("message", e => {
   const m = e.data;
@@ -5330,6 +5556,7 @@ window.addEventListener("message", e => {
   args = m.args || {};
   if (args.ytKey) YTS.key = String(args.ytKey).trim();
   if (args.omdbKey) OMDB.key = String(args.omdbKey).trim();
+  if (args.firebase && D && !AUTH.cfg) { setAuthConfig(args.firebase); authBoot(); }
   if (args.langs && typeof args.langs === "object" && D) gotServerLangs(args.langs);
   if (args.catalog) boot(args.catalog);
   if (args.resolved && typeof args.resolved === "object") {

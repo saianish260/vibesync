@@ -61,6 +61,19 @@ def omdb_key() -> str:
     return str(key or os.environ.get("OMDB_API_KEY", "")).strip()
 
 
+def firebase_config() -> dict:
+    """Google sign-in + cloud save. Set FIREBASE_API_KEY, FIREBASE_PROJECT_ID and GOOGLE_CLIENT_ID
+    (the Web client ID from Firebase > Authentication > Google) in Streamlit secrets. Empty = no sign-in."""
+    def get(name: str) -> str:
+        try:
+            v = st.secrets.get(name, "")
+        except Exception:
+            v = ""
+        return str(v or os.environ.get(name, "")).strip()
+    cfg = {"apiKey": get("FIREBASE_API_KEY"), "projectId": get("FIREBASE_PROJECT_ID"), "clientId": get("GOOGLE_CLIENT_ID")}
+    return cfg if all(cfg.values()) else {}
+
+
 @st.cache_data(ttl=12 * 3600, max_entries=600, show_spinner=False)
 def _langs(title: str, year: int | None, tmdb_id: int | None, kind: str) -> dict:
     try:
@@ -82,7 +95,7 @@ def render(theme: str) -> dict | None:
     _write_catalog(payload)
     resolved = st.session_state.setdefault("vs_resolved", {})
     langs = st.session_state.setdefault("vs_langs", {})
-    value = _component(catalog=payload, theme=theme, tmdbKey=tmdb_key(), ytKey=youtube_key(), omdbKey=omdb_key(), resolved=resolved, langs=langs,
+    value = _component(catalog=payload, theme=theme, tmdbKey=tmdb_key(), ytKey=youtube_key(), omdbKey=omdb_key(), firebase=firebase_config(), resolved=resolved, langs=langs,
                        key="discover", default=None)
     # When a live title's sheet opens, the screen asks for that title's exact per-app links.
     req = value.get("resolve") if isinstance(value, dict) else None
