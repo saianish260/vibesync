@@ -1,4 +1,6 @@
 """Page chrome + Lounge styles. Colours follow the theme picked inside Discover."""
+import re
+
 import streamlit as st
 
 THEMES = {
@@ -97,8 +99,24 @@ iframe{border:0;display:block}
 """
 
 
-def palette(theme: str) -> dict:
-    return THEMES.get(theme, THEMES["cinema"])
+_HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def custom_palette(raw) -> dict | None:
+    """A title theme's palette sent by the Discover screen; only plain #rrggbb colours are accepted."""
+    if not isinstance(raw, dict):
+        return None
+    keys = ("bg", "s1", "s2", "text", "muted", "accent", "on_accent", "hot")
+    if not all(isinstance(raw.get(k), str) and _HEX.match(raw[k]) for k in keys):
+        return None
+    pal = {k: raw[k] for k in keys}
+    r, g, b = (int(pal["text"][i:i + 2], 16) for i in (1, 3, 5))
+    pal["line"] = f"rgba({r},{g},{b},.09)"
+    return pal
+
+
+def palette(theme: str, custom: dict | None = None) -> dict:
+    return custom or THEMES.get(theme, THEMES["cinema"])
 
 
 # Discover is one full-screen component with its own top bar and tab bar, so drop the page padding there.
@@ -113,5 +131,5 @@ DISCOVER_CSS = """
 """
 
 
-def inject(theme: str = "cinema", page: str = "discover") -> None:
-    st.markdown(CSS % palette(theme) + (DISCOVER_CSS if page == "discover" else ""), unsafe_allow_html=True)
+def inject(theme: str = "cinema", page: str = "discover", custom: dict | None = None) -> None:
+    st.markdown(CSS % palette(theme, custom) + (DISCOVER_CSS if page == "discover" else ""), unsafe_allow_html=True)

@@ -52,7 +52,7 @@ def _to_discover() -> None:
     st.session_state.page = "discover"
 
 
-styles.inject(st.session_state.theme, st.session_state.page)
+styles.inject(st.session_state.theme, st.session_state.page, st.session_state.get("title_palette"))
 
 if st.session_state.page == "lounge":
     top_l, top_r = st.columns([1, 1], vertical_alignment="center")
@@ -74,6 +74,10 @@ else:
             if picked in styles.THEMES and picked != st.session_state.theme:
                 st.session_state.theme = picked     # keep page chrome + Lounge in the same look
                 changed = True
+            if "palette" in value:                 # a title theme (or None = default look) for the Lounge too
+                pal = styles.custom_palette(value.get("palette"))
+                if pal != st.session_state.get("title_palette"):
+                    st.session_state.title_palette = pal
             if nonce is not None and value.get("page") == "lounge":
                 st.session_state.page = "lounge"
                 changed = True

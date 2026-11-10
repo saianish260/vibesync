@@ -180,3 +180,15 @@ class WatchLinkTests(unittest.TestCase):
                     "http://www.themoviedb.org/movie/1/watch", "https://www.themoviedb.org/movie/1/watch?locale=IN&x=1"]:
             self.assertFalse(is_watch_url(bad), bad)
 
+    def test_custom_palette_validation(self):
+        from core import styles
+        ok = {"bg": "#0a0b10", "s1": "#11131a", "s2": "#191c26", "text": "#f2f4fa", "muted": "#a9b0c2",
+              "accent": "#f0b44c", "on_accent": "#1a1205", "hot": "#ff4d5e"}
+        pal = styles.custom_palette(ok)
+        self.assertEqual(pal["accent"], "#f0b44c")
+        self.assertIn("rgba(242,244,250", pal["line"])
+        self.assertIn("#0a0b10", styles.CSS % styles.palette("cinema", pal))
+        self.assertIsNone(styles.custom_palette(dict(ok, bg="red;}</style><script>")))
+        self.assertIsNone(styles.custom_palette({"bg": "#000000"}))
+        self.assertIsNone(styles.custom_palette(None))
+

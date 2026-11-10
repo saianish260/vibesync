@@ -366,6 +366,56 @@ img{display:block}
     box-shadow:0 18px 50px rgba(0,0,0,.4),inset 0 0 0 1px var(--line)}
   .cloud .toast{bottom:170px}
 }
+/* ── Title themes: the 3D world behind the UI ── */
+.world{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity 1.2s ease;overflow:hidden;perspective:900px}
+.titled .world{opacity:1}
+.titled .ambient{opacity:0}
+.w-far,.w-near{position:absolute;background-size:cover;background-position:center 30%;will-change:transform;transition:background-image .6s}
+.w-far{inset:-10%;filter:blur(2px) saturate(1.15);opacity:.62;
+  transform:translate3d(var(--px,0px),calc(var(--py,0px) + var(--sy,0px)),0) scale(1.1)}
+.w-near{left:-12%;right:-12%;top:-6%;height:78%;opacity:.55;filter:saturate(1.25) contrast(1.05);
+  -webkit-mask-image:radial-gradient(65% 60% at 50% 42%,#000 25%,transparent 72%);mask-image:radial-gradient(65% 60% at 50% 42%,#000 25%,transparent 72%);
+  transform:translate3d(calc(var(--px,0px) * -2.2),calc(var(--py,0px) * -2.2 + var(--sy,0px) * 2.4),60px) scale(1.04)}
+#wfx{position:absolute;inset:0;width:100%;height:100%}
+.w-shade{position:absolute;inset:0;
+  background:radial-gradient(130% 75% at 50% 0%,transparent 0%,color-mix(in srgb,var(--bg) 45%,transparent) 50%,color-mix(in srgb,var(--bg) 88%,transparent) 100%),
+             linear-gradient(180deg,color-mix(in srgb,var(--bg) 10%,transparent) 0%,color-mix(in srgb,var(--bg) 55%,transparent) 45%,color-mix(in srgb,var(--bg) 82%,transparent) 100%)}
+.titled .hbd.on{opacity:.14}
+.titled .tile{background:linear-gradient(150deg,color-mix(in srgb,var(--m1) 30%,var(--accent)),color-mix(in srgb,var(--m2) 30%,var(--accent2)));color:var(--on-tint)}
+.titled .mixcard{background:linear-gradient(120deg,var(--accent),color-mix(in srgb,var(--accent) 40%,var(--accent2)) 55%,var(--accent2));color:var(--on-tint);
+  box-shadow:0 18px 40px color-mix(in srgb,var(--accent) 30%,transparent)}
+.titled .mxchip{background:linear-gradient(120deg,var(--accent),var(--accent2));color:var(--on-tint)}
+.titled .surprise{background:linear-gradient(120deg,color-mix(in srgb,var(--accent) 30%,var(--s1)),color-mix(in srgb,var(--s1) 80%,transparent) 70%)}
+.titled .trkw,.titled .chip,.titled .tabrow{background:color-mix(in srgb,var(--s1) 82%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.titled .tabs{background:transparent}
+.titled .tabs.glass{background:var(--glass)}
+.titled .pw{box-shadow:0 0 0 1px var(--line),0 12px 30px color-mix(in srgb,var(--accent) 14%,transparent)}
+.titled .sec h2,.titled .ht,.titled .mark{text-shadow:0 2px 22px color-mix(in srgb,var(--bg) 85%,transparent)}
+.titled .tile{box-shadow:0 10px 26px color-mix(in srgb,var(--bg) 60%,transparent)}
+.tthumb{width:32px;height:32px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px var(--accent),0 0 18px color-mix(in srgb,var(--accent) 60%,transparent)}
+.tflash{position:fixed;inset:0;z-index:45;display:grid;place-items:center;align-content:center;gap:14px;text-align:center;background:#000;
+  animation:tfIn .45s ease both;overflow:hidden}
+.tflash.out{animation:tfOut .7s ease both}
+.tf-bg{position:absolute;inset:-12%;background-size:cover;background-position:center;filter:blur(40px) saturate(1.6) brightness(.7);animation:tfZoom 2.2s ease both}
+.tf-p{position:relative;width:min(46vw,220px);filter:drop-shadow(0 30px 60px rgba(0,0,0,.6))}
+.tf-p .pw{border-radius:18px}
+.tf-t{position:relative;font-weight:900;font-variation-settings:"wdth" 125;font-size:clamp(26px,7vw,44px);letter-spacing:-.03em;color:#fff;padding:0 20px;
+  animation:rise .6s .3s var(--ease) both}
+.tf-s{position:relative;color:rgba(255,255,255,.75);font-size:15px;animation:rise .6s .45s var(--ease) both}
+@keyframes tfIn{from{opacity:0}}
+@keyframes tfOut{to{opacity:0;transform:scale(1.06)}}
+@keyframes tfZoom{from{transform:scale(1.3)}to{transform:scale(1)}}
+.tcur{display:flex;align-items:center;gap:14px;margin:12px 0 4px;padding:14px;border-radius:22px;
+  background:linear-gradient(120deg,color-mix(in srgb,var(--accent) 22%,var(--s1)),var(--s1) 75%);box-shadow:inset 0 0 0 1px var(--line)}
+.tcur img{width:54px;height:80px;border-radius:12px;object-fit:cover;flex:0 0 auto}
+.tcur-i{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;font-size:28px;background:var(--s2);flex:0 0 auto}
+.tcur>div{flex:1;min-width:0}
+.tcur small{display:block;color:var(--muted);font-size:13px}
+.tcur b{display:block;font-size:19px;font-weight:850;letter-spacing:-.01em;margin:2px 0}
+.tfx{display:block;font-size:13px;color:var(--muted)}
+.tchip{padding-left:6px}
+.tchip img{width:30px;height:30px;border-radius:50%;object-fit:cover}
+
 /* ── Did you mean ── */
 .dym{display:flex;gap:12px;align-items:flex-start;margin:14px 0 4px;padding:14px 16px;border-radius:20px;
   background:linear-gradient(120deg,color-mix(in srgb,var(--tint) 24%,var(--s1)),var(--s1) 75%);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tint) 35%,transparent);
@@ -466,11 +516,13 @@ img{display:block}
 </head>
 <body>
 <div class="ambient" id="ambient"></div>
+<div class="world" id="world" aria-hidden="true"><div class="w-far" id="wfar"></div><div class="w-near" id="wnear"></div><canvas id="wfx"></canvas><div class="w-shade"></div></div>
 <div id="app" aria-live="polite"></div>
 <div class="veil" id="veil"></div>
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Title details"></section>
 <div class="search" id="search" role="dialog" aria-label="Search"></div>
 <div class="mixer" id="mixer" role="dialog" aria-label="Genre mixer"></div>
+<div class="search themer" id="themer" role="dialog" aria-label="Themes"></div>
 <div class="reel" id="reel" aria-hidden="true"><div class="reel-in"><div class="reel-win"><div class="frame"></div><div class="reel-strip" id="strip"></div></div>
   <div class="reel-cap" id="reelcap">Rolling…</div><div class="reel-sub" id="reelsub"></div></div></div>
 <div class="pop-menu" id="themes" role="menu"></div>
@@ -567,6 +619,7 @@ function sampleTint(it) {
 }
 sampleTint.busy = {};
 function setTint(c) {
+  if (document.documentElement.classList.contains("titled")) return;     // a title theme keeps its own accent
   const t = document.documentElement.dataset.theme;
   document.documentElement.style.setProperty("--tint", t === "cinema" || t === "deepsea" ? c : "var(--accent)");
 }
@@ -1133,7 +1186,7 @@ function render() {
     </main>`;
   $("#panel").innerHTML = panelHTML(state.tab);
   $("#bnav").innerHTML = navHTML(); navState();
-  themeMenu();
+  themeBtn();
   requestAnimationFrame(() => { movePill(); showSlide(0); startHero(); onScroll(); });
 }
 
@@ -1145,6 +1198,7 @@ function onScroll() {
   if (!hero) return;
   const h = hero.offsetHeight;
   top.classList.toggle("solid", y > 24);
+  document.documentElement.style.setProperty("--sy", (-y * .12).toFixed(1) + "px");
   if (!REDUCED && y < h) { slides.style.transform = `translate3d(0,${y * .32}px,0)`; slides.style.opacity = Math.max(0, 1 - y / (h * .55)); }
   const off = y > h * .7;
   if (off !== heroOff) { heroOff = off; if (!openId) pauseHero(off); }
@@ -1194,7 +1248,15 @@ document.addEventListener("click", e => {
   if (t.hasAttribute("data-search")) { openSearch(); return; }
   if (t.hasAttribute("data-closesearch")) { closeSearch(); return; }
   if (t.hasAttribute("data-surprise")) { surprise(); return; }
-  if (t.hasAttribute("data-theme-btn")) { themeMenu(); $("#themes").classList.toggle("on"); return; }
+  if (t.hasAttribute("data-theme-btn")) { openThemer(); buzz(); return; }
+  if (t.hasAttribute("data-closethemer")) { closeThemer(); return; }
+  if (t.dataset.themeit) { e.preventDefault(); themeFrom(BY[t.dataset.themeit], t); buzz(); return; }
+  if (t.hasAttribute("data-tdefault")) { TT.cur = null; store.set("titleTheme", null); applyTitle(null, true); renderThemer($("#tq").value); toast("Back to the default look"); return; }
+  if (t.dataset.trecent) {
+    const th = store.get("themeRecent", []).find(x => x.id === t.dataset.trecent);
+    if (th) { TT.cur = th; store.set("titleTheme", th); applyTitle(th, true); closeThemer(); toast(`VibeSync is now ${th.title} ✨`); }
+    return;
+  }
   if (t.dataset.theme && t.classList.contains("sw")) { applyTheme(t.dataset.theme, true); buzz(); setTimeout(() => $("#themes").classList.remove("on"), 180); return; }
   if (t.tagName === "A") buzz();
 });
@@ -1206,13 +1268,14 @@ document.addEventListener("submit", e => {
   tr.notes.push({ts: new Date().toISOString().slice(0, 10), tag: f.tag.value, text: text.slice(0, 200)});
   saveTracker(); refreshSheet(); toast("Note added");
 });
-document.addEventListener("input", e => { if (e.target.id === "q") renderSearch(e.target.value); });
+document.addEventListener("input", e => { if (e.target.id === "q") renderSearch(e.target.value); if (e.target.id === "tq") renderThemer(e.target.value); });
 document.addEventListener("change", e => { const o = e.target.dataset && e.target.dataset.mxopt; if (o) { M[o] = e.target.checked; saveMix(); queueResults(); buzz(); } });
 $("#veil").addEventListener("click", closeSheet);
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
   if ($("#themes").classList.contains("on")) $("#themes").classList.remove("on");
   else if (openId) closeSheet();
+  else if ($("#themer").classList.contains("on")) closeThemer();
   else if ($("#mixer").classList.contains("on")) closeMixer();
   else if ($("#search").classList.contains("on")) closeSearch();
 });
@@ -1390,6 +1453,282 @@ async function mixSurprise() {
   const pick = from[Math.floor(Math.random() * from.length)];
   store.set("recentPicks", recent.concat(pick.id).slice(-30));
   rollReel(pick, pool.concat(M.res.items), `Mixing ${mixName()}…`);
+}
+
+/* ───────────── Title themes ─────────────
+   Pick ANY title and the whole app becomes it: colours pulled from its own backdrop/poster, its backdrops
+   as a layered 3D world behind the UI (moves with scroll and phone tilt), and a genre-matched particle
+   effect. Nothing is hand-made per title, so it works for everything TMDB knows. */
+const TT = {cur: store.get("titleTheme", null), busy: false};
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function rgb2hsl(r, g, b) {
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  if (!d) return [0, 0, l];
+  const s = d / (1 - Math.abs(2 * l - 1));
+  let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [(h * 60 + 360) % 360, s, l];
+}
+function hsl2hex(h, s, l) {
+  const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+  const f = n => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1))));
+  return "#" + [f(0), f(8), f(4)].map(v => v.toString(16).padStart(2, "0")).join("");
+}
+const loadImg = src => new Promise((res, rej) => {
+  const im = new Image(); im.crossOrigin = "anonymous"; im.referrerPolicy = "no-referrer";
+  im.onload = () => res(im); im.onerror = rej; im.src = src;
+});
+/* Colour analysis: the hue of the dark areas becomes the background; the strongest vivid hue the accent. */
+async function analyse(src) {
+  const im = await loadImg(src);
+  const c = document.createElement("canvas"); c.width = 48; c.height = 32;
+  const x = c.getContext("2d", {willReadFrequently: true}); x.drawImage(im, 0, 0, 48, 32);
+  const px = x.getImageData(0, 0, 48, 32).data;          // throws when the image host has no CORS
+  const bins = Array.from({length: 12}, () => ({w: 0, cx: 0, cy: 0, s: 0}));
+  let dx = 0, dy = 0, dw = 0, ds = 0;
+  for (let i = 0; i < px.length; i += 4) {
+    const [h, s, l] = rgb2hsl(px[i] / 255, px[i + 1] / 255, px[i + 2] / 255), rad = h * Math.PI / 180;
+    if (l < .5 && s > .06) { const w = (1 - l) * s; dx += Math.cos(rad) * w; dy += Math.sin(rad) * w; dw += w; ds += s * w; }
+    if (s > .22 && l > .22 && l < .86) {
+      const b = bins[Math.floor(h / 30) % 12], w = s * s * (1 - Math.abs(l - .55));
+      b.w += w; b.cx += Math.cos(rad) * w; b.cy += Math.sin(rad) * w; b.s += s * w;
+    }
+  }
+  const hue = (cx, cy) => (Math.atan2(cy, cx) * 180 / Math.PI + 360) % 360;
+  const order = bins.filter(b => b.w > .15).sort((a, b) => b.w - a.w);
+  const acc = order[0], accH = acc ? hue(acc.cx, acc.cy) : null;
+  const acc2 = order.find(b => accH != null && Math.abs(((hue(b.cx, b.cy) - accH + 540) % 360) - 180) > 50 && b.w > acc.w * .18);
+  const bgH = dw > .4 ? hue(dx, dy) : accH ?? 260;
+  return {bgH, bgS: dw ? ds / dw : .2, accH: accH ?? (bgH + 180) % 360, accS: acc ? acc.s / acc.w : .7,
+          acc2H: acc2 ? hue(acc2.cx, acc2.cy) : ((accH ?? bgH) + 40) % 360};
+}
+function makePalette(p) {
+  const bs = clamp(.16 + p.bgS * .45, .14, .42);
+  return {bg: hsl2hex(p.bgH, bs, .07), s1: hsl2hex(p.bgH, bs * .9, .11), s2: hsl2hex(p.bgH, bs * .85, .155), s3: hsl2hex(p.bgH, bs * .8, .205),
+          text: hsl2hex(p.bgH, .3, .95), muted: hsl2hex(p.bgH, .16, .7), accent: hsl2hex(p.accH, clamp(p.accS, .62, .92), .64),
+          accent2: hsl2hex(p.acc2H, .72, .62), onAccent: hsl2hex(p.accH, .55, .1), hot: "#FF4D5E"};
+}
+function fxFor(genres) {
+  const g = genres.join(" ").toLowerCase();
+  if (/horror|thriller|mystery|crime|supernatural|suspense/.test(g)) return "embers";
+  if (/sci-?fi|science|space|dystopia/.test(g)) return "stars";
+  if (/action|war|adventure|history|epic|sport|racing|martial|heist/.test(g)) return "sparks";
+  if (/anim|fantasy|family|kids|music|myth/.test(g)) return "sparkle";
+  return "bokeh";
+}
+async function tmdbRef(it) {
+  if (it.tmdb) return it.tmdb;
+  if (!T.key || T.failed) return null;
+  try {
+    const j = await tget("/search/multi", {query: it.title, include_adult: "false"});
+    const want = it.kind === "movie" ? "movie" : "tv";
+    const ok = (j.results || []).filter(r => (r.media_type === "movie" || r.media_type === "tv") && (r.backdrop_path || r.poster_path));
+    const yr = r => +(r.release_date || r.first_air_date || "0").slice(0, 4);
+    const same = r => [it.title, it.title.split(":")[0]].some(t => twinKey(r.title || r.name) === twinKey(t));   // never borrow another film's images
+    const best = ok.find(r => same(r) && (!it.year || Math.abs(yr(r) - it.year) <= 1)) || ok.find(same);
+    return best ? {type: best.media_type, id: best.id} : null;
+  } catch (e) { return null; }
+}
+async function themeFrom(it, srcEl) {
+  if (!it || TT.busy) return;
+  TT.busy = true;
+  const flash = themeFlash(it, srcEl);
+  let genres = (it.genres || []).slice(), backs = [], tposter = it.tmdbPoster || "";
+  const ref = await tmdbRef(it);
+  if (ref) {
+    try {
+      const [det, imgs] = await Promise.all([tget(`/${ref.type}/${ref.id}`, {}),
+        tget(`/${ref.type}/${ref.id}/images`, {include_image_language: "null,en"}).catch(() => ({}))]);
+      genres = (det.genres || []).map(g => g.name).concat(genres);
+      backs = (imgs.backdrops || []).filter(b => b.width >= 1000).sort((a, b) => (a.iso_639_1 ? 1 : 0) - (b.iso_639_1 ? 1 : 0) || b.vote_average - a.vote_average)
+        .slice(0, 3).map(b => b.file_path);
+      if (!backs.length && det.backdrop_path) backs = [det.backdrop_path];
+      tposter = tposter || det.poster_path || "";
+    } catch (e) { /* poster-only theme */ }
+  }
+  const img = (p, w) => `https://image.tmdb.org/t/p/${w}${p}`;
+  const far = backs[0] ? img(backs[0], "w1280") : hasPoster(it) ? posterURL(it, "s592") : "";
+  const near = backs[1] ? img(backs[1], "w780") : backs[0] ? img(backs[0], "w780") : far;
+  let pal = null;
+  for (const src of [backs[0] && img(backs[0], "w300"), tposter && img(tposter, "w185"), hasPoster(it) && posterURL(it, "s166")].filter(Boolean)) {
+    try { pal = makePalette(await analyse(src)); break; } catch (e) { /* try the next image */ }
+  }
+  if (!pal) { const [h] = rgb2hsl(...[1, 3, 5].map(i => parseInt(tintOf(it).slice(i, i + 2), 16) / 255 || .5)); pal = makePalette({bgH: h, bgS: .3, accH: h, accS: .75, acc2H: (h + 40) % 360}); }
+  const theme = {id: it.id, title: it.title, year: it.year || "", poster: tposter ? img(tposter, "w185") : hasPoster(it) ? posterURL(it, "s166") : "",
+                 far, near, pal, fx: fxFor(genres), genres: genres.slice(0, 3), at: Date.now()};
+  TT.cur = theme; store.set("titleTheme", theme);
+  const rec = store.get("themeRecent", []).filter(t => t.id !== theme.id);
+  store.set("themeRecent", [theme].concat(rec).slice(0, 10));
+  await flash;
+  applyTitle(theme, true);
+  TT.busy = false;
+  closeThemer();
+  toast(`VibeSync is now ${theme.title} ✨`);
+}
+/* cinematic hand-off: the poster flies to the centre, its colours flood the screen, then the new UI fades in */
+function themeFlash(it, srcEl) {
+  return new Promise(res => {
+    if (REDUCED) return res();
+    const f = document.createElement("div");
+    f.className = "tflash";
+    f.innerHTML = `<div class="tf-bg" style="background-image:url('${hasPoster(it) ? posterURL(it, "s332") : ""}')"></div>
+      <div class="tf-p">${poster(it, "s592")}</div><div class="tf-t">${esc(it.title)}</div><div class="tf-s">Theming the app…</div>`;
+    document.body.appendChild(f);
+    const pw = srcEl && srcEl.querySelector && srcEl.querySelector(".pw"), tp = f.querySelector(".tf-p");
+    if (pw) {
+      const r = pw.getBoundingClientRect(), t = tp.getBoundingClientRect();
+      tp.animate([{transform: `translate(${r.left - t.left}px,${r.top - t.top}px) scale(${r.width / t.width})`}, {transform: "none"}],
+                 {duration: 600, easing: EASE});
+    }
+    setTimeout(res, 1100);                                  // the theme is usually ready by now
+    setTimeout(() => { f.classList.add("out"); setTimeout(() => f.remove(), 700); }, 1500);
+  });
+}
+const VARS = ["--bg", "--s1", "--s2", "--s3", "--text", "--muted", "--accent", "--on-tint", "--line", "--glass", "--tint", "--accent2"];
+function applyTitle(theme, tell) {
+  const root = document.documentElement;
+  if (!theme) {
+    VARS.forEach(v => root.style.removeProperty(v));
+    root.classList.remove("titled"); stopFx();
+    $("#wfar").style.backgroundImage = $("#wnear").style.backgroundImage = "";
+  } else {
+    const p = theme.pal;
+    Object.entries({"--bg": p.bg, "--s1": p.s1, "--s2": p.s2, "--s3": p.s3, "--text": p.text, "--muted": p.muted, "--accent": p.accent,
+      "--accent2": p.accent2, "--on-tint": p.onAccent, "--tint": p.accent, "--line": `color-mix(in srgb,${p.text} 9%,transparent)`,
+      "--glass": `color-mix(in srgb,${p.bg} 74%,transparent)`}).forEach(([k, v]) => root.style.setProperty(k, v));
+    root.classList.add("titled");
+    $("#wfar").style.backgroundImage = theme.far ? `url('${theme.far}')` : "";
+    $("#wnear").style.backgroundImage = theme.near ? `url('${theme.near}')` : "";
+    startFx(theme.fx, p);
+  }
+  themeBtn();
+  if (tell) {
+    const p = theme && theme.pal;
+    send("streamlit:setComponentValue", {value: {theme: "cinema", n: Date.now(), palette: p ? {bg: p.bg, s1: p.s1, s2: p.s2, text: p.text, muted: p.muted,
+      accent: p.accent, on_accent: p.onAccent, hot: p.hot} : null}, dataType: "json"});
+  }
+}
+function themeBtn() {
+  const b = $("[data-theme-btn]"); if (!b) return;
+  b.innerHTML = TT.cur && TT.cur.poster ? `<img class="tthumb" src="${esc(TT.cur.poster)}" alt="">` : ICON.palette;
+  b.setAttribute("aria-label", TT.cur ? `Theme: ${TT.cur.title}. Change theme` : "Change theme");
+}
+
+/* the 3D world: two backdrop layers at different depths + particles, steered by scroll and tilt */
+const W = {tx: 0, ty: 0, gx: 0, gy: 0, raf: 0, parts: [], kind: null, pal: null};
+addEventListener("deviceorientation", e => {
+  if (e.gamma == null) return;
+  W.gx = clamp(e.gamma / 25, -1, 1); W.gy = clamp(((e.beta || 45) - 45) / 25, -1, 1);
+}, true);
+addEventListener("pointermove", e => { if (e.pointerType === "mouse") { W.gx = (e.clientX / innerWidth - .5) * 2; W.gy = (e.clientY / innerHeight - .5) * 2; } }, {passive: true});
+function stopFx() { cancelAnimationFrame(W.raf); W.raf = 0; const cv = $("#wfx"); if (cv) cv.getContext("2d").clearRect(0, 0, cv.width, cv.height); }
+function startFx(kind, pal) {
+  stopFx();
+  const cv = $("#wfx"); if (!cv) return;
+  const ctx = cv.getContext("2d"), dpr = Math.min(1.5, devicePixelRatio || 1);
+  const fit = () => { cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; };
+  fit(); if (!W.fitted) { addEventListener("resize", () => { if (W.raf) fit(); }); W.fitted = true; }
+  W.kind = kind; W.pal = pal;
+  const N = {embers: 64, stars: 120, sparkle: 56, sparks: 60, bokeh: 22}[kind] || 40;
+  const cols = [pal.accent, pal.accent2, pal.text];
+  const mk = born => ({x: Math.random() * cv.width, y: born ? Math.random() * cv.height : cv.height + 20 * dpr, z: .3 + Math.random() * .7,
+    r: (kind === "bokeh" ? 16 + Math.random() * 46 : 1 + Math.random() * 2.4) * dpr, t: Math.random() * 6.3,
+    c: cols[Math.random() < .7 ? 0 : Math.random() < .5 ? 1 : 2], sx: Math.random() * 2 - 1, sy: Math.random() * 2 - 1, life: Math.random()});
+  W.parts = Array.from({length: N}, () => mk(true));
+  const step = () => {
+    W.raf = requestAnimationFrame(step);
+    W.tx += (W.gx - W.tx) * .06; W.ty += (W.gy - W.ty) * .06;               // smooth the tilt
+    const root = document.documentElement.style;
+    root.setProperty("--px", (W.tx * 16).toFixed(2) + "px"); root.setProperty("--py", (W.ty * 12).toFixed(2) + "px");
+    if (document.hidden || REDUCED) return;
+    const w = cv.width, h = cv.height, cx = w / 2, cy = h / 2, ox = W.tx * 24 * dpr, oy = W.ty * 18 * dpr;
+    ctx.clearRect(0, 0, w, h);
+    ctx.globalCompositeOperation = "lighter";
+    for (const p of W.parts) {
+      p.t += .02;
+      if (kind === "stars") {                                     // fly through a star field
+        p.z -= .0035; if (p.z <= .05) Object.assign(p, mk(true), {z: 1});
+        const k = .35 / p.z, x = cx + (p.x - cx) * k + ox * (1 - p.z), y = cy + (p.y - cy) * k + oy * (1 - p.z);
+        if (x < 0 || x > w || y < 0 || y > h) { p.z = 1; continue; }
+        ctx.globalAlpha = clamp((1 - p.z) * 1.3, 0, .9); ctx.fillStyle = p.c;
+        ctx.beginPath(); ctx.arc(x, y, p.r * (1.2 - p.z), 0, 6.3); ctx.fill();
+        continue;
+      }
+      if (kind === "embers") { p.y -= (.35 + p.z * .8) * dpr; p.x += Math.sin(p.t) * .5 * dpr; }
+      else if (kind === "sparks") { p.y -= (1.4 + p.z * 2.2) * dpr; p.x += (.6 + p.sx) * dpr; }
+      else if (kind === "sparkle") { p.y += (.25 + p.z * .35) * dpr; p.x += Math.sin(p.t * .7) * .3 * dpr; }
+      else { p.y -= (.12 + p.z * .2) * dpr; p.x += p.sx * .15 * dpr; }
+      if (p.y < -60 * dpr || p.y > h + 60 * dpr || p.x < -80 * dpr || p.x > w + 80 * dpr) {
+        Object.assign(p, mk(false)); if (kind === "sparkle") p.y = -20 * dpr;
+      }
+      const x = p.x + ox * p.z, y = p.y + oy * p.z;
+      if (kind === "sparks") {
+        ctx.globalAlpha = .55 * p.z; ctx.strokeStyle = p.c; ctx.lineWidth = p.r * .7;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - (.6 + p.sx) * 6 * dpr, y + (1.4 + p.z * 2.2) * 6 * dpr); ctx.stroke();
+      } else if (kind === "sparkle") {
+        const a = (Math.sin(p.t * 2.2) + 1) / 2, s = p.r * (1.5 + a * 2.5);
+        ctx.globalAlpha = .25 + a * .6; ctx.fillStyle = p.c;
+        ctx.beginPath(); ctx.moveTo(x, y - s); ctx.lineTo(x + s * .22, y); ctx.lineTo(x, y + s); ctx.lineTo(x - s * .22, y); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x, y + s * .22); ctx.lineTo(x + s, y); ctx.lineTo(x, y - s * .22); ctx.closePath(); ctx.fill();
+      } else if (kind === "bokeh") {
+        const g = ctx.createRadialGradient(x, y, 0, x, y, p.r);
+        g.addColorStop(0, p.c); g.addColorStop(1, "transparent");
+        ctx.globalAlpha = .1 + .08 * Math.sin(p.t); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, p.r, 0, 6.3); ctx.fill();
+      } else {                                                      // embers: glowing, flickering
+        ctx.globalAlpha = (.35 + .4 * Math.abs(Math.sin(p.t * 1.7))) * p.z; ctx.fillStyle = p.c;
+        ctx.beginPath(); ctx.arc(x, y, p.r, 0, 6.3); ctx.fill();
+        ctx.globalAlpha *= .25; ctx.beginPath(); ctx.arc(x, y, p.r * 3.2, 0, 6.3); ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+  };
+  step();
+}
+
+/* theme search screen */
+function openThemer() {
+  const s = $("#themer");
+  s.innerHTML = `<div class="sbar"><div class="sfield">${ICON.search}<label class="sr" for="tq">Theme the app after a title</label>
+    <input id="tq" type="search" placeholder="Theme the app after any title…" autocomplete="off" enterkeyhint="search"></div>
+    <button class="icon" data-closethemer aria-label="Close themes">${ICON.close}</button></div><div class="sres"><div class="wrap" id="tres"></div></div>`;
+  s.classList.add("on");
+  setTimeout(() => $("#tq").focus(), 80);
+  renderThemer("");
+}
+function closeThemer() { $("#themer").classList.remove("on"); }
+const tcard = it => card(it).replace('data-open="', 'data-themeit="');
+let thT = null;
+function renderThemer(q) {
+  q = q.trim().toLowerCase();
+  const cur = TT.cur;
+  const head = `<div class="tcur">${cur ? `<img src="${esc(cur.poster)}" alt=""><div><small>Current theme</small><b>${esc(cur.title)}</b>
+      <span class="tfx">${{embers: "🔥 Embers", stars: "✨ Star field", sparks: "⚡ Sparks", sparkle: "💫 Sparkle", bokeh: "🫧 Glow"}[cur.fx] || ""}</span></div>
+      <button class="btn soft" data-tdefault>Default look</button>` : `<div class="tcur-i">🎨</div><div><small>Current theme</small><b>Midnight show (default)</b>
+      <span class="tfx">Search any movie or series to theme the whole app after it</span></div>`}</div>`;
+  if (!q) {
+    const rec = store.get("themeRecent", []).filter(t => !cur || t.id !== cur.id);
+    const picks = D.items.filter(i => hasPoster(i) && i.kind !== "sports").sort(() => Math.random() - .5).slice(0, 12);
+    $("#tres").innerHTML = head + (rec.length ? section("Recent themes") + `<div class="chips">${rec.map(t =>
+      `<button class="chip tchip" data-trecent="${esc(t.id)}"><img src="${esc(t.poster)}" alt="">${esc(t.title)}</button>`).join("")}</div>` : "")
+      + section("Try one", "Every title works") + `<div class="grid">${picks.map(tcard).join("")}</div>`;
+    return;
+  }
+  const tq = twinKey(q);
+  let items = D.items.filter(i => i.kind !== "sports" && hasPoster(i) && (i.title.toLowerCase().includes(q) || twinKey(i.title).includes(tq)));
+  if (!items.length && q.length >= 3) items = suggestions(q, new Set()).slice(0, 8).map(([, i]) => i);
+  $("#tres").innerHTML = head + section(items.length ? "From your library" : "Searching…") + (items.length ? `<div class="grid">${items.map(tcard).join("")}</div>` : "")
+    + (T.key && q.length > 1 ? `<div id="tmore">${section("More titles", "")}<div class="checking"><i></i>Searching every title…</div></div>` : "");
+  clearTimeout(thT);
+  if (T.key && q.length > 1) thT = setTimeout(async () => {
+    let more = [];
+    try {
+      const j = await tget("/search/multi", {query: q, include_adult: "false"});
+      const have = new Set(items.map(i => i.id));
+      more = (j.results || []).map(r => fromTmdb(r)).filter(it => it && !have.has(it.id)).slice(0, 24);
+    } catch (e) { /* offline */ }
+    const box = $("#tmore"), input = $("#tq");
+    if (!box || !input || input.value.trim().toLowerCase() !== q) return;
+    box.innerHTML = more.length ? section("More titles", "Any of these works") + `<div class="grid">${more.map(tcard).join("")}</div>` : "";
+  }, 320);
 }
 
 /* ───────────── TMDB live library (only when a key is configured) ─────────────
@@ -1650,8 +1989,9 @@ function boot(data) {
   D.featured = pickFeatured();
   T.key = (args.tmdbKey || new URLSearchParams(location.search).get("tmdb") || "").trim();
   Object.values(store.get("favMeta", {})).forEach(m => { if (!BY[m.id]) BY[m.id] = rehydrate(m); });
-  applyTheme(store.get("theme", args.theme || "cinema"), true);
+  applyTheme("cinema", false);                   // the four fixed looks are gone; title themes replace them
   render(); fillLive(document); fitHeight();
+  applyTitle(TT.cur, true);
   if (T.key) ensureProviders();
 }
 window.addEventListener("message", e => {
