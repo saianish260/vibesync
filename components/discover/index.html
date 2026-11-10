@@ -1707,8 +1707,8 @@ document.addEventListener("click", e => {
   if (t.hasAttribute("data-mixer")) { closeSearch(); openMixer(); buzz(); return; }
   if (t.hasAttribute("data-closemixer")) { closeMixer(); return; }
   if (t.dataset.mxtype) { M.type = t.dataset.mxtype; saveMix(); renderMixer(true); buzz(); return; }
-  if (t.dataset.gplus) { setGenre(+t.dataset.gplus, 1); return; }
-  if (t.dataset.gminus) { setGenre(+t.dataset.gminus, -1); return; }
+  if (t.dataset.gplus) { setGenre(gk(t.dataset.gplus), 1); return; }
+  if (t.dataset.gminus) { setGenre(gk(t.dataset.gminus), -1); return; }
   if (t.dataset.mix) {
     const [, , type, ids] = MIXES[+t.dataset.mix];
     M.type = type; M.sel[type] = {}; ids.forEach(id => M.sel[type][id] = 1); saveMix();
@@ -1840,13 +1840,30 @@ const GENRES = {
        [10768, "War & Politics", "🎖️", /war\b|politic/i], [37, "Western", "🤠", /western/i], [10763, "News", "📰", /news/i],
        [10766, "Soap", "🫧", /soap/i], [10767, "Talk", "🎙️", /talk/i]]
 };
+/* extra sub-genres TMDB doesn't tag (Mythology, Superhero, Anime…): matched on the title and synopsis */
+const XG = [["x-mythology", "Mythology", "🏺", /myth|legend|gods?\b|epic|folklore|ancient/i],
+  ["x-superhero", "Superhero", "🦸", /superhero|super-?power|marvel|\bdc\b|avenger|mutant/i],
+  ["x-anime", "Anime", "🎌", /anime|shonen|manga/i],
+  ["x-sports", "Sports", "🏅", /sport|cricket|football|boxing|kabaddi|wrestl|olympic|tournament/i],
+  ["x-biopic", "Biopic", "🎬", /biopic|true story|real life|based on (a )?true|real-life/i],
+  ["x-spy", "Spy", "🕴️", /\bspy\b|espionage|secret agent|intelligence/i],
+  ["x-survival", "Survival", "🏕️", /survival|stranded|castaway|wilderness/i],
+  ["x-coming", "Coming of age", "🌱", /coming of age|teen|school|college/i],
+  ["x-musical", "Musical", "🎤", /musical|singing|songs?\b|dance/i],
+  ["x-heist", "Heist", "💎", /heist|robbery|con artist|bank job/i],
+  ["x-zombie", "Zombie", "🧟", /zombie|undead|apocalypse/i],
+  ["x-telugu", "Telugu", "🎞️", /telugu|tollywood/i]];
+GENRES.movie = GENRES.movie.concat(XG);
+GENRES.tv = GENRES.tv.concat(XG);
 const MIXES = [["Date night", "💘", "movie", [10749, 35]], ["Adrenaline", "⚡", "movie", [28, 53]], ["Mind-benders", "🧠", "movie", [878, 9648]],
                ["Family time", "🍿", "movie", [16, 10751]], ["Crime binge", "🕵️", "tv", [80, 18]], ["Anime night", "🎌", "tv", [16, 10759]],
                ["Scary + funny", "🎃", "movie", [27, 35]], ["Epic worlds", "🐉", "tv", [10765, 10759]]];
 const M = Object.assign({type: "movie", sel: {movie: {}, tv: {}}, all: true, good: true}, store.get("mix", {}));
 M.res = {items: [], total: null, busy: false, seq: 0, any: false};
-const gInfo = (type, id) => GENRES[type].find(g => g[0] === +id);
-const picked = (v) => Object.entries(M.sel[M.type]).filter(([, s]) => s === v).map(([id]) => +id);
+const gk = id => /^\d+$/.test(String(id)) ? +id : String(id);
+const xs = () => picked(1).filter(x => typeof x === "string");
+const gInfo = (type, id) => GENRES[type].find(g => g[0] === gk(id));
+const picked = (v) => Object.entries(M.sel[M.type]).filter(([, s]) => s === v).map(([id]) => gk(id));
 const saveMix = () => store.set("mix", {type: M.type, sel: M.sel, all: M.all, good: M.good});
 
 function mixCardHTML() {
@@ -1926,14 +1943,24 @@ function mixBar(ask) {
 
 /* live preview of what the mix matches */
 function mixParams(any) {
-  const inc = picked(1), exc = picked(-1);
-  return Object.assign({}, STREAM, {with_genres: inc.join(M.all && !any ? "," : "|")},
+  const inc = picked(1).filter(x => typeof x === "number"), exc = picked(-1).filter(x => typeof x === "number");
+  return Object.assign({}, STREAM, inc.length ? {with_genres: inc.join(M.all && !any ? "," : "|")} : {},
     exc.length ? {without_genres: exc.join(",")} : {}, M.good ? {"vote_average.gte": "6.5", "vote_count.gte": "40"} : {});
+}
+function xHit(i, id) {
+  const g = gInfo(M.type, id);
+  return !!g && g[3].test(`${i.title || ""} ${i.synopsis || ""} ${(i.genres || []).join(" ")}`);
+}
+function mixFilter(items) {   // apply the extra sub-genres TMDB can't filter on
+  const ex = picked(1).filter(x => typeof x === "string"), no = picked(-1).filter(x => typeof x === "string");
+  if (!ex.length && !no.length) return items;
+  return items.filter(i => (!ex.length || (M.all ? ex.every(id => xHit(i, id)) : ex.some(id => xHit(i, id))))
+    && !no.some(id => xHit(i, id)));
 }
 function curatedMatches() {
   const isMovie = i => i.kind === "movie" || (i.kind === "anime" && /\d+h|\d+ ?min|film|movie/i.test(i.meta || ""));
   const ofType = D.items.filter(i => i.kind !== "sports" && (M.type === "movie" ? isMovie(i) : !isMovie(i)));
-  const hits = (i, id) => { const g = gInfo(M.type, id); return g[3].test(i.genres.join(" ")) || (id === 16 && i.kind === "anime") || (id === 10764 && i.kind === "reality"); };
+  const hits = (i, id) => { if (typeof id === "string") return xHit(i, id); const g = gInfo(M.type, id); return g[3].test(i.genres.join(" ")) || (id === 16 && i.kind === "anime") || (id === 10764 && i.kind === "reality"); };
   const inc = picked(1), exc = picked(-1);
   return ofType.filter(i => (M.all ? inc.every(id => hits(i, id)) : inc.some(id => hits(i, id))) && !exc.some(id => hits(i, id))
     && (!M.good || !scoreOf(i) || scoreOf(i) >= 6.5));
@@ -1951,8 +1978,8 @@ async function loadResults() {
       const path = `/discover/${M.type}`;
       let j = await tget(path, Object.assign({page: 1}, mixParams()));
       if (!j.total_results && M.all && inc.length > 1) { j = await tget(path, Object.assign({page: 1}, mixParams(true))); any = true; }
-      items = (j.results || []).map(r => fromTmdb(r, M.type)).filter(Boolean);
-      total = j.total_results || 0; M.res.pages = Math.min(j.total_pages || 1, 20);
+      items = mixFilter((j.results || []).map(r => fromTmdb(r, M.type)).filter(Boolean));
+      total = xs().length ? items.length : (j.total_results || 0); M.res.pages = Math.min(j.total_pages || 1, 20);
     } catch (e) { items = curatedMatches(); total = items.length; }
   } else { items = curatedMatches(); total = items.length; }
   if (seq !== M.res.seq) return;                     // a newer selection already took over
@@ -1970,7 +1997,7 @@ async function mixSurprise() {
     try {   // dig into a random page so the surprise isn't always one of the top 20
       const page = 1 + Math.floor(Math.random() * (M.res.pages || 1));
       const j = await tget(`/discover/${M.type}`, Object.assign({page}, mixParams(M.res.any)));
-      const more = (j.results || []).map(r => fromTmdb(r, M.type)).filter(Boolean);
+      const more = mixFilter((j.results || []).map(r => fromTmdb(r, M.type)).filter(Boolean));
       if (more.length) pool = more;
     } catch (e) { /* keep page 1 */ }
   }
