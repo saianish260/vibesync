@@ -1133,6 +1133,16 @@ document.addEventListener("error", e => {
 
 /* Deep links: the Android app handles https itself; Chrome on Android gets an intent URL
    (opens the installed app, or its Play Store page if it's missing); everything else gets https. */
+/* SonyLIV opens a title from its share-link format: /movie-bundle/<name>-<id>?utm_source=shared-content */
+function sonyShare(url) {
+  try {
+    const u = new URL(url); if (!/(^|\.)sonyliv\.com$/.test(u.hostname)) return url;
+    const segs = u.pathname.split("/").filter(Boolean), last = segs[segs.length - 1] || "";
+    if (!/-\d{6,}$/.test(decodeURIComponent(last))) return url;
+    const path = /^movie/i.test(segs[0]) ? "/movie-bundle/" + last : u.pathname;
+    return `https://www.sonyliv.com${path}?utm_source=shared-content&UTM_MEDIUM=more`;
+  } catch (e) { return url; }
+}
 function hotstarId(url) {
   let id = null;
   try { new URL(url).pathname.split("/").forEach(seg => { if (/^\d{4,}$/.test(seg)) id = seg; }); } catch (e) {}
@@ -1140,6 +1150,7 @@ function hotstarId(url) {
 }
 function linkFor(url, provider) {
   url = String(url).replace(/^https:\/\/(www\.)?primevideo\.com\//, "https://app.primevideo.com/");   // the only Prime host its app accepts
+  url = sonyShare(url);                                   // SonyLIV: its own share-link format
   const pkg = provider && D.providers[provider] ? D.providers[provider].pkg : "";
   // JioHotstar opens a title from its own share-link format: https://jiohotstar.com/<content id>
   if (!IN_APP && ANDROID && provider === "hotstar" && hotstarId(url)) {
