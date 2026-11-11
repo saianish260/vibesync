@@ -920,6 +920,11 @@ img{display:block}
 .lne{margin:4px 0 6px;color:var(--muted);font-size:.88rem}
 .lnsk{display:block;height:14px;border-radius:7px;margin:10px 0;background:linear-gradient(90deg,rgba(255,255,255,.07),rgba(255,255,255,.2),rgba(255,255,255,.07));background-size:200% 100%;animation:nwsk 1.1s linear infinite}
 .lnsk.short{width:60%}
+/* genre mixer: "Show more" at the end of the matches row */
+.card.mxmore .pw{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--s2);color:var(--text)}
+.card.mxmore .mxm-i{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:color-mix(in srgb,var(--accent,#FFB547) 22%,transparent)}
+.card.mxmore .mxm-t{font-weight:700;font-size:.95rem}
+.card.mxmore.busy .mxm-i{animation:nwsk 1.1s linear infinite;opacity:.6}
 
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
@@ -1740,6 +1745,7 @@ document.addEventListener("click", e => {
   }
   if (t.hasAttribute("data-mxclear")) { M.sel[M.type] = {}; saveMix(); renderMixer(); return; }
   if (t.hasAttribute("data-mxsurprise")) { mixSurprise(); return; }
+  if (t.hasAttribute("data-mxmore")) { mixMore(t); return; }
   if (t.hasAttribute("data-close")) { closeSheet(); return; }
   if (t.dataset.fav) { toggleFav(t.dataset.fav); return; }
   if (t.dataset.watch) {
@@ -1998,7 +2004,7 @@ async function xIds(id) {
 function mixParams(any) {
   const inc = picked(1).filter(x => typeof x === "number"), exc = picked(-1).filter(x => typeof x === "number");
   return Object.assign({}, STREAM, inc.length ? {with_genres: inc.join(M.all && !any ? "," : "|")} : {},
-    exc.length ? {without_genres: exc.join(",")} : {}, M.good ? {"vote_average.gte": "6.5", "vote_count.gte": "40"} : {});
+    exc.length ? {without_genres: exc.join(",")} : {}, M.good ? {"vote_average.gte": "6.5", "vote_count.gte": "10"} : {});   // ★ 6.5+; 10 votes is enough (many Indian films have few TMDB votes)
 }
 function xHit(i, id) {
   if (XLANG[id]) return !!i.telugu || (i.tmdb && i.lang === XLANG[id]) || /telugu|tollywood/i.test((i.genres || []).join(" ") + " " + (i.meta || ""));
@@ -2024,6 +2030,8 @@ async function mixQueries(any) {
   if (M.all && !any) {
     const first = await lead(xin[0], base); if (first) qs.push(first);
     qs.push({params: XLANG[xin[0]] ? Object.assign({}, base, {with_original_language: XLANG[xin[0]]}) : base, skip: XLANG[xin[0]] ? xin[0] : null, wide: true});
+    // …and the same genres among Indian films only (a small pool, so Kalki-type titles are always in it)
+    if (!XLANG[xin[0]]) qs.push({params: Object.assign({}, base, {with_origin_country: "IN"}), skip: null, wide: true});
   } else {                                                 // any of them: each genre searched on its own, merged
     const num = picked(1).filter(x => typeof x === "number");
     if (num.length) qs.push({params: base, skip: null, any: true});
@@ -2032,18 +2040,18 @@ async function mixQueries(any) {
   }
   return qs;
 }
-/* run the searches (page 1, or a given page of the main one), filter, merge without duplicates */
-async function mixRun(any, page) {
+/* run the searches for pages start … start+span-1, filter, merge without duplicates */
+async function mixRun(any, start = 1, span = 1) {
   const qs = await mixQueries(any), seen = new Set(), out = [];
   let total = 0, pages = 1;
-  const res = await Promise.all(qs.map((q, n) => {
-    const pg = n === 0 && page ? page : 1, more = q.wide ? [pg, pg + 1] : [pg];
-    return Promise.all(more.map(x => tget(`/discover/${M.type}`, Object.assign({page: x}, q.params)).catch(() => ({results: []}))));
+  const res = await Promise.all(qs.map(q => {
+    const n = q.wide ? Math.max(2, span) : span, list = Array.from({length: n}, (_, i) => start + i);
+    return Promise.all(list.map(x => tget(`/discover/${M.type}`, Object.assign({page: x}, q.params)).catch(() => ({results: []}))));
   }));
   res.forEach((js, n) => {
     const q = qs[n];
     js.forEach((j, k) => {
-      if (n === 0 && k === 0) pages = Math.min(j.total_pages || 1, 20);
+      if (k === 0) pages = Math.max(pages, Math.min(j.total_pages || 1, 500));
       if (!q.wide && k === 0) total += j.total_results || 0;
       const items = (j.results || []).map(r => { const it = fromTmdb(r, M.type); if (it && r.original_language) it.lang = r.original_language; return it; }).filter(Boolean);
       const keep = q.any ? items.filter(i => !picked(-1).some(id => typeof id === "string" && xHit(i, id))) : mixFilter(items, q.skip);
@@ -2070,17 +2078,34 @@ async function loadResults() {
   let items = [], total = 0, any = false;
   if (T.key && !T.failed) {
     try {
-      let r = await mixRun(false);
-      if (!r.items.length && M.all && inc.length > 1) { r = await mixRun(true); any = true; }
-      items = r.items; total = r.total; M.res.pages = r.pages;
+      let r = await mixRun(false, 1, 3);
+      if (!r.items.length && M.all && inc.length > 1) { r = await mixRun(true, 1, 3); any = true; }
+      items = r.items; total = r.total; M.res.pages = r.pages; M.res.next = 4;
     } catch (e) { items = curatedMatches(); total = items.length; }
   } else { items = curatedMatches(); total = items.length; }
   if (seq !== M.res.seq) return;                     // a newer selection already took over
   Object.assign(M.res, {items, total, any});
   box.innerHTML = section(any ? "Nothing has all of them, so here's any of them" : "Matches", total ? `${total.toLocaleString("en-IN")} titles` : "")
-    + (items.length ? `<div class="row">${items.slice(0, 30).map(card).join("")}</div>` : `<div class="empty">No titles match this mix. Try fewer genres or turn off “Match every genre”.</div>`);
+    + (items.length ? `<div class="row" id="mxrow">${items.map(card).join("")}${moreCard()}</div>` : `<div class="empty">No titles match this mix. Try fewer genres or turn off “Match every genre”.</div>`);
   $$("#mxres .card").forEach((c, i) => { c.classList.add("fresh"); c.style.setProperty("--i", i); });
   mixBar();
+}
+/* "Show more" at the end of the row: the next pages of the same mix */
+const moreCard = () => T.key && !T.failed && (M.res.next || 99) <= (M.res.pages || 0)
+  ? `<button class="card mxmore" data-mxmore aria-label="Show more matches"><span class="pw"><span class="mxm-i">${ICON.arrow}</span><span class="mxm-t">Show more</span></span></button>` : "";
+async function mixMore(btn) {
+  if (M.res.loading) return;
+  M.res.loading = true; btn.classList.add("busy");
+  const seq = M.res.seq;
+  try {
+    const r = await mixRun(M.res.any, M.res.next, 3);
+    if (seq !== M.res.seq) return;
+    const have = new Set(M.res.items.map(i => i.id)), add = r.items.filter(i => !have.has(i.id));
+    M.res.items = M.res.items.concat(add); M.res.next += 3;
+    btn.insertAdjacentHTML("beforebegin", add.map(card).join(""));
+    if (M.res.next > M.res.pages || !r.items.length) btn.remove();
+  } catch (e) { toast("Couldn't load more right now"); }
+  finally { M.res.loading = false; if (btn.isConnected) btn.classList.remove("busy"); }
 }
 async function mixSurprise() {
   if (rolling || picked(1).length < 2) return;
@@ -2088,8 +2113,8 @@ async function mixSurprise() {
   let pool = M.res.items.slice();
   if (T.key && !T.failed && (M.res.pages || 1) > 1) {
     try {   // dig into a random page so the surprise isn't always one of the top results
-      const page = 1 + Math.floor(Math.random() * (M.res.pages || 1));
-      const r = await mixRun(M.res.any, page);
+      const page = 1 + Math.floor(Math.random() * Math.min(M.res.pages || 1, 20));
+      const r = await mixRun(M.res.any, page, 1);
       if (r.items.length) pool = r.items;
     } catch (e) { /* keep page 1 */ }
   }
