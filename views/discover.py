@@ -15,6 +15,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from core.data import catalog_payload
+from core.imdb import fetch_ratings, imdb_id, live_rating
 from core.langs import fetch_langs
 from core.news import fetch_news
 from core.watchlinks import fetch_watch_links, is_watch_url
@@ -91,6 +92,48 @@ def _news(query: str) -> list:
         return []
 
 
+@st.cache_resource(ttl=24 * 3600, show_spinner=False)   # IMDb's ratings file, refreshed daily
+def _imdb_ratings():
+    try:
+        return fetch_ratings()
+    except Exception:           # IMDb unreachable: the genre mixer falls back to TMDB's ratings
+        return None
+
+
+@st.cache_data(ttl=60, max_entries=200, show_spinner=False)     # "refresh IMDb rating" on one title
+def _imdb_live(imdb: str) -> dict:
+    return live_rating(imdb, omdb_key(), _imdb_ratings())
+
+
+@st.cache_data(ttl=30 * 24 * 3600, max_entries=50000, show_spinner=False)
+def _imdb_id(kind: str, tmdb_id: int) -> str:
+    try:
+        return imdb_id(tmdb_key(), kind, tmdb_id)
+    except Exception:
+        return ""
+
+
+def _imdb_for(refs: list) -> dict:
+    """{"movie:123": [7.4, 120345], ...} for the genre mixer (titles IMDb has no rating for are left out)."""
+    from concurrent.futures import ThreadPoolExecutor
+    table = _imdb_ratings()
+    if table is None:
+        return {"error": True}
+    pairs = []
+    for r in refs[:120]:
+        kind, _, tid = str(r).partition(":")
+        if kind in ("movie", "tv") and tid.isdigit():
+            pairs.append((kind, int(tid)))
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        ids = list(pool.map(lambda p: _imdb_id(*p), pairs))
+    out = {}
+    for (kind, tid), iid in zip(pairs, ids):
+        got = table.get(iid)
+        if got:
+            out[f"{kind}:{tid}"] = [got[0], got[1]]
+    return out
+
+
 @st.cache_data(ttl=6 * 3600, max_entries=400, show_spinner=False)
 def _watch_links(url: str) -> dict[str, str]:
     try:
@@ -105,8 +148,9 @@ def render(theme: str) -> dict | None:
     resolved = st.session_state.setdefault("vs_resolved", {})
     langs = st.session_state.setdefault("vs_langs", {})
     news = st.session_state.setdefault("vs_news", {})
+    imdb = st.session_state.setdefault("vs_imdb", {})
     value = _component(catalog=payload, theme=theme, tmdbKey=tmdb_key(), ytKey=youtube_key(), omdbKey=omdb_key(), firebase=firebase_config(), resolved=resolved, langs=langs, news=news,
-                       key="discover", default=None)
+                       imdb=imdb, key="discover", default=None)
     # When a live title's sheet opens, the screen asks for that title's exact per-app links.
     req = value.get("resolve") if isinstance(value, dict) else None
     if req and value.get("n") != st.session_state.get("_resolve_n"):
@@ -140,5 +184,20 @@ def render(theme: str) -> dict | None:
             news[k] = _news(q)
             while len(news) > 30:
                 news.pop(next(iter(news)))
+            st.rerun()
+    # ...and the genre mixer's IMDb ratings for the titles it found
+    iq = value.get("imdb") if isinstance(value, dict) else None
+    if isinstance(iq, dict) and value.get("n") != st.session_state.get("_imdb_n"):
+        st.session_state._imdb_n = value.get("n")
+        k, refs, one = str(iq.get("key", ""))[:80], iq.get("ids"), str(iq.get("one", ""))[:20]
+        if k and one and k not in imdb:
+            imdb[k] = _imdb_live(one)
+            while len(imdb) > 12:
+                imdb.pop(next(iter(imdb)))
+            st.rerun()
+        if k and isinstance(refs, list) and k not in imdb and tmdb_key():
+            imdb[k] = _imdb_for(refs)
+            while len(imdb) > 12:
+                imdb.pop(next(iter(imdb)))
             st.rerun()
     return value

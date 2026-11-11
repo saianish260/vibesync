@@ -1913,7 +1913,7 @@ function openMixer() {
     <div class="mx-grid" id="mxgrid"></div>
     <div class="mx-opts">
       <label class="sw2"><input type="checkbox" data-mxopt="all" ${M.all ? "checked" : ""}><i></i><span><b>Match every genre</b><small>Off = any of them</small></span></label>
-      <label class="sw2"><input type="checkbox" data-mxopt="good" ${M.good ? "checked" : ""}><i></i><span><b>Only well rated</b><small>★ 6.5 and up</small></span></label>
+      <label class="sw2"><input type="checkbox" data-mxopt="good" ${M.good ? "checked" : ""}><i></i><span><b>Only well rated</b><small>IMDb ★ 6.5 and up</small></span></label>
     </div>
     <div id="mxres"></div></div>
     <div class="mx-bar" id="mxbar"></div>`;
@@ -2003,8 +2003,53 @@ async function xIds(id) {
 }
 function mixParams(any) {
   const inc = picked(1).filter(x => typeof x === "number"), exc = picked(-1).filter(x => typeof x === "number");
+  // "Only well rated" is judged on IMDb ratings (see imdbApply); TMDB's own score is only the fallback
+  const good = !M.good ? {} : imdbOn() ? {"vote_count.gte": "10"} : {"vote_average.gte": "6.5", "vote_count.gte": "10"};
   return Object.assign({}, STREAM, inc.length ? {with_genres: inc.join(M.all && !any ? "," : "|")} : {},
-    exc.length ? {without_genres: exc.join(",")} : {}, M.good ? {"vote_average.gte": "6.5", "vote_count.gte": "10"} : {});   // ★ 6.5+; 10 votes is enough (many Indian films have few TMDB votes)
+    exc.length ? {without_genres: exc.join(",")} : {}, good);
+}
+/* ── IMDb ratings for the mixer: the website's server reads IMDb's official daily ratings file and matches
+   TMDB's titles to it (the apps run the website, so they use it too). Matches are rated, filtered
+   (IMDb ★ 6.5+ when "Only well rated" is on) and sorted by IMDb. If the server can't reach IMDb, TMDB's
+   score is used instead. ── */
+const IMDBQ = {wait: {}, down: false};
+const imdbOn = () => EMBED && !IMDBQ.down && !!T.key;
+function gotServerImdb(map) {
+  Object.entries(map || {}).forEach(([k, v]) => {
+    const cb = IMDBQ.wait[k]; if (!cb) return;
+    delete IMDBQ.wait[k]; if (SERVER_ASK.imdb && SERVER_ASK.imdb.key === k) delete SERVER_ASK.imdb;
+    cb(v && typeof v === "object" ? v : null);
+  });
+}
+function imdbFor(items) {
+  const need = items.filter(i => i.tmdb && i.imdbR === undefined);
+  if (!need.length) return Promise.resolve({});
+  return new Promise(res => {
+    const k = "im" + Date.now() + Math.random().toString(36).slice(2, 6);
+    const done = map => {
+      if (!map || map.error) return res(null);
+      need.forEach(i => {
+        const v = map[`${i.tmdb.type}:${i.tmdb.id}`];
+        i.imdbR = v ? +v[0] : 0; i.imdbV = v ? +v[1] : 0;
+        if (v && +v[0]) i.imdb = +v[0];                   // cards show the IMDb score (scoreOf prefers it)
+      });
+      res(map);
+    };
+    IMDBQ.wait[k] = done;
+    serverAsk("imdb", {key: k, ids: need.map(i => `${i.tmdb.type}:${i.tmdb.id}`)});
+    setTimeout(() => { if (IMDBQ.wait[k]) { delete IMDBQ.wait[k]; res(null); } }, 30000);
+  });
+}
+const imdbOf = i => typeof i.imdb === "number" ? i.imdb : 0;
+async function imdbApply(items) {
+  if (!imdbOn() || !items.length) return items;
+  const ok = await imdbFor(items);
+  if (ok === null) {                                      // no IMDb right now: TMDB's score instead
+    IMDBQ.down = true; setTimeout(() => IMDBQ.down = false, 10 * 60e3);
+    return M.good ? items.filter(i => (scoreOf(i) || 0) >= 6.5) : items;
+  }
+  const out = M.good ? items.filter(i => imdbOf(i) >= 6.5) : items.slice();
+  return out.sort((a, b) => (imdbOf(b) - imdbOf(a)) || ((b.imdbV || 0) - (a.imdbV || 0)));
 }
 function xHit(i, id) {
   if (XLANG[id]) return !!i.telugu || (i.tmdb && i.lang === XLANG[id]) || /telugu|tollywood/i.test((i.genres || []).join(" ") + " " + (i.meta || ""));
@@ -2080,12 +2125,19 @@ async function loadResults() {
     try {
       let r = await mixRun(false, 1, 3);
       if (!r.items.length && M.all && inc.length > 1) { r = await mixRun(true, 1, 3); any = true; }
-      items = r.items; total = r.total; M.res.pages = r.pages; M.res.next = 4;
+      M.res.pages = r.pages; M.res.next = 4;
+      items = await imdbApply(r.items); total = r.total;
+      if (items.length < 20 && M.res.pages >= 4 && seq === M.res.seq) {     // IMDb's bar left few: look further
+        const r2 = await mixRun(any, 4, 3), seen = new Set(items.map(i => i.id));
+        items = items.concat(await imdbApply(r2.items.filter(i => !seen.has(i.id)))); M.res.next = 7;
+      }
+      M.res.imdb = imdbOn();
     } catch (e) { items = curatedMatches(); total = items.length; }
   } else { items = curatedMatches(); total = items.length; }
   if (seq !== M.res.seq) return;                     // a newer selection already took over
   Object.assign(M.res, {items, total, any});
-  box.innerHTML = section(any ? "Nothing has all of them, so here's any of them" : "Matches", total ? `${total.toLocaleString("en-IN")} titles` : "")
+  const sub = M.res.imdb && items.length ? `${items.length}${moreCard() ? "+" : ""} titles · best IMDb rating first` : total ? `${total.toLocaleString("en-IN")} titles` : "";
+  box.innerHTML = section(any ? "Nothing has all of them, so here's any of them" : "Matches", sub)
     + (items.length ? `<div class="row" id="mxrow">${items.map(card).join("")}${moreCard()}</div>` : `<div class="empty">No titles match this mix. Try fewer genres or turn off “Match every genre”.</div>`);
   $$("#mxres .card").forEach((c, i) => { c.classList.add("fresh"); c.style.setProperty("--i", i); });
   mixBar();
@@ -2100,7 +2152,8 @@ async function mixMore(btn) {
   try {
     const r = await mixRun(M.res.any, M.res.next, 3);
     if (seq !== M.res.seq) return;
-    const have = new Set(M.res.items.map(i => i.id)), add = r.items.filter(i => !have.has(i.id));
+    const have = new Set(M.res.items.map(i => i.id)), add = await imdbApply(r.items.filter(i => !have.has(i.id)));
+    if (seq !== M.res.seq) return;
     M.res.items = M.res.items.concat(add); M.res.next += 3;
     btn.insertAdjacentHTML("beforebegin", add.map(card).join(""));
     if (M.res.next > M.res.pages || !r.items.length) btn.remove();
@@ -2115,7 +2168,8 @@ async function mixSurprise() {
     try {   // dig into a random page so the surprise isn't always one of the top results
       const page = 1 + Math.floor(Math.random() * Math.min(M.res.pages || 1, 20));
       const r = await mixRun(M.res.any, page, 1);
-      if (r.items.length) pool = r.items;
+      const rated = await imdbApply(r.items);
+      if (rated.length) pool = rated;
     } catch (e) { /* keep page 1 */ }
   }
   if (!pool.length) pool = curatedMatches();
@@ -6009,6 +6063,7 @@ window.addEventListener("message", e => {
   if (args.firebase && D && !AUTH.cfg) { setAuthConfig(args.firebase); authBoot(); }
   if (args.langs && typeof args.langs === "object" && D) gotServerLangs(args.langs);
   if (args.news && typeof args.news === "object" && D) gotServerNews(args.news);
+  if (args.imdb && typeof args.imdb === "object" && D) gotServerImdb(args.imdb);
   if (args.catalog) boot(args.catalog);
   if (args.resolved && typeof args.resolved === "object") {
     let fresh = false;
