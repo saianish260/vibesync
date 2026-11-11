@@ -3783,14 +3783,22 @@ async function tget(path, params) {
   const keep = /^\/(movie|tv)\/\d+$/.test(path), sk = "vs.tc:" + path + "?" + (params && params.append_to_response || "");
   if (keep) { try { const c = JSON.parse(localStorage.getItem(sk) || "null"); if (c && Date.now() - c.at < 6 * 3600e3) { T.cache.set(key, Promise.resolve(c.j)); return c.j; } } catch (e) {} }
   const job = (async () => {
-    const r = await fetch(key);
-    if (!r.ok) throw new Error("TMDB " + r.status);
+    let r, tries = 0;
+    for (;;) {                                            // too many requests / a hiccup: wait and try again
+      try { r = await fetch(key); } catch (e) { r = null; }
+      if (r && r.ok) break;
+      if (++tries > 2 || (r && r.status < 500 && r.status !== 429)) throw new Error("TMDB " + (r ? r.status : "offline"));
+      await new Promise(ok => setTimeout(ok, 700 * tries + Math.random() * 400));
+    }
     const j = await r.json();
     if (keep) try {
-      localStorage.setItem(sk, JSON.stringify({at: Date.now(), j}));
-      const ks = Object.keys(localStorage).filter(k => k.startsWith("vs.tc:"));
-      if (ks.length > 60) ks.slice(0, ks.length - 60).forEach(k => localStorage.removeItem(k));
-    } catch (e) {}
+      const txt = JSON.stringify({at: Date.now(), j});
+      if (txt.length < 90000) {                           // keep the phone's storage light: ~25 recent titles
+        const ks = Object.keys(localStorage).filter(k => k.startsWith("vs.tc:"));
+        if (ks.length >= 25) ks.slice(0, ks.length - 24).forEach(k => localStorage.removeItem(k));
+        localStorage.setItem(sk, txt);
+      }
+    } catch (e) { try { Object.keys(localStorage).filter(k => k.startsWith("vs.tc:")).forEach(k => localStorage.removeItem(k)); } catch (e2) {} }
     return j;
   })();
   T.cache.set(key, job);                                   // a second asker shares the same request
@@ -3910,7 +3918,16 @@ async function loadLive(key) {
       else el.insertAdjacentHTML("beforeend", fresh.map(card).join(""));
       [...el.querySelectorAll(".card")].slice(-fresh.length).forEach((c, i) => { c.classList.add("fresh"); c.style.setProperty("--i", i); });
     }
-  } catch (e) { tmdbFail(); }
+  } catch (e) {
+    // one row failing isn't TMDB being down: show it in that row; only when nothing loads at all, fall back
+    T.rowFails = (T.rowFails || 0) + 1;
+    const el = document.querySelector(`[data-live="${CSS.escape(key)}"]`);
+    if (el && !st.ids.length) el.innerHTML = `<div class="empty">Couldn't load this row. It'll try again shortly.</div>`;
+    if (T.rowFails >= 4 && !T.rowOk) tmdbFail();
+    else setTimeout(() => { st.busy = false; if (!st.ids.length) loadLive(key); }, 4000);
+    st.busy = false; return;
+  }
+  T.rowOk = true;
   st.busy = false;
 }
 // endless rows: fetch the next page as a live row nears its end
@@ -5491,12 +5508,17 @@ document.addEventListener("keydown", e => {
   if ($("#trv").classList.contains("on")) closeTrailer(); else if ($("#xp").classList.contains("on") && !openId) closeXP();
 });
 
-/* start loading a title the moment a finger lands on its poster (the tap itself comes ~150 ms later) */
+/* start loading a title when a finger rests on its poster (not while scrolling past it) */
+let PRE = null;
 document.addEventListener("pointerdown", e => {
   const c = e.target.closest && e.target.closest("[data-open]"); if (!c) return;
-  const it = BY[c.dataset.open]; if (!it || it.kind === "sports") return;
-  try { if (it.tmdb) loadDetails(it); loadExtras(it); } catch (err) {}
+  const it = BY[c.dataset.open]; if (!it || it.kind === "sports" || (it.tmdb && details[it.id]) || XD[it.id]) return;
+  clearTimeout(PRE);
+  PRE = setTimeout(() => { try { if (it.tmdb) loadDetails(it); loadExtras(it); } catch (err) {} }, 90);
 }, {passive: true, capture: true});
+["pointermove", "pointercancel", "scroll"].forEach(ev => document.addEventListener(ev, e => {
+  if (ev !== "pointermove" || (Math.abs(e.movementX) + Math.abs(e.movementY)) > 4) clearTimeout(PRE);
+}, {passive: true, capture: true}));
 
 /* ───────────── Fluid motion ───────────── */
 const FLUID = {spring: CSS.supports("transition-timing-function", "linear(0, 1)") ? getComputedStyle(document.documentElement).getPropertyValue("--spring").trim() || "cubic-bezier(.2,1.2,.4,1)" : "cubic-bezier(.2,1.2,.4,1)",
