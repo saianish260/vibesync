@@ -5836,7 +5836,7 @@ const IMBUSY = {};
 function imdbRefresh(id) {
   const it = BY[id], x = XD[id];
   if (!it || !x || !x.imdbId || IMBUSY[id]) return;
-  IMBUSY[id] = true; buzz(); if (openId === id) refreshSheet();
+  IMBUSY[id] = true; buzz(); imdbChipSwap(it);
   const k = "i1" + Date.now() + Math.random().toString(36).slice(2, 6);
   const finish = v => {
     delete IMBUSY[id];
@@ -5847,7 +5847,7 @@ function imdbRefresh(id) {
       document.querySelectorAll(`[data-open="${CSS.escape(id)}"] .sc`).forEach(e => { e.textContent = `★ ${(+v.r).toFixed(1)}`; });   // cards on screen
       toast(`IMDb ${(+v.r).toFixed(1)} · ${(+v.v || 0).toLocaleString("en-IN")} votes${v.src === "daily" ? " (today's IMDb data)" : ""}`);
     } else toast("Couldn't reach IMDb right now. Try again in a bit.");
-    if (openId === id) refreshSheet();
+    imdbChipSwap(it);
   };
   IMDBQ.wait[k] = finish;
   serverAsk("imdb", {key: k, one: x.imdbId});
@@ -5873,7 +5873,7 @@ function imdbDaily(it, x) {
       it.imdb = +v[0];
       document.querySelectorAll(`[data-open="${CSS.escape(it.id)}"] .sc`).forEach(e => { e.textContent = `★ ${(+v[0]).toFixed(1)}`; });
     }
-    if (openId === it.id) refreshSheet();
+    imdbChipSwap(it);                                     // in the background: only the chip changes, no page redraw
   };
   serverAsk("imdb", {key: k, daily: [tt]});
   setTimeout(() => { if (IMDBQ.wait[k]) { delete IMDBQ.wait[k]; delete IMDAYWAIT[tt]; } }, 30000);
@@ -5890,6 +5890,14 @@ function imdbHeadHTML(it) {
   if (x.imdbId && EMBED) return `<button class="imh rtfx${IMBUSY[it.id] ? " busy" : ""}" data-imdbfresh="${esc(it.id)}" aria-label="IMDb rating ${imv || "unknown"}. Tap for the latest">
     <span class="imh-l">IMDb</span><b>${imv ? "★ " + imv : "★ –"}</b><small class="imh-w">${when}</small><i aria-hidden="true">↻</i>${sub}</button>`;
   return imv ? `<span class="imh"><span class="imh-l">IMDb</span><b>★ ${esc(imv)}</b></span>` : "";
+}
+
+/* swap just the IMDb chip on the open title page (nothing else is redrawn, so nothing flickers) */
+function imdbChipSwap(it) {
+  if (!it || openId !== it.id) return;
+  const old = document.querySelector("#sheet .imh"), html = imdbHeadHTML(it);
+  if (old && html) { const t = document.createElement("template"); t.innerHTML = html.trim(); old.replaceWith(t.content.firstChild); }
+  else if (!old && html) { const h = document.querySelector("#sheet .stitle"); if (h) h.insertAdjacentHTML("afterend", html); }
 }
 
 /* ───────────── Fluid motion ───────────── */
