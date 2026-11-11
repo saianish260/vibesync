@@ -227,3 +227,20 @@ class NewsTest(unittest.TestCase):
         self.assertEqual(items[0]["s"], "NewsBytes")
         self.assertIn("November 13", items[0]["t"])
         self.assertEqual(items[1]["t"], "A & B")
+
+
+class ImdbTest(unittest.TestCase):
+    def test_parse_ratings(self):
+        import gzip
+        from core.imdb import live_rating, parse_ratings
+        raw = gzip.compress(b"tconst\taverageRating\tnumVotes\n"
+                            b"tt12735488\t7.1\t152340\n"      # kept
+                            b"tt0000001\t5.7\t2100\n"         # kept
+                            b"tt9999999\t9.9\t12\n")          # too few votes: left out
+        t = parse_ratings(raw)
+        self.assertEqual(len(t), 2)
+        self.assertEqual(t.get("tt12735488"), (7.1, 152340))
+        self.assertEqual(t.get("tt0000001"), (5.7, 2100))
+        self.assertIsNone(t.get("tt9999999"))
+        self.assertIsNone(t.get("nonsense"))
+        self.assertEqual(live_rating("not-an-id"), {})

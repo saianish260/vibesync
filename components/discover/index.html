@@ -925,6 +925,13 @@ img{display:block}
 .card.mxmore .mxm-i{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:color-mix(in srgb,var(--accent,#FFB547) 22%,transparent)}
 .card.mxmore .mxm-t{font-weight:700;font-size:.95rem}
 .card.mxmore.busy .mxm-i{animation:nwsk 1.1s linear infinite;opacity:.6}
+/* the IMDb chip on a title's page: tap to refresh that title's rating */
+.rt.rtfx{border:0;font:inherit;font-size:12.5px;font-weight:650;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .2s}
+.rt.rtfx:active{transform:scale(.95)}
+.rt.rtfx b{color:var(--text)}
+.rt.rtfx i{font-style:normal;margin-left:2px;font-size:13px;opacity:.85;display:inline-block}
+.rt.rtfx.busy i{animation:vsspin .8s linear infinite}
+@keyframes vsspin{to{transform:rotate(360deg)}}
 
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
@@ -1134,7 +1141,9 @@ function linkFor(url, provider) {
 }
 function ytLink(it) { return linkFor(it.trailer, "youtube"); }
 function kindLabel(it) { return D.kinds[it.kind] || ""; }
-const scoreOf = it => it.imdb || it.score;
+/* a title's IMDb rating you refreshed by hand (the IMDb chip on its page) wins over the stored one */
+var IMFRESH = (() => { try { return JSON.parse(localStorage.getItem("vs.imdbfix") || "{}") || {}; } catch (e) { return {}; } })();
+const scoreOf = it => (IMFRESH[it.id] && IMFRESH[it.id].r) || it.imdb || it.score;
 
 /* ───────────── cards ───────────── */
 function provBadges(it) {
@@ -1746,6 +1755,7 @@ document.addEventListener("click", e => {
   if (t.hasAttribute("data-mxclear")) { M.sel[M.type] = {}; saveMix(); renderMixer(); return; }
   if (t.hasAttribute("data-mxsurprise")) { mixSurprise(); return; }
   if (t.hasAttribute("data-mxmore")) { mixMore(t); return; }
+  if (t.hasAttribute("data-imdbfresh")) { imdbRefresh(t.dataset.imdbfresh); return; }
   if (t.hasAttribute("data-close")) { closeSheet(); return; }
   if (t.dataset.fav) { toggleFav(t.dataset.fav); return; }
   if (t.dataset.watch) {
@@ -4963,8 +4973,10 @@ function sheetExtras(it) {
   queueMicrotask(() => loadExtras(it));
   const x = XD[it.id] || {}, s = statusOf(it.id);
   const chips = [];
-  if (x.omdb && x.omdb.imdb) chips.push(`<span class="rt imdb">IMDb <b>${esc(x.omdb.imdb)}</b></span>`);
-  else if (it.imdb) chips.push(`<span class="rt imdb">IMDb <b>${it.imdb.toFixed(1)}</b></span>`);
+  // IMDb: tap the chip for this title's latest exact rating (only this title is checked)
+  const fx = IMFRESH[it.id], imv = fx ? fx.r.toFixed(1) : x.omdb && x.omdb.imdb ? x.omdb.imdb : it.imdb ? it.imdb.toFixed(1) : "";
+  if (x.imdbId && EMBED) chips.push(`<button class="rt imdb rtfx${IMBUSY[it.id] ? " busy" : ""}" data-imdbfresh="${esc(it.id)}" aria-label="Refresh this title's IMDb rating">IMDb <b>${imv || "–"}</b><small>${fx ? `${(fx.v || 0).toLocaleString("en-IN")} votes · ${agoTxt(fx.at)}` : IMBUSY[it.id] ? "checking…" : "tap to refresh"}</small><i aria-hidden="true">↻</i></button>`);
+  else if (imv) chips.push(`<span class="rt imdb">IMDb <b>${esc(imv)}</b></span>`);
   if (x.score) chips.push(`<span class="rt tmdb">TMDB <b>${x.score.toFixed(1)}</b><small>${(x.votes || 0).toLocaleString("en-IN")} votes</small></span>`);
   if (x.omdb && x.omdb.rt) chips.push(`<span class="rt tomato">🍅 <b>${esc(x.omdb.rt)}</b></span>`);
   if (x.omdb && x.omdb.mc) chips.push(`<span class="rt mc">Metascore <b>${esc(x.omdb.mc)}</b></span>`);
@@ -5763,7 +5775,7 @@ function rnewsFor(it) {
   }));
   return RNEWS.mem[id];
 }
-const agoTxt = t => { const m = Math.max(1, Math.round((Date.now() - t) / 60e3)); return m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`; };
+const agoTxt = t => { const m = Math.round((Date.now() - t) / 60e3); return m < 1 ? "just now" : m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`; };
 function liveNewsHTML(it) {
   if (it.kind !== "reality" || !newsOn()) return "";
   const r = rnewsFor(it) || {busy: true};
@@ -5780,6 +5792,31 @@ setInterval(() => {
   const m = RNEWS.mem[openId];
   if (m && !m.busy && Date.now() - m.at >= RNEWS.ttl) { delete RNEWS.mem[openId]; refreshSheet(); }
 }, 5 * 60e3);
+
+/* ───────────── Refresh one title's IMDb rating (the IMDb chip on its page) ─────────────
+   Asks the website's server for this one title's latest rating: IMDb's own page (exact, with the vote count),
+   else OMDb, else IMDb's daily ratings file. Remembered on this device; that title's cards use it too. */
+const IMBUSY = {};
+function imdbRefresh(id) {
+  const it = BY[id], x = XD[id];
+  if (!it || !x || !x.imdbId || IMBUSY[id]) return;
+  IMBUSY[id] = true; buzz(); if (openId === id) refreshSheet();
+  const k = "i1" + Date.now() + Math.random().toString(36).slice(2, 6);
+  const finish = v => {
+    delete IMBUSY[id];
+    if (v && +v.r) {
+      IMFRESH[id] = {r: +v.r, v: +v.v || 0, at: Date.now(), src: v.src || ""};
+      try { const ks = Object.keys(IMFRESH); if (ks.length > 300) delete IMFRESH[ks[0]]; localStorage.setItem("vs.imdbfix", JSON.stringify(IMFRESH)); } catch (e) {}
+      it.imdb = +v.r;
+      document.querySelectorAll(`[data-open="${CSS.escape(id)}"] .sc`).forEach(e => { e.textContent = `★ ${(+v.r).toFixed(1)}`; });   // cards on screen
+      toast(`IMDb ${(+v.r).toFixed(1)} · ${(+v.v || 0).toLocaleString("en-IN")} votes${v.src === "daily" ? " (today's IMDb data)" : ""}`);
+    } else toast("Couldn't reach IMDb right now. Try again in a bit.");
+    if (openId === id) refreshSheet();
+  };
+  IMDBQ.wait[k] = finish;
+  serverAsk("imdb", {key: k, one: x.imdbId});
+  setTimeout(() => { if (IMDBQ.wait[k]) { delete IMDBQ.wait[k]; finish(null); } }, 25000);
+}
 
 /* ───────────── Fluid motion ───────────── */
 const FLUID = {spring: CSS.supports("transition-timing-function", "linear(0, 1)") ? getComputedStyle(document.documentElement).getPropertyValue("--spring").trim() || "cubic-bezier(.2,1.2,.4,1)" : "cubic-bezier(.2,1.2,.4,1)",
