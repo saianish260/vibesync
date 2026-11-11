@@ -901,6 +901,7 @@ img{display:block}
 .coming.news{background:color-mix(in srgb,#FFB547 14%,var(--s2));border:1px dashed color-mix(in srgb,#FFB547 45%,transparent)}
 .coming.news b b{display:inline;font-size:inherit}
 .coming.news .nw{font-size:15px}.coming.news .nw b{display:inline;font-size:inherit}
+.coming.news .nwsk{display:inline-block;width:76px;height:14px;border-radius:7px;vertical-align:-1px;background:linear-gradient(90deg,rgba(255,255,255,.08),rgba(255,255,255,.22),rgba(255,255,255,.08));background-size:200% 100%;animation:nwsk 1.1s linear infinite}@keyframes nwsk{to{background-position:-200% 0}}
 
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
@@ -4669,20 +4670,20 @@ function newsRead(items, it) {
   const srcs = [...new Set(hits.filter(h => (!plat || h.plat === plat || !h.plat)).map(h => h.src).filter(Boolean))].slice(0, 3);
   return {plat, date, srcs, dateSrcs, n: hits.length};
 }
-function newsFor(it) {
+function newsFor(it, haveDate) {
   if (!newsOn()) return null;
   const b = newsApp();
   const id = it.id, mem = NEWS.mem[id];
-  if (mem) return mem.busy ? null : mem.r;
+  if (mem && (mem.busy || (mem.r && mem.r.plat) || Date.now() - (mem.at || 0) < 60e3)) return mem.busy ? null : mem.r;
   const saved = store.get("news", {})[id];
-  if (saved && Date.now() - saved.at < NEWS.ttl && saved.v === 3) { NEWS.mem[id] = {r: saved.r}; return saved.r; }
+  if (saved && Date.now() - saved.at < NEWS.ttl && saved.v === 4 && saved.r && saved.r.plat) { NEWS.mem[id] = {r: saved.r}; return saved.r; }
   NEWS.mem[id] = {busy: true};
   const key = "nw" + Date.now() + Math.random().toString(36).slice(2, 6);
   const base = String(it.title).split(":")[0].trim();
   const done = r => {
-    NEWS.mem[id] = {r};
-    try { const all = store.get("news", {}); all[id] = {at: Date.now(), r, v: 3}; const ks = Object.keys(all); if (ks.length > 80) delete all[ks[0]]; store.set("news", all); } catch (e) {}
-    if (openId === id && r && !r.none) refreshSheet();
+    NEWS.mem[id] = {r, at: Date.now()};
+    if (r && r.plat) try { const all = store.get("news", {}); all[id] = {at: Date.now(), r, v: 4}; const ks = Object.keys(all); if (ks.length > 80) delete all[ks[0]]; store.set("news", all); } catch (e) {}
+    if (openId === id) refreshSheet();
   };
   const ask = (q, k, cb) => {
     if (!b) {                                         // website: the Streamlit server fetches the headlines
@@ -4699,7 +4700,7 @@ function newsFor(it) {
   };
   ask(`${base} OTT release date`, key, items => {
     const r = newsRead(items, it);
-    if (!r || r.none || !r.plat || r.date) return done(r);
+    if (!r || r.none || !r.plat || r.date || haveDate) return done(r);
     // the platform is known but no headline gave a date: ask again, aimed at the date
     const name = D.providers[r.plat] ? D.providers[r.plat].name : NEWS_NAME[r.plat] || r.plat;
     ask(`${base} ${name} streaming date`, key + "b", more => {
@@ -4718,12 +4719,14 @@ function newsHTML(it) {
   if (x.ott && x.ott.app && new Date(x.ott.date) >= today) return "";                                       // TMDB has it officially
   // one simple card in the apps: the platform (from the news) and the date (TMDB's, else the news's)
   const tmdbDate = x.ott && new Date(x.ott.date) >= today ? x.ott.date.slice(0, 10) : null;
-  const r = newsFor(it), got = r && !r.none ? r : null;
+  const r = newsFor(it, !!tmdbDate), got = r && !r.none ? r : null;
+  const loading = !!(NEWS.mem[it.id] && NEWS.mem[it.id].busy);
   const plat = got && got.plat, date = tmdbDate || (got && got.date);
-  if (!plat && !(date && tmdbDate)) return "";            // nothing from the news yet: TMDB's own card shows
-  const name = plat ? (D.providers[plat] ? D.providers[plat].name : NEWS_NAME[plat] || plat) : "OTT";
-  const when = date ? new Date(date + "T12:00:00").toLocaleDateString("en-IN", {weekday: "short", day: "numeric", month: "short"}) : "";
-  const line = [`<b>${esc(name)}</b>`, when ? `<b>${esc(when)}</b>` : ""].filter(Boolean).join(" · ");
+  if (!plat && !(date && tmdbDate)) return "";            // nothing to add: TMDB's own card shows
+  const name = plat ? `<b>${esc(D.providers[plat] ? D.providers[plat].name : NEWS_NAME[plat] || plat)}</b>`
+    : loading ? `<i class="nwsk" aria-label="Finding the app"></i>` : "";
+  const when = date ? `<b>${esc(new Date(date + "T12:00:00").toLocaleDateString("en-IN", {weekday: "short", day: "numeric", month: "short"}))}</b>` : "";
+  const line = [name, when].filter(Boolean).join(" · ");
   return `<div class="coming news"><span class="cm-i" aria-hidden="true">🍿</span><span class="nw">${line}</span></div>`;
 }
 function comingHTML(it) {
