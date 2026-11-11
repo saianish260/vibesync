@@ -3779,9 +3779,28 @@ async function tget(path, params) {
   Object.entries(params || {}).forEach(([k, v]) => u.searchParams.set(k, v));
   const key = u.toString();
   if (T.cache.has(key)) return T.cache.get(key);
-  const r = await fetch(key);
-  if (!r.ok) throw new Error("TMDB " + r.status);
-  const j = await r.json(); T.cache.set(key, j); return j;
+  // title pages are kept for 6 hours on this device, so reopening a title is instant
+  const keep = /^\/(movie|tv)\/\d+$/.test(path), sk = "vs.tc:" + path + "?" + (params && params.append_to_response || "");
+  if (keep) { try { const c = JSON.parse(localStorage.getItem(sk) || "null"); if (c && Date.now() - c.at < 6 * 3600e3) { T.cache.set(key, Promise.resolve(c.j)); return c.j; } } catch (e) {} }
+  const job = (async () => {
+    const r = await fetch(key);
+    if (!r.ok) throw new Error("TMDB " + r.status);
+    const j = await r.json();
+    if (keep) try {
+      localStorage.setItem(sk, JSON.stringify({at: Date.now(), j}));
+      const ks = Object.keys(localStorage).filter(k => k.startsWith("vs.tc:"));
+      if (ks.length > 60) ks.slice(0, ks.length - 60).forEach(k => localStorage.removeItem(k));
+    } catch (e) {}
+    return j;
+  })();
+  T.cache.set(key, job);                                   // a second asker shares the same request
+  job.catch(() => T.cache.delete(key));
+  return job;
+}
+/* everything a title's page needs, in one TMDB request ("Where to watch", cast, trailers, dates) */
+function tdetail(type, id) {
+  return tget(`/${type}/${id}`, {append_to_response: type === "movie" ? "watch/providers,credits,videos,external_ids,release_dates"
+    : "watch/providers,aggregate_credits,videos,external_ids,content_ratings", include_video_language: "en,null,te,hi,ta,ml,kn,ja,ko"});
 }
 function tmdbFail() {
   if (!T.failed) { T.failed = true; toast("Couldn't reach TMDB. Showing the hand-picked library."); }
@@ -3921,7 +3940,7 @@ const details = {};
 async function loadDetails(it) {
   if (details[it.id]) return;
   try {
-    const d = await tget(`/${it.tmdb.type}/${it.tmdb.id}`, {append_to_response: "watch/providers"});
+    const d = await tdetail(it.tmdb.type, it.tmdb.id);
     const ind = (d["watch/providers"] && d["watch/providers"].results && d["watch/providers"].results.IN) || {};
     const seen = new Set(), provs = [];
     ["flatrate", "free", "ads"].forEach(kind => (ind[kind] || []).forEach(p => {
@@ -4465,8 +4484,7 @@ async function loadExtras(it) {
   const ref = it.kind === "sports" ? null : await tmdbRef(it);
   if (!ref) { XD[it.id] = {none: true}; if (openId === it.id) refreshSheet(); return; }
   try {
-    const ap = ref.type === "movie" ? "credits,videos,external_ids,release_dates" : "aggregate_credits,videos,external_ids,content_ratings";
-    const d = await tget(`/${ref.type}/${ref.id}`, {append_to_response: ap, include_video_language: "en,null,te,hi,ta,ml,kn,ja,ko"});
+    const d = await tdetail(ref.type, ref.id);               // one request shared with "Where to watch"
     const cr = d.credits || d.aggregate_credits || {};
     const cast = (cr.cast || []).slice(0, 14).map(c => ({id: c.id, name: c.name, role: c.character || (c.roles && c.roles[0] && c.roles[0].character) || "", img: c.profile_path}));
     const crew = ref.type === "movie" ? (cr.crew || []).filter(c => c.job === "Director").slice(0, 2).map(c => ({id: c.id, name: c.name, role: "Director", img: c.profile_path}))
@@ -4481,7 +4499,7 @@ async function loadExtras(it) {
                ott: ref.type === "movie" ? ottFrom(d.release_dates) : null, network: (d.networks || []).map(n => n.name).slice(0, 2),
                premiere: ref.type === "tv" ? d.first_air_date || "" : "", theatre: ref.type === "movie" ? theatreFrom(d.release_dates) : "",
                release: releaseOf(d, ref.type)};
-    if (ref.type === "movie") await loadNowPlaying();
+    if (ref.type === "movie") loadNowPlaying().then(() => { if (openId === it.id) refreshSheet(); });   // doesn't hold the page
     if (!it.gids) it.gids = x.gids;
     if (!it.lang) it.lang = x.lang;
     if (runtime) { X.rt[it.id] = runtime; store.set("rt", X.rt); }
@@ -5472,6 +5490,13 @@ document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
   if ($("#trv").classList.contains("on")) closeTrailer(); else if ($("#xp").classList.contains("on") && !openId) closeXP();
 });
+
+/* start loading a title the moment a finger lands on its poster (the tap itself comes ~150 ms later) */
+document.addEventListener("pointerdown", e => {
+  const c = e.target.closest && e.target.closest("[data-open]"); if (!c) return;
+  const it = BY[c.dataset.open]; if (!it || it.kind === "sports") return;
+  try { if (it.tmdb) loadDetails(it); loadExtras(it); } catch (err) {}
+}, {passive: true, capture: true});
 
 /* ───────────── Fluid motion ───────────── */
 const FLUID = {spring: CSS.supports("transition-timing-function", "linear(0, 1)") ? getComputedStyle(document.documentElement).getPropertyValue("--spring").trim() || "cubic-bezier(.2,1.2,.4,1)" : "cubic-bezier(.2,1.2,.4,1)",
