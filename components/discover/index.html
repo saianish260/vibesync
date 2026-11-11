@@ -898,6 +898,9 @@ img{display:block}
 .acct-card img,.acct-i{width:56px;height:56px;border-radius:50%;object-fit:cover;background:var(--s2);display:grid;place-items:center;font-size:24px;font-weight:900}
 .acct-card b{display:block;font-size:17px}.acct-card small{color:var(--muted)}
 
+.coming.news{background:color-mix(in srgb,#FFB547 14%,var(--s2));border:1px dashed color-mix(in srgb,#FFB547 45%,transparent)}
+.coming.news b b{display:inline;font-size:inherit}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -4572,7 +4575,7 @@ document.addEventListener("submit", e => {
   e.preventDefault(); const c = e.target.c.value.trim(); if (c) { store.set("city", c); openBook($("#bk").dataset.id); }
 });
 // "Coming to OTT" line on a title's sheet: when, and on which app
-function comingHTML(it) {
+function comingBaseHTML(it) {
   const x = XD[it.id]; if (!x || x.busy || x.none) return "";
   const det = details[it.id];
   const streaming = (it.offers && it.offers.length) || (det && (det.apps.length || det.other.length));
@@ -4594,6 +4597,97 @@ function comingHTML(it) {
   }
   if (x.ref.type === "tv" && x.network.length) return box("📺", `Made for ${esc(x.network.join(" / "))}`, "Not listed on an Indian streaming app yet");
   return "";
+}
+/* ───────────── OTT news check (only inside the VibeSync phone and TV apps) ─────────────
+   When a title isn't streaming yet and TMDB has no confirmed OTT app + date, the app reads the latest
+   Indian news headlines ("<title> OTT release date", Google News India, fetched by the app itself) and
+   shows what they report: the platform, and the date when at least two sources agree. Labelled as news,
+   not confirmed; TMDB's official date replaces it once it's there. Plain browsers never run this. */
+const NEWS = {mem: {}, ttl: 3 * 3600e3};
+const NEWS_PLAT = [["netflix", /netflix/i], ["prime", /prime video|amazon prime|\bprime\b/i], ["hotstar", /jio\s?hotstar|disney\+?\s?hotstar|\bhotstar/i],
+  ["sunnxt", /sun\s?nxt/i], ["zee5", /zee\s?5/i], ["sonyliv", /sony\s?liv/i], ["aha", /\baha\b/i], ["etvwin", /etv\s?win/i],
+  ["appletv", /apple\s?tv/i], ["crunchyroll", /crunchyroll/i], ["jiocinema", /jio\s?cinema/i], ["lionsgate", /lionsgate\s?play/i], ["mxplayer", /mx\s?player/i]];
+const NEWS_NAME = {etvwin: "ETV Win", jiocinema: "JioCinema", lionsgate: "Lionsgate Play", mxplayer: "MX Player"};
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+const newsApp = () => { const b = window.VibeSyncApp; return b && typeof b.newsStart === "function" && typeof b.newsTake === "function" ? b : null; };
+const loose = t => String(t || "").toLowerCase().normalize("NFKD").replace(/[^a-z0-9 ]+/g, " ").replace(/([a-z])\1+/g, "$1").replace(/\s+/g, " ").trim();
+function newsDate(text, pub) {
+  const t = text.toLowerCase(), out = [];
+  const add = (d, m, y) => {
+    const mi = MONTHS.indexOf(m.slice(0, 3)); d = +d; if (mi < 0 || !d || d > 31) return;
+    let yr = y ? +y : pub.getFullYear(), dt = new Date(yr, mi, d, 12);
+    if (!y && dt < new Date(+pub - 7 * dayMs)) dt = new Date(yr + 1, mi, d, 12);
+    out.push(dt);
+  };
+  let m; const a = /\b(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?(?:,?\s+(20\d\d))?/g;
+  while ((m = a.exec(t))) add(m[1], m[2], m[3]);
+  const b = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b(?:,?\s+(20\d\d))?/g;
+  while ((m = b.exec(t))) add(m[2], m[1], m[3]);
+  return out[0] || null;
+}
+function newsRead(items, it) {
+  const name = loose(String(it.title).split(":")[0]); if (!name) return null;
+  const now = Date.now(), today = new Date(new Date().toDateString());
+  const hits = [];
+  (items || []).forEach(n => {
+    const head = String(n.t || "").replace(/\s+-\s+[^-]+$/, ""), src = n.s || (String(n.t || "").match(/\s-\s([^-]+)$/) || [])[1] || "";
+    const pub = new Date(n.d || 0); if (!(+pub) || now - pub > 60 * dayMs) return;              // recent news only
+    if (!loose(head).includes(name)) return;                                                       // about this title
+    if (!/\bott\b|stream|digital|premiere|netflix|prime|hotstar|sun nxt|zee5|sony ?liv|\baha\b|where to watch/i.test(head)) return;
+    const plat = (NEWS_PLAT.find(([, rx]) => rx.test(head)) || [])[0] || null;
+    let date = newsDate(head, pub);
+    if (date && (date < new Date(+today - 30 * dayMs) || date > new Date(+today + 200 * dayMs))) date = null;
+    if (plat || date) hits.push({plat, date: date ? iso(date) : null, src: src.trim()});
+  });
+  if (!hits.length) return {none: true};
+  const count = key => hits.reduce((m, h) => { const k = key(h); if (k) (m[k] = m[k] || new Set()).add(h.src || Math.random()); return m; }, {});
+  const plats = Object.entries(count(h => h.plat)).sort((a, b) => b[1].size - a[1].size);
+  const plat = plats.length ? plats[0][0] : null;
+  const dates = Object.entries(count(h => (!plat || !h.plat || h.plat === plat) ? h.date : null)).sort((a, b) => b[1].size - a[1].size);
+  const date = dates.length && dates[0][1].size >= 2 ? dates[0][0] : null;                        // a date needs two sources
+  if (!plat && !date) return {none: true};
+  const srcs = [...new Set(hits.filter(h => (!plat || h.plat === plat || !h.plat)).map(h => h.src).filter(Boolean))].slice(0, 3);
+  return {plat, date, srcs, n: hits.length};
+}
+function newsFor(it) {
+  const b = newsApp(); if (!b) return null;
+  const id = it.id, mem = NEWS.mem[id];
+  if (mem) return mem.busy ? null : mem.r;
+  const saved = store.get("news", {})[id];
+  if (saved && Date.now() - saved.at < NEWS.ttl) { NEWS.mem[id] = {r: saved.r}; return saved.r; }
+  NEWS.mem[id] = {busy: true};
+  const key = "nw" + Date.now() + Math.random().toString(36).slice(2, 6);
+  const q = `${String(it.title).split(":")[0].trim()} OTT release date`;
+  const done = r => {
+    NEWS.mem[id] = {r};
+    try { const all = store.get("news", {}); all[id] = {at: Date.now(), r}; const ks = Object.keys(all); if (ks.length > 80) delete all[ks[0]]; store.set("news", all); } catch (e) {}
+    if (openId === id && r && !r.none) refreshSheet();
+  };
+  try { b.newsStart(key, q); } catch (e) { done(null); return null; }
+  let n = 0;
+  const poll = setInterval(() => {
+    let r = ""; try { r = b.newsTake(key) || ""; } catch (e) {}
+    if (r || ++n > 50) { clearInterval(poll); let items = []; try { items = JSON.parse(r || "[]"); } catch (e) {} done(newsRead(items, it)); }
+  }, 300);
+  return null;
+}
+function newsHTML(it) {
+  const x = XD[it.id]; if (!x || x.busy || x.none || it.kind === "sports") return "";
+  const det = details[it.id];
+  if ((it.offers && it.offers.length) || (det && (det.apps.length || det.other.length))) return "";        // already streaming
+  const today = new Date(new Date().toDateString());
+  if (x.ott && x.ott.app && new Date(x.ott.date) >= today) return "";                                       // TMDB has it officially
+  const r = newsFor(it); if (!r || r.none) return "";
+  const name = r.plat ? (D.providers[r.plat] ? D.providers[r.plat].name : NEWS_NAME[r.plat] || r.plat) : "";
+  const when = r.date ? whenText(new Date(r.date + "T12:00:00")) : "";
+  const head = r.plat && r.date ? `Reported: ${esc(name)} · ${when}` : r.plat ? `Reported for <b>${esc(name)}</b>` : `Reported: on OTT ${when}`;
+  const sub = `${r.srcs.length ? `From ${r.srcs.map(esc).join(", ")}. ` : ""}News reports, not confirmed yet${r.plat && !r.date ? ". No date agreed yet" : ""}`;
+  return `<div class="coming news"><span class="cm-i" aria-hidden="true">📰</span><span><b>${head}</b><small>${sub}</small></span></div>`;
+}
+function comingHTML(it) {
+  const nw = newsHTML(it), base = comingBaseHTML(it);
+  // the news names the app: drop the "app hasn't been announced" estimate that would contradict it
+  return nw + (nw && /Reported(?:: | for )<b>|Reported: [^·]+·/.test(nw) && /hasn't been announced|isn't announced/.test(base) ? "" : base);
 }
 function airDate(s) { return s ? new Date(s + "T18:00:00") : null; }        // TMDB gives a date; assume an evening drop
 function whenText(d) {
