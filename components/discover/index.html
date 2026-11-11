@@ -900,6 +900,7 @@ img{display:block}
 
 .coming.news{background:color-mix(in srgb,#FFB547 14%,var(--s2));border:1px dashed color-mix(in srgb,#FFB547 45%,transparent)}
 .coming.news b b{display:inline;font-size:inherit}
+.coming.news .nw{font-size:15px}.coming.news .nw b{display:inline;font-size:inherit}
 
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
@@ -4644,31 +4645,45 @@ function newsRead(items, it) {
   const plats = Object.entries(count(h => h.plat)).sort((a, b) => b[1].size - a[1].size);
   const plat = plats.length ? plats[0][0] : null;
   const dates = Object.entries(count(h => (!plat || !h.plat || h.plat === plat) ? h.date : null)).sort((a, b) => b[1].size - a[1].size);
-  const date = dates.length && dates[0][1].size >= 2 ? dates[0][0] : null;                        // a date needs two sources
+  // a date needs two sources, or a single source that no other headline contradicts
+  const date = dates.length && (dates[0][1].size >= 2 || dates.length === 1) ? dates[0][0] : null;
+  const dateSrcs = date ? [...new Set(hits.filter(h => h.date === date).map(h => h.src).filter(Boolean))] : [];
   if (!plat && !date) return {none: true};
   const srcs = [...new Set(hits.filter(h => (!plat || h.plat === plat || !h.plat)).map(h => h.src).filter(Boolean))].slice(0, 3);
-  return {plat, date, srcs, n: hits.length};
+  return {plat, date, srcs, dateSrcs, n: hits.length};
 }
 function newsFor(it) {
   const b = newsApp(); if (!b) return null;
   const id = it.id, mem = NEWS.mem[id];
   if (mem) return mem.busy ? null : mem.r;
   const saved = store.get("news", {})[id];
-  if (saved && Date.now() - saved.at < NEWS.ttl) { NEWS.mem[id] = {r: saved.r}; return saved.r; }
+  if (saved && Date.now() - saved.at < NEWS.ttl && saved.v === 2) { NEWS.mem[id] = {r: saved.r}; return saved.r; }
   NEWS.mem[id] = {busy: true};
   const key = "nw" + Date.now() + Math.random().toString(36).slice(2, 6);
-  const q = `${String(it.title).split(":")[0].trim()} OTT release date`;
+  const base = String(it.title).split(":")[0].trim();
   const done = r => {
     NEWS.mem[id] = {r};
-    try { const all = store.get("news", {}); all[id] = {at: Date.now(), r}; const ks = Object.keys(all); if (ks.length > 80) delete all[ks[0]]; store.set("news", all); } catch (e) {}
+    try { const all = store.get("news", {}); all[id] = {at: Date.now(), r, v: 2}; const ks = Object.keys(all); if (ks.length > 80) delete all[ks[0]]; store.set("news", all); } catch (e) {}
     if (openId === id && r && !r.none) refreshSheet();
   };
-  try { b.newsStart(key, q); } catch (e) { done(null); return null; }
-  let n = 0;
-  const poll = setInterval(() => {
-    let r = ""; try { r = b.newsTake(key) || ""; } catch (e) {}
-    if (r || ++n > 50) { clearInterval(poll); let items = []; try { items = JSON.parse(r || "[]"); } catch (e) {} done(newsRead(items, it)); }
-  }, 300);
+  const ask = (q, k, cb) => {
+    try { b.newsStart(k, q); } catch (e) { return cb([]); }
+    let n = 0;
+    const poll = setInterval(() => {
+      let r = ""; try { r = b.newsTake(k) || ""; } catch (e) {}
+      if (r || ++n > 50) { clearInterval(poll); let items = []; try { items = JSON.parse(r || "[]"); } catch (e) {} cb(items); }
+    }, 300);
+  };
+  ask(`${base} OTT release date`, key, items => {
+    const r = newsRead(items, it);
+    if (!r || r.none || !r.plat || r.date) return done(r);
+    // the platform is known but no headline gave a date: ask again, aimed at the date
+    const name = D.providers[r.plat] ? D.providers[r.plat].name : NEWS_NAME[r.plat] || r.plat;
+    ask(`${base} ${name} streaming date`, key + "b", more => {
+      const seen = new Set(items.map(x => x.t));
+      done(newsRead(items.concat(more.filter(x => !seen.has(x.t))), it) || r);
+    });
+  });
   return null;
 }
 function newsHTML(it) {
@@ -4679,15 +4694,14 @@ function newsHTML(it) {
   if (x.ott && x.ott.app && new Date(x.ott.date) >= today) return "";                                       // TMDB has it officially
   const r = newsFor(it); if (!r || r.none) return "";
   const name = r.plat ? (D.providers[r.plat] ? D.providers[r.plat].name : NEWS_NAME[r.plat] || r.plat) : "";
-  const when = r.date ? whenText(new Date(r.date + "T12:00:00")) : "";
-  const head = r.plat && r.date ? `Reported: ${esc(name)} · ${when}` : r.plat ? `Reported for <b>${esc(name)}</b>` : `Reported: on OTT ${when}`;
-  const sub = `${r.srcs.length ? `From ${r.srcs.map(esc).join(", ")}. ` : ""}News reports, not confirmed yet${r.plat && !r.date ? ". No date agreed yet" : ""}`;
-  return `<div class="coming news"><span class="cm-i" aria-hidden="true">📰</span><span><b>${head}</b><small>${sub}</small></span></div>`;
+  const when = r.date ? new Date(r.date + "T12:00:00").toLocaleDateString("en-IN", {weekday: "short", day: "numeric", month: "short"}) : "";
+  const line = [name ? `<b>${esc(name)}</b>` : "", when ? `<b>${esc(when)}</b>` : ""].filter(Boolean).join(" · ");
+  return line ? `<div class="coming news"><span class="cm-i" aria-hidden="true">🍿</span><span class="nw">${line}</span></div>` : "";
 }
 function comingHTML(it) {
   const nw = newsHTML(it), base = comingBaseHTML(it);
   // the news names the app: drop the "app hasn't been announced" estimate that would contradict it
-  return nw + (nw && /Reported(?:: | for )<b>|Reported: [^·]+·/.test(nw) && /hasn't been announced|isn't announced/.test(base) ? "" : base);
+  return nw + (nw && /hasn't been announced|isn't announced/.test(base) ? "" : base);
 }
 function airDate(s) { return s ? new Date(s + "T18:00:00") : null; }        // TMDB gives a date; assume an evening drop
 function whenText(d) {
