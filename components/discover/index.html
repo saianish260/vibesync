@@ -1882,13 +1882,29 @@ const GENRES = {
           [10402, "Music", "🎵", /music/i], [9648, "Mystery", "🔍", /mystery/i], [10749, "Romance", "💘", /romance|love/i],
           [878, "Sci-Fi", "🚀", /sci-?fi|space|science/i], [53, "Thriller", "🔪", /thriller|suspense/i], [10752, "War", "🎖️", /war\b/i],
           [37, "Western", "🤠", /western/i], [10770, "TV Movie", "📺", /tv movie/i]],
-  tv: [[10759, "Action & Adventure", "💥", /action|adventure|superhero|heist/i], [16, "Animation", "🎨", /anim/i],
-       [35, "Comedy", "😂", /comedy/i], [80, "Crime", "🕵️", /crime|gangster|heist/i], [99, "Documentary", "🎥", /document/i],
-       [18, "Drama", "🎭", /drama/i], [10751, "Family", "👨‍👩‍👧", /family/i], [10762, "Kids", "🧸", /kids/i],
-       [9648, "Mystery", "🔍", /mystery/i], [10764, "Reality", "📸", /reality/i], [10765, "Sci-Fi & Fantasy", "🚀", /sci-?fi|fantasy|space|dystopia/i],
-       [10768, "War & Politics", "🎖️", /war\b|politic/i], [37, "Western", "🤠", /western/i], [10763, "News", "📰", /news/i],
-       [10766, "Soap", "🫧", /soap/i], [10767, "Talk", "🎙️", /talk/i]]
+  /* series get the same genres as movies. TMDB only has combined genres for series (Action & Adventure,
+     Sci-Fi & Fantasy, War & Politics) and none for Horror, Romance, Thriller, History or Music, so those
+     ("t-…") are found like the extra genres: TMDB's broad series genre (XBASE) + their own keywords (XK)
+     + their words in the description. */
+  tv: [["t-action", "Action", "💥", /action|fight|battle|gun|mission|martial|assassin|combat|chase|mercenar|vigilante|superhero/i],
+       ["t-adventure", "Adventure", "🗺️", /adventure|quest|journey|treasure|expedition|explor|voyage|survival/i],
+       [16, "Animation", "🎨", /anim/i], [35, "Comedy", "😂", /comedy/i], [80, "Crime", "🕵️", /crime|gangster|heist/i],
+       [99, "Documentary", "🎥", /document/i], [18, "Drama", "🎭", /drama/i], [10751, "Family", "👨‍👩‍👧", /family/i],
+       ["t-fantasy", "Fantasy", "🧙", /fantasy|magic|dragon|wizard|witch|sorcer|supernatural|myth|kingdom|realm|curse/i],
+       ["t-history", "History", "🏛️", /histor|period|centur|empire|dynasty|king\b|queen|freedom|colonial|war of|ancient|medieval|\b1[0-9]{3}s?\b/i],
+       ["t-horror", "Horror", "👻", /horror|ghost|haunt|demon|possess|terror|zombie|vampire|curse|paranormal|creepy|evil/i],
+       ["t-music", "Music", "🎵", /music|singer|band\b|song|musician|rapper|concert|idol/i],
+       [9648, "Mystery", "🔍", /mystery/i],
+       ["t-romance", "Romance", "💘", /romance|love|romantic|relationship|marriage|couple|dating|wedding/i],
+       ["t-scifi", "Sci-Fi", "🚀", /sci-?fi|space|future|alien|time travel|robot|dystopi|planet|galax|technolog|artificial intelligence|cyber/i],
+       ["t-thriller", "Thriller", "🔪", /thriller|suspense|conspiracy|killer|murder|psycholog|hostage|spy|cat-and-mouse|dangerous/i],
+       ["t-war", "War", "🎖️", /\bwar\b|soldier|army|military|battlefield|wartime/i],
+       [37, "Western", "🤠", /western/i],
+       [10762, "Kids", "🧸", /kids/i], [10764, "Reality", "📸", /reality/i], [10766, "Soap", "🫧", /soap/i],
+       [10767, "Talk", "🎙️", /talk/i], [10763, "News", "📰", /news/i]]
 };
+/* the broad TMDB series genre each "t-" genre sits in (searched together with its keywords) */
+const XBASE = {"t-action": 10759, "t-adventure": 10759, "t-fantasy": 10765, "t-scifi": 10765, "t-war": 10768};
 /* extra sub-genres TMDB doesn't tag (Mythology, Superhero, Anime…): matched on the title and synopsis */
 const XG = [["x-mythology", "Mythology", "🏺", /myth|legend|gods?\b|goddess|deity|deities|divine|folklore|demigod|mahabharat|ramayan|kurukshetra|ashwatthama|arjuna|karna|vishnu|shiva|krishna|hanuman|\brama\b|ravana|asura|avatar of|dashavatar|olymp|zeus|hercules|poseidon|\bthor\b|\bodin\b|asgard|norse/i],
   ["x-superhero", "Superhero", "🦸", /superhero|super-?power|marvel|\bdc\b|avenger|mutant/i],
@@ -1905,10 +1921,11 @@ const XG = [["x-mythology", "Mythology", "🏺", /myth|legend|gods?\b|goddess|de
 GENRES.movie = GENRES.movie.concat(XG);
 GENRES.tv = GENRES.tv.concat(XG);
 const MIXES = [["Date night", "💘", "movie", [10749, 35]], ["Adrenaline", "⚡", "movie", [28, 53]], ["Mind-benders", "🧠", "movie", [878, 9648]],
-               ["Family time", "🍿", "movie", [16, 10751]], ["Crime binge", "🕵️", "tv", [80, 18]], ["Anime night", "🎌", "tv", [16, 10759]],
-               ["Scary + funny", "🎃", "movie", [27, 35]], ["Epic worlds", "🐉", "tv", [10765, 10759]]];
+               ["Family time", "🍿", "movie", [16, 10751]], ["Crime binge", "🕵️", "tv", [80, 18]], ["Anime night", "🎌", "tv", [16, "t-action"]],
+               ["Scary + funny", "🎃", "movie", [27, 35]], ["Epic worlds", "🐉", "tv", ["t-fantasy", "t-adventure"]]];
 const M = Object.assign({type: "movie", sel: {movie: {}, tv: {}}, all: true, good: true}, store.get("mix", {}));
 M.res = {items: [], total: null, busy: false, seq: 0, any: false};
+(() => { const ok = new Set(GENRES.tv.map(g => String(g[0]))); Object.keys(M.sel.tv || {}).forEach(k => { if (!ok.has(k)) delete M.sel.tv[k]; }); })();
 const gk = id => /^\d+$/.test(String(id)) ? +id : String(id);
 const xs = () => picked(1).filter(x => typeof x === "string");
 const gInfo = (type, id) => GENRES[type].find(g => g[0] === gk(id));
@@ -2006,7 +2023,17 @@ const XK = {
   "x-coming": ["coming of age"],
   "x-musical": ["musical"],
   "x-heist": ["heist", "robbery"],
-  "x-zombie": ["zombie"]
+  "x-zombie": ["zombie"],
+  "t-action": ["action", "martial arts", "gunfight", "vigilante"],
+  "t-adventure": ["adventure", "quest", "treasure hunt", "expedition"],
+  "t-fantasy": ["fantasy", "magic", "dragon", "sword and sorcery", "supernatural", "mythology"],
+  "t-history": ["history", "historical", "period drama", "historical drama"],
+  "t-horror": ["horror", "ghost", "haunting", "supernatural horror", "zombie", "demon"],
+  "t-music": ["music", "musician", "band", "singer"],
+  "t-romance": ["romance", "love", "romantic comedy", "love triangle"],
+  "t-scifi": ["science fiction", "time travel", "space", "dystopia", "alien", "artificial intelligence", "cyberpunk"],
+  "t-thriller": ["thriller", "suspense", "psychological thriller", "conspiracy"],
+  "t-war": ["war", "world war ii", "military", "soldier"]
 };
 const XLANG = {"x-telugu": "te"};
 /* TMDB keyword ids for an extra genre (looked up live, remembered for a week) */
@@ -2021,7 +2048,8 @@ async function xIds(id) {
   return ids;
 }
 function mixParams(any) {
-  const inc = picked(1).filter(x => typeof x === "number"), exc = picked(-1).filter(x => typeof x === "number");
+  const xb = M.all && !any ? picked(1).filter(x => typeof x === "string").map(x => XBASE[x]).filter(Boolean) : [];
+  const inc = [...new Set(picked(1).filter(x => typeof x === "number").concat(xb))], exc = picked(-1).filter(x => typeof x === "number");
   // "Only well rated" is judged on IMDb ratings (see imdbApply); TMDB's own score is only the fallback
   const good = !M.good ? {} : imdbOn() ? {"vote_count.gte": "10"} : {"vote_average.gte": "6.5", "vote_count.gte": "10"};
   return Object.assign({}, STREAM, inc.length ? {with_genres: inc.join(M.all && !any ? "," : "|")} : {},
@@ -2099,7 +2127,7 @@ async function mixQueries(any) {
   } else {                                                 // any of them: each genre searched on its own, merged
     const num = picked(1).filter(x => typeof x === "number");
     if (num.length) qs.push({params: base, skip: null, any: true});
-    for (const id of xin) { const q = await lead(id, Object.assign({}, base, {with_genres: undefined})); if (q) { delete q.params.with_genres; q.any = true; qs.push(q); } }
+    for (const id of xin) { const q = await lead(id, Object.assign({}, base, {with_genres: undefined})); if (q) { delete q.params.with_genres; if (XBASE[id]) q.params.with_genres = XBASE[id]; q.any = true; qs.push(q); } }
     if (!qs.length) qs.push({params: base, skip: null, wide: true});
   }
   return qs;
