@@ -3738,7 +3738,7 @@ if (/[?&]vsdebug/.test(location.search)) window.__vs = {AU, YTS, renderScore, re
 /* ───────────── TMDB live library (only when a key is configured) ─────────────
    Thousands of titles, posters and India streaming data, fetched straight from the browser.
    Curated titles keep their hand-checked exact links; live ones open a search inside the app. */
-const T = {key: "", base: "https://api.themoviedb.org/3", cache: new Map(), provIds: {}, failed: false};
+const T = {key: "", base: "https://api.themoviedb.org/3", cache: new Map(), provIds: {}, failed: false, alt: (() => { try { return Date.now() - +(localStorage.getItem("vs.tmdbAlt") || 0) < 864e5; } catch (e) { return false; } })()};
 const STREAM = {watch_region: "IN", with_watch_monetization_types: "flatrate|free|ads", sort_by: "popularity.desc"};
 const LIVE = {
   foryou: [["Trending this week", "/trending/all/week", {}],
@@ -3785,7 +3785,11 @@ async function tget(path, params) {
   const job = (async () => {
     let r, tries = 0;
     for (;;) {                                            // too many requests / a hiccup: wait and try again
-      try { r = await fetch(key); } catch (e) { r = null; }
+      const url = T.alt ? key.replace("https://api.themoviedb.org/", "https://api.tmdb.org/") : key;
+      const ctl = new AbortController(), stop = setTimeout(() => ctl.abort(), 6000);
+      try { r = await fetch(url, {signal: ctl.signal}); } catch (e) { r = null; }
+      clearTimeout(stop);
+      if (!r && !T.alt) { T.alt = true; try { localStorage.setItem("vs.tmdbAlt", String(Date.now())); } catch (e) {} }   // stalled: switch address (remembered a day)
       if (r && r.ok) break;
       if (++tries > 2 || (r && r.status < 500 && r.status !== 429)) throw new Error("TMDB " + (r ? r.status : "offline"));
       await new Promise(ok => setTimeout(ok, 700 * tries + Math.random() * 400));
@@ -3996,7 +4000,9 @@ function tmdbSheetHTML(it) {
   const logo = p => p.logo ? `<img class="plogo" src="https://image.tmdb.org/t/p/w92${p.logo}" alt="">`
                            : `<span class="logo">${esc(p.name[0])}</span>`;
   let where;
-  if (!d) where = `<div class="checking"><i></i>Checking where it streams in India…</div>`;
+  if (!d) { where = `<div class="checking"><i></i>Checking where it streams in India…</div>`;
+    clearTimeout(T.slowT); T.slowT = setTimeout(() => { if (openId === it.id && !details[it.id]) { const c = document.querySelector("#sheet .checking");
+      if (c) c.outerHTML = `<div class="note">Taking longer than usual. <button class="btn soft" data-retryd="${esc(it.id)}">Retry</button></div>`; } }, 15000); }
   else if (d.error) where = `<div class="note">Couldn't load streaming info. Try again in a moment.</div>`;
   else if (!d.apps.length && !d.other.length) where = `<div class="note">Not streaming in India right now.</div>`;
   else where = `<div class="offers">` + d.apps.map(p => {
@@ -5519,6 +5525,16 @@ document.addEventListener("pointerdown", e => {
 ["pointermove", "pointercancel", "scroll"].forEach(ev => document.addEventListener(ev, e => {
   if (ev !== "pointermove" || (Math.abs(e.movementX) + Math.abs(e.movementY)) > 4) clearTimeout(PRE);
 }, {passive: true, capture: true}));
+
+/* Retry on a title page whose details stalled: drop the stuck request and ask again */
+document.addEventListener("click", e => {
+  const b = e.target.closest && e.target.closest("[data-retryd]"); if (!b) return;
+  const it = BY[b.dataset.retryd]; if (!it) return;
+  e.preventDefault();
+  [...T.cache.keys()].filter(k => it.tmdb && k.includes(`/${it.tmdb.type}/${it.tmdb.id}?`)).forEach(k => T.cache.delete(k));
+  delete details[it.id]; delete XD[it.id];
+  if (it.tmdb) loadDetails(it); loadExtras(it); refreshSheet();
+});
 
 /* ───────────── Fluid motion ───────────── */
 const FLUID = {spring: CSS.supports("transition-timing-function", "linear(0, 1)") ? getComputedStyle(document.documentElement).getPropertyValue("--spring").trim() || "cubic-bezier(.2,1.2,.4,1)" : "cubic-bezier(.2,1.2,.4,1)",
