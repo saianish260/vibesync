@@ -67,11 +67,17 @@ def summarize(node: dict | None) -> dict:
         name = pkg.get("clearName") or pkg.get("shortName") or ""
         if not name:
             continue
-        a = apps.setdefault(name, {"name": name, "tech": pkg.get("technicalName", ""), "types": [], "audio": [], "subs": []})
+        a = apps.setdefault(name, {"name": name, "tech": pkg.get("technicalName", ""), "types": [], "audio": [], "subs": [], "url": ""})
+        # this app's own link to the title (the Watch buttons use it); a streaming offer's link first
+        stream = o.get("monetizationType") in ("FLATRATE", "FREE", "ADS")
+        if o.get("standardWebURL") and (not a["url"] or (stream and not a.get("_s"))):
+            a["url"], a["_s"] = o["standardWebURL"], stream
         for k, src in (("types", [o.get("monetizationType")]), ("audio", o.get("audioLanguages")), ("subs", o.get("subtitleLanguages"))):
             for v in src or []:
                 if v and v not in a[k]:
                     a[k].append(v)
+    for a in apps.values():
+        a.pop("_s", None)
     c = node.get("content") or {}
     return {"found": True, "date": c.get("originalReleaseDate") or "", "year": c.get("originalReleaseYear"), "apps": list(apps.values())}
 

@@ -4222,12 +4222,13 @@ function tmdbSheetHTML(it) {
   else where = `<div class="offers">` + d.apps.map(p => {
       // TMDB's watch page (powered by JustWatch) links to this exact title on each app.
       // Without it, fall back to searching inside the app.
-      const direct = exactLink(d, p.name), pending = d.link && EMBED && !RESOLVED[d.link];
-      const url = direct ? linkFor(direct, p.key) : d.link ? viaApp(d.link, p.name) : FIND[p.key] ? linkFor(FIND[p.key](it.title), p.key) : linkFor(HOME[p.key], p.key);
-      const sub = direct || (IN_APP && d.link) ? "Opens this exact title" : pending ? "Finding the exact link…" : d.link ? `Tap ${D.providers[p.key].name} on the next screen to open this title` : FIND[p.key] ? "Opens the app and searches this title" : "Opens the app";
+      const direct = exactLink(d, p.name) || jwLink(it, p.name);
+      const pending = !direct && ((d.link && EMBED && !RESOLVED[d.link]) || !LG[it.id] || LG[it.id].busy);
+      const url = direct ? linkFor(direct, p.key) : FIND[p.key] ? linkFor(FIND[p.key](it.title), p.key) : linkFor(HOME[p.key], p.key);
+      const sub = direct ? "Opens this exact title" : pending ? "Finding the exact link…" : FIND[p.key] ? "Opens the app and searches this title" : "Opens the app";
       return `<a class="offer" style="--pcol:${D.providers[p.key].color}" href="${esc(url)}" target="_blank" rel="noopener">${logo(p)}
         <span><b>${esc(D.providers[p.key].name)}</b><small>${sub}</small></span><span class="go">${ICON.play}Watch</span></a>`;
-    }).join("") + d.other.map(p => { const direct = exactLink(d, p.name);
+    }).join("") + d.other.map(p => { const direct = exactLink(d, p.name) || jwLink(it, p.name);
       const exact = direct || (IN_APP && d.link);
       return `<a class="offer" href="${esc(direct || (d.link ? viaApp(d.link, p.name) : it.trailer))}" target="_blank" rel="noopener">${logo(p)}
         <span><b>${esc(p.name)}</b><small>${exact ? "Opens this exact title" : "See watch options"}</small></span><span class="go">${exact ? ICON.play + "Watch" : "View"}</span></a>`; }).join("") + `</div>`;
@@ -5483,7 +5484,9 @@ function jwSummary(edges, title, year, tmdb) {       // same rules as core/langs
   if (!n) return {found: false};
   const apps = {};
   (n.offers || []).forEach(o => { const p = o.package || {}, nm = p.clearName || p.shortName; if (!nm) return;
-    const a = apps[nm] || (apps[nm] = {name: nm, tech: p.technicalName || "", types: [], audio: [], subs: []});
+    const a = apps[nm] || (apps[nm] = {name: nm, tech: p.technicalName || "", types: [], audio: [], subs: [], url: ""});
+    // this app's own link to the title (a streaming offer's link first)
+    if (o.standardWebURL && (!a.url || (!a.urlStream && STREAM_TYPES.includes(o.monetizationType)))) { a.url = o.standardWebURL; a.urlStream = STREAM_TYPES.includes(o.monetizationType); }
     [["types", [o.monetizationType]], ["audio", o.audioLanguages], ["subs", o.subtitleLanguages]].forEach(([k, v]) => (v || []).forEach(x => { if (x && !a[k].includes(x)) a[k].push(x); })); });
   const c = n.content || {};
   return {found: true, date: c.originalReleaseDate || "", year: c.originalReleaseYear, apps: Object.values(apps)};
@@ -5898,6 +5901,14 @@ function imdbChipSwap(it) {
   const old = document.querySelector("#sheet .imh"), html = imdbHeadHTML(it);
   if (old && html) { const t = document.createElement("template"); t.innerHTML = html.trim(); old.replaceWith(t.content.firstChild); }
   else if (!old && html) { const h = document.querySelector("#sheet .stitle"); if (h) h.insertAdjacentHTML("afterend", html); }
+}
+
+/* JustWatch's own link to this title on an app (from the "Languages on each app" lookup) */
+function jwLink(it, name) {
+  const lg = LG[it.id]; if (!lg || !lg.apps) return null;
+  const n = norm(name);
+  const a = lg.apps.find(x => norm(x.name) === n) || lg.apps.find(x => { const k = norm(x.name); return k.length > 3 && (k.includes(n) || n.includes(k)); });
+  return a && a.url && /^https?:\/\//.test(a.url) ? a.url : null;
 }
 
 /* ───────────── Fluid motion ───────────── */

@@ -244,3 +244,14 @@ class ImdbTest(unittest.TestCase):
         self.assertIsNone(t.get("tt9999999"))
         self.assertIsNone(t.get("nonsense"))
         self.assertEqual(live_rating("not-an-id"), {})
+
+
+class JustWatchLinkTest(unittest.TestCase):
+    def test_app_link_prefers_streaming_offer(self):
+        from core import langs
+        node = {"content": {"title": "X", "originalReleaseYear": 2018}, "offers": [
+            {"monetizationType": "RENT", "standardWebURL": "https://www.primevideo.com/detail/RENT", "package": {"clearName": "Amazon Prime Video"}},
+            {"monetizationType": "FLATRATE", "standardWebURL": "https://www.primevideo.com/detail/STREAM", "package": {"clearName": "Amazon Prime Video"}}]}
+        app = langs.summarize(node)["apps"][0]
+        self.assertEqual(app["url"], "https://www.primevideo.com/detail/STREAM")
+        self.assertNotIn("_s", app)
