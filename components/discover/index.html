@@ -1141,9 +1141,9 @@ function hotstarId(url) {
 function linkFor(url, provider) {
   url = String(url).replace(/^https:\/\/(www\.)?primevideo\.com\//, "https://app.primevideo.com/");   // the only Prime host its app accepts
   const pkg = provider && D.providers[provider] ? D.providers[provider].pkg : "";
-  // JioHotstar's app ignores web links; it opens titles via hotstar://<content id>
+  // JioHotstar opens a title from its own share-link format: https://jiohotstar.com/<content id>
   if (!IN_APP && ANDROID && provider === "hotstar" && hotstarId(url)) {
-    return "intent://" + hotstarId(url) + "#Intent;scheme=hotstar;package=" + pkg + ";end";
+    return "intent://jiohotstar.com/" + hotstarId(url) + "#Intent;scheme=https;package=" + pkg + ";end";
   }
   if (!IN_APP && ANDROID && pkg && /^https:\/\//.test(url)) {
     return "intent://" + url.replace(/^https:\/\//, "") + "#Intent;scheme=https;package=" + pkg + ";end";
