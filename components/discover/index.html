@@ -902,6 +902,7 @@ img{display:block}
 .coming.news b b{display:inline;font-size:inherit}
 .coming.news .nw{font-size:15px}.coming.news .nw b{display:inline;font-size:inherit}
 .coming.news .nwsk{display:inline-block;width:76px;height:14px;border-radius:7px;vertical-align:-1px;background:linear-gradient(90deg,rgba(255,255,255,.08),rgba(255,255,255,.22),rgba(255,255,255,.08));background-size:200% 100%;animation:nwsk 1.1s linear infinite}@keyframes nwsk{to{background-position:-200% 0}}
+.gsearch{display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:10px 16px;border-radius:999px;background:var(--s2);color:var(--text);font-weight:700;font-size:14px;text-decoration:none}.gsearch:active{transform:scale(.97)}
 
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
@@ -4732,7 +4733,17 @@ function newsHTML(it) {
 function comingHTML(it) {
   const nw = newsHTML(it), base = comingBaseHTML(it);
   // the news names the app: drop the "app hasn't been announced" estimate that would contradict it
-  return nw + (nw && /hasn't been announced|isn't announced|Coming to OTT/.test(base) ? "" : base);
+  return nw + (nw && /hasn't been announced|isn't announced|Coming to OTT/.test(base) ? "" : base) + gsearchHTML(it);
+}
+/* one tap to Google's own answer for "<title> OTT release date" (opens Google; VibeSync doesn't read it).
+   Shown while a title isn't streaming in India yet. The TV app turns it into a QR code for your phone. */
+function gsearchHTML(it) {
+  const x = XD[it.id]; if (!x || x.busy || x.none || it.kind === "sports") return "";
+  const det = details[it.id];
+  if ((it.offers && it.offers.length) || (det && (det.apps.length || det.other.length))) return "";
+  const q = `${String(it.title).split(":")[0].trim()}${it.year ? " " + String(it.year).slice(0, 4) : ""} OTT release date`;
+  return `<a class="gsearch" href="https://www.google.com/search?q=${encodeURIComponent(q)}" target="_blank" rel="noopener" data-gq="${esc(q)}">
+    <span aria-hidden="true">🔎</span> Search on Google</a>`;
 }
 function airDate(s) { return s ? new Date(s + "T18:00:00") : null; }        // TMDB gives a date; assume an evening drop
 function whenText(d) {
