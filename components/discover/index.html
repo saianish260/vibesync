@@ -4689,21 +4689,26 @@ function newsFor(it) {
   return null;
 }
 function newsHTML(it) {
+  if (!newsApp()) return "";                                   // website: unchanged
   const x = XD[it.id]; if (!x || x.busy || x.none || it.kind === "sports") return "";
   const det = details[it.id];
   if ((it.offers && it.offers.length) || (det && (det.apps.length || det.other.length))) return "";        // already streaming
   const today = new Date(new Date().toDateString());
   if (x.ott && x.ott.app && new Date(x.ott.date) >= today) return "";                                       // TMDB has it officially
-  const r = newsFor(it); if (!r || r.none) return "";
-  const name = r.plat ? (D.providers[r.plat] ? D.providers[r.plat].name : NEWS_NAME[r.plat] || r.plat) : "";
-  const when = r.date ? new Date(r.date + "T12:00:00").toLocaleDateString("en-IN", {weekday: "short", day: "numeric", month: "short"}) : "";
-  const line = [name ? `<b>${esc(name)}</b>` : "", when ? `<b>${esc(when)}</b>` : ""].filter(Boolean).join(" · ");
-  return line ? `<div class="coming news"><span class="cm-i" aria-hidden="true">🍿</span><span class="nw">${line}</span></div>` : "";
+  // one simple card in the apps: the platform (from the news) and the date (TMDB's, else the news's)
+  const tmdbDate = x.ott && new Date(x.ott.date) >= today ? x.ott.date.slice(0, 10) : null;
+  const r = newsFor(it), got = r && !r.none ? r : null;
+  const plat = got && got.plat, date = tmdbDate || (got && got.date);
+  if (!plat && !(date && tmdbDate)) return "";            // nothing from the news yet: TMDB's own card shows
+  const name = plat ? (D.providers[plat] ? D.providers[plat].name : NEWS_NAME[plat] || plat) : "OTT";
+  const when = date ? new Date(date + "T12:00:00").toLocaleDateString("en-IN", {weekday: "short", day: "numeric", month: "short"}) : "";
+  const line = [`<b>${esc(name)}</b>`, when ? `<b>${esc(when)}</b>` : ""].filter(Boolean).join(" · ");
+  return `<div class="coming news"><span class="cm-i" aria-hidden="true">🍿</span><span class="nw">${line}</span></div>`;
 }
 function comingHTML(it) {
   const nw = newsHTML(it), base = comingBaseHTML(it);
   // the news names the app: drop the "app hasn't been announced" estimate that would contradict it
-  return nw + (nw && /hasn't been announced|isn't announced/.test(base) ? "" : base);
+  return nw + (nw && /hasn't been announced|isn't announced|Coming to OTT/.test(base) ? "" : base);
 }
 function airDate(s) { return s ? new Date(s + "T18:00:00") : null; }        // TMDB gives a date; assume an evening drop
 function whenText(d) {
