@@ -903,6 +903,23 @@ img{display:block}
 .coming.news .nw{font-size:15px}.coming.news .nw b{display:inline;font-size:inherit}
 .coming.news .nwsk{display:inline-block;width:76px;height:14px;border-radius:7px;vertical-align:-1px;background:linear-gradient(90deg,rgba(255,255,255,.08),rgba(255,255,255,.22),rgba(255,255,255,.08));background-size:200% 100%;animation:nwsk 1.1s linear infinite}@keyframes nwsk{to{background-position:-200% 0}}
 .gsearch{display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:10px 16px;border-radius:999px;background:var(--s2);color:var(--text);font-weight:700;font-size:14px;text-decoration:none}.gsearch:active{transform:scale(.97)}
+/* Live updates (reality shows): elimination + this week, from the news */
+.lnlive{display:inline-flex;align-items:center;gap:6px;margin-left:8px;font-size:.72rem;font-weight:700;color:var(--muted);letter-spacing:.02em;vertical-align:2px}
+.lnlive i{width:7px;height:7px;border-radius:50%;background:#ff5a5f;box-shadow:0 0 0 0 rgba(255,90,95,.6);animation:lnpulse 2s infinite}
+@keyframes lnpulse{0%{box-shadow:0 0 0 0 rgba(255,90,95,.55)}70%{box-shadow:0 0 0 8px rgba(255,90,95,0)}100%{box-shadow:0 0 0 0 rgba(255,90,95,0)}}
+.lnews{display:grid;gap:10px;margin:6px 0 4px}
+@media (min-width:760px){.lnews{grid-template-columns:1fr 1fr}}
+.lnc{background:var(--s2);border-radius:18px;padding:14px 16px 10px}
+.lnc h4{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:.98rem}
+.lnc h4 small{margin-left:auto;font-size:.72rem;font-weight:600;color:var(--muted)}
+.lni{display:block;padding:9px 0;border-top:1px solid color-mix(in srgb,var(--text) 9%,transparent);color:var(--text);text-decoration:none}
+.lnc h4+.lni{border-top:0}
+.lni b{display:block;font-weight:650;font-size:.92rem;line-height:1.38}
+.lni small{display:block;margin-top:3px;font-size:.76rem;color:var(--muted)}
+.lni:active{opacity:.7}
+.lne{margin:4px 0 6px;color:var(--muted);font-size:.88rem}
+.lnsk{display:block;height:14px;border-radius:7px;margin:10px 0;background:linear-gradient(90deg,rgba(255,255,255,.07),rgba(255,255,255,.2),rgba(255,255,255,.07));background-size:200% 100%;animation:nwsk 1.1s linear infinite}
+.lnsk.short{width:60%}
 
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
@@ -1325,6 +1342,7 @@ function sheetHTML(it) {
     ${it.note ? `<div class="note">${esc(it.note)}</div>` : ""}
     ${rateHTML(it)}<div class="acts">${it.kind === "sports" || it.kind === "reality" ? `<a class="btn tint" href="${esc(ytLink(it))}" target="_blank" rel="noopener">${ICON.play}${it.kind === "sports" ? "Highlights" : "Latest promos"}</a>`
       : `<button class="btn tint" data-trailer="${esc(it.id)}">${ICON.play}Trailer</button>`}${saveBtn(it)}</div>
+    ${it.kind === "reality" ? liveNewsHTML(it) : ""}
     ${D.tracker[it.id] ? trackerHTML(it.id) : ""}`;
   return sheetShell(it, [fact(it.imdb ? `★ ${it.imdb.toFixed(1)} IMDb` : "", "sc"), fact(esc(it.meta)), it.kind === "sports" ? "" : fact(esc(it.year)), fact(esc(kindLabel(it)))], body);
 }
@@ -5603,6 +5621,86 @@ document.addEventListener("click", e => {
   delete details[it.id]; delete XD[it.id];
   if (it.tmdb) loadDetails(it); loadExtras(it); refreshSheet();
 });
+
+/* ───────────── Live updates for reality shows (Bigg Boss…) ─────────────
+   Two cards from the latest Indian news headlines (Google News India, the same source as the OTT news check):
+   🚪 Elimination update (who was evicted) and 📅 This week (nominations, captaincy, tasks, wild cards).
+   The apps fetch the headlines themselves; the website asks its server. Refreshed every 2 hours (also while
+   the page stays open). Headlines are links to the articles. */
+const RNEWS = {mem: {}, ttl: 2 * 3600e3};
+function newsQuery(q, cb) {
+  const b = newsApp(), k = "rn" + Date.now() + Math.random().toString(36).slice(2, 6);
+  if (!b) {
+    NEWS.wait[k] = cb; serverAsk("news", {key: k, q});
+    setTimeout(() => { if (NEWS.wait[k]) { delete NEWS.wait[k]; cb([]); } }, 20000);
+    return;
+  }
+  try { b.newsStart(k, q); } catch (e) { return cb([]); }
+  let n = 0;
+  const poll = setInterval(() => {
+    let r = ""; try { r = b.newsTake(k) || ""; } catch (e) {}
+    if (r || ++n > 50) { clearInterval(poll); let items = []; try { items = JSON.parse(r || "[]"); } catch (e) {} cb(items); }
+  }, 300);
+}
+/* the words a headline must have to be about this show: "bigg boss" + the language / season words of the title */
+function showWords(it) {
+  const t = loose(String(it.title).split(":")[0]);
+  const lang = (t.match(/\b(telugu|tamil|kannada|malayalam|marathi|hindi|bangla|ott)\b/) || [])[1];
+  const num = (t.match(/\b(\d{1,2})\b/) || [])[1];
+  const core = t.replace(/\b(telugu|tamil|kannada|malayalam|marathi|hindi|bangla|ott|season|s)\b|\b\d+\b/g, " ").replace(/\s+/g, " ").trim();
+  return {core, lang, num};
+}
+function rnewsPick(items, it, kind) {
+  const {core, lang, num} = showWords(it), now = Date.now(), out = [], seen = new Set();
+  (items || []).forEach(n => {
+    const head = String(n.t || "").replace(/\s+-\s+[^-]+$/, "").trim(), src = (n.s || (String(n.t || "").match(/\s-\s([^-]+)$/) || [])[1] || "").trim();
+    const pub = +new Date(n.d || 0); if (!pub || now - pub > (kind === "elim" ? 9 : 7) * dayMs) return;   // this week's news
+    const h = loose(head);
+    if (core && !h.includes(core)) return;
+    if (lang && !h.includes(lang)) return;
+    if (num && !new RegExp(`\\b${num}\\b`).test(h)) return;                                    // this season, not an old one
+    const elim = /elimin|evict|eliminated|walks? out|exit(s|ed)?\b|voted out|leaves the house|out of bigg boss/i.test(head);
+    if (kind === "elim" ? !elim : (elim || !/nominat|captain|task|wild ?card|week|weekend|day \d+|promo|episode|house|contestant|vote|fight|highlights/i.test(head))) return;
+    const sig = h.slice(0, 60); if (seen.has(sig)) return; seen.add(sig);
+    out.push({head, src, pub, u: n.u || ""});
+  });
+  return out.sort((a, b) => b.pub - a.pub).slice(0, 3);
+}
+function rnewsFor(it) {
+  if (!newsOn()) return null;
+  const id = it.id, mem = RNEWS.mem[id];
+  if (mem && (mem.busy || Date.now() - mem.at < RNEWS.ttl)) return mem;
+  const saved = store.get("rnews", {})[id];
+  if (!mem && saved && Date.now() - saved.at < RNEWS.ttl) { RNEWS.mem[id] = saved; return saved; }
+  RNEWS.mem[id] = Object.assign({}, saved || {}, {busy: true});
+  const base = String(it.title).split(":")[0].trim();
+  // one question at a time (the website's server takes one news question per round trip)
+  newsQuery(`${base} elimination`, a => newsQuery(`${base} this week nominations`, b => {
+    const all = a.concat(b);
+    const r = {at: Date.now(), elim: rnewsPick(all, it, "elim"), week: rnewsPick(all, it, "week")};
+    RNEWS.mem[id] = r;
+    try { const s = store.get("rnews", {}); s[id] = r; const ks = Object.keys(s); if (ks.length > 20) delete s[ks[0]]; store.set("rnews", s); } catch (e) {}
+    if (openId === id) refreshSheet();
+  }));
+  return RNEWS.mem[id];
+}
+const agoTxt = t => { const m = Math.max(1, Math.round((Date.now() - t) / 60e3)); return m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`; };
+function liveNewsHTML(it) {
+  if (it.kind !== "reality" || !newsOn()) return "";
+  const r = rnewsFor(it) || {busy: true};
+  const card = (icon, label, list, empty) => `<div class="lnc"><h4><span aria-hidden="true">${icon}</span>${label}${r.at ? `<small>updated ${agoTxt(r.at)}</small>` : ""}</h4>
+    ${list && list.length ? list.map(x => `<a class="lni" href="${esc(x.u)}" target="_blank" rel="noopener"><b>${esc(x.head)}</b><small>${esc(x.src)}${x.src ? " · " : ""}${agoTxt(x.pub)}</small></a>`).join("")
+      : r.busy && !list ? `<i class="nwsk lnsk" aria-label="Loading"></i><i class="nwsk lnsk short" aria-hidden="true"></i>` : `<p class="lne">${empty}</p>`}</div>`;
+  return `<div class="h3">Live updates <span class="lnlive"><i></i>from the news</span></div><div class="lnews">
+    ${card("🚪", "Elimination update", r.elim, "No elimination news this week yet.")}
+    ${card("📅", "This week", r.week, "No news about this week yet.")}</div>`;
+}
+/* keep an open reality-show page fresh: re-check every few minutes, refetch when the 2-hour mark passes */
+setInterval(() => {
+  if (!openId || !BY[openId] || BY[openId].kind !== "reality") return;
+  const m = RNEWS.mem[openId];
+  if (m && !m.busy && Date.now() - m.at >= RNEWS.ttl) { delete RNEWS.mem[openId]; refreshSheet(); }
+}, 5 * 60e3);
 
 /* ───────────── Fluid motion ───────────── */
 const FLUID = {spring: CSS.supports("transition-timing-function", "linear(0, 1)") ? getComputedStyle(document.documentElement).getPropertyValue("--spring").trim() || "cubic-bezier(.2,1.2,.4,1)" : "cubic-bezier(.2,1.2,.4,1)",

@@ -83,7 +83,7 @@ def _langs(title: str, year: int | None, tmdb_id: int | None, kind: str) -> dict
         return {"error": True}
 
 
-@st.cache_data(ttl=3 * 3600, max_entries=400, show_spinner=False)
+@st.cache_data(ttl=2 * 3600, max_entries=400, show_spinner=False)   # news refreshes every 2 hours
 def _news(query: str) -> list:
     try:
         return fetch_news(query)
