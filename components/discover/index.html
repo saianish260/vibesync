@@ -1154,7 +1154,7 @@ function linkFor(url, provider) {
   const pkg = provider && D.providers[provider] ? D.providers[provider].pkg : "";
   // JioHotstar opens a title from its own share-link format: https://jiohotstar.com/<content id>
   if (!IN_APP && ANDROID && provider === "hotstar" && hotstarId(url)) {
-    return "intent://jiohotstar.com/" + hotstarId(url) + "#Intent;scheme=https;package=" + pkg + ";end";
+    return "intent://jiohotstar.com/" + hotstarId(url) + "?utm_source=share#Intent;scheme=https;package=" + pkg + ";end";
   }
   if (!IN_APP && ANDROID && pkg && /^https:\/\//.test(url)) {
     return "intent://" + url.replace(/^https:\/\//, "") + "#Intent;scheme=https;package=" + pkg + ";end";
