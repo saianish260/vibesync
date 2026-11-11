@@ -932,6 +932,15 @@ img{display:block}
 .rt.rtfx i{font-style:normal;margin-left:2px;font-size:13px;opacity:.85;display:inline-block}
 .rt.rtfx.busy i{animation:vsspin .8s linear infinite}
 @keyframes vsspin{to{transform:rotate(360deg)}}
+/* IMDb chip under the title on a title's page */
+.imh{display:inline-flex;align-items:center;gap:7px;margin:0 0 10px;padding:6px 12px 6px 6px;border:0;border-radius:999px;background:#F5C518;color:#121212;font:inherit;font-size:13px;line-height:1;cursor:default;-webkit-tap-highlight-color:transparent}
+.imh .imh-l{padding:4px 6px;border-radius:6px;background:#121212;color:#F5C518;font-weight:900;font-size:11px;letter-spacing:.02em}
+.imh b{font-weight:850;font-size:14px}
+.imh small{font-weight:650;opacity:.72;font-size:11.5px}
+.imh i{font-style:normal;font-weight:800;font-size:14px;display:inline-block}
+button.imh{cursor:pointer;transition:transform .2s}
+button.imh:active{transform:scale(.95)}
+.imh.busy i{animation:vsspin .8s linear infinite}
 
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
@@ -1338,7 +1347,7 @@ function sheetShell(it, facts, body) {
   const bd = hasPoster(it) ? `background-image:url('${posterURL(it, "s166")}')` : `background:linear-gradient(150deg,${tintOf(it)},transparent)`;
   return `<div class="grab" data-grab><i></i></div><button class="icon x" data-close aria-label="Close">${ICON.close}</button>
     <div class="sbody"><div class="shero"><div class="sbd" style="${bd}"></div>
-      <div class="shead">${poster(it, "s592")}<div><h2 class="stitle">${esc(it.title)}</h2><div class="facts">${facts.filter(Boolean).join("")}</div></div></div></div>
+      <div class="shead">${poster(it, "s592")}<div><h2 class="stitle">${esc(it.title)}</h2>${imdbHeadHTML(it)}<div class="facts">${facts.filter(Boolean).join("")}</div></div></div></div>
     <div class="sin${sheetStill ? " still" : ""}">${body}${sheetExtras(it)}</div></div>`;
 }
 const fact = (t, cls = "") => t ? `<span class="fact ${cls}">${t}</span>` : "";
@@ -1358,7 +1367,7 @@ function sheetHTML(it) {
       : `<button class="btn tint" data-trailer="${esc(it.id)}">${ICON.play}Trailer</button>`}${saveBtn(it)}</div>
     ${it.kind === "reality" ? liveNewsHTML(it) : ""}
     ${D.tracker[it.id] ? trackerHTML(it.id) : ""}`;
-  return sheetShell(it, [fact(it.imdb ? `★ ${it.imdb.toFixed(1)} IMDb` : "", "sc"), fact(esc(it.meta)), it.kind === "sports" ? "" : fact(esc(it.year)), fact(esc(kindLabel(it)))], body);
+  return sheetShell(it, [fact(esc(it.meta)), it.kind === "sports" ? "" : fact(esc(it.year)), fact(esc(kindLabel(it)))], body);
 }
 let openId = null, sheetStill = false;
 const isMobile = () => innerWidth < 760;
@@ -4973,10 +4982,7 @@ function sheetExtras(it) {
   queueMicrotask(() => loadExtras(it));
   const x = XD[it.id] || {}, s = statusOf(it.id);
   const chips = [];
-  // IMDb: tap the chip for this title's latest exact rating (only this title is checked)
-  const fx = IMFRESH[it.id], imv = fx ? fx.r.toFixed(1) : x.omdb && x.omdb.imdb ? x.omdb.imdb : it.imdb ? it.imdb.toFixed(1) : "";
-  if (x.imdbId && EMBED) chips.push(`<button class="rt imdb rtfx${IMBUSY[it.id] ? " busy" : ""}" data-imdbfresh="${esc(it.id)}" aria-label="Refresh this title's IMDb rating">IMDb <b>${imv || "–"}</b><small>${fx ? `${(fx.v || 0).toLocaleString("en-IN")} votes · ${agoTxt(fx.at)}` : IMBUSY[it.id] ? "checking…" : "tap to refresh"}</small><i aria-hidden="true">↻</i></button>`);
-  else if (imv) chips.push(`<span class="rt imdb">IMDb <b>${esc(imv)}</b></span>`);
+  // (IMDb has its own chip right under the title: imdbHeadHTML)
   if (x.score) chips.push(`<span class="rt tmdb">TMDB <b>${x.score.toFixed(1)}</b><small>${(x.votes || 0).toLocaleString("en-IN")} votes</small></span>`);
   if (x.omdb && x.omdb.rt) chips.push(`<span class="rt tomato">🍅 <b>${esc(x.omdb.rt)}</b></span>`);
   if (x.omdb && x.omdb.mc) chips.push(`<span class="rt mc">Metascore <b>${esc(x.omdb.mc)}</b></span>`);
@@ -5816,6 +5822,16 @@ function imdbRefresh(id) {
   IMDBQ.wait[k] = finish;
   serverAsk("imdb", {key: k, one: x.imdbId});
   setTimeout(() => { if (IMDBQ.wait[k]) { delete IMDBQ.wait[k]; finish(null); } }, 25000);
+}
+
+/* the IMDb chip right under a title's name: its rating, and a tap refreshes this one title's latest rating */
+function imdbHeadHTML(it) {
+  if (!it || it.kind === "sports") return "";
+  const x = XD[it.id] || {}, fx = IMFRESH[it.id];
+  const imv = fx ? fx.r.toFixed(1) : x.omdb && x.omdb.imdb ? x.omdb.imdb : it.imdb ? it.imdb.toFixed(1) : "";
+  if (x.imdbId && EMBED) return `<button class="imh rtfx${IMBUSY[it.id] ? " busy" : ""}" data-imdbfresh="${esc(it.id)}" aria-label="IMDb rating ${imv || "unknown"}. Tap to refresh">
+    <span class="imh-l">IMDb</span><b>${imv ? "★ " + imv : "–"}</b><small>${fx ? `${(fx.v || 0).toLocaleString("en-IN")} votes · ${agoTxt(fx.at)}` : IMBUSY[it.id] ? "checking…" : "tap to refresh"}</small><i aria-hidden="true">↻</i></button>`;
+  return imv ? `<span class="imh"><span class="imh-l">IMDb</span><b>★ ${esc(imv)}</b></span>` : "";
 }
 
 /* ───────────── Fluid motion ───────────── */
