@@ -15,7 +15,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from core.data import catalog_payload
-from core.imdb import fetch_ratings, imdb_id, live_rating
+from core.imdb import imdb_id, library_ratings, live_rating, ratings_table
 from core.langs import fetch_langs
 from core.news import fetch_news
 from core.watchlinks import fetch_watch_links, is_watch_url
@@ -92,12 +92,9 @@ def _news(query: str) -> list:
         return []
 
 
-@st.cache_resource(ttl=24 * 3600, show_spinner=False)   # IMDb's ratings file, refreshed daily
 def _imdb_ratings():
-    try:
-        return fetch_ratings()
-    except Exception:           # IMDb unreachable: the genre mixer falls back to TMDB's ratings
-        return None
+    """IMDb's ratings file, downloaded again every day (kept in memory; None if IMDb can't be reached)."""
+    return ratings_table(block=True)
 
 
 @st.cache_data(ttl=60, max_entries=200, show_spinner=False)     # "refresh IMDb rating" on one title
@@ -144,6 +141,11 @@ def _watch_links(url: str) -> dict[str, str]:
 
 def render(theme: str) -> dict | None:
     payload = catalog_payload()
+    # the hand-picked library's IMDb ratings: today's numbers from IMDb's daily file (worked out in the background)
+    today = library_ratings(payload["items"], tmdb_key())
+    for it in payload["items"]:
+        if it["id"] in today:
+            it["imdb"] = round(float(today[it["id"]]), 1)
     _write_catalog(payload)
     resolved = st.session_state.setdefault("vs_resolved", {})
     langs = st.session_state.setdefault("vs_langs", {})
@@ -190,6 +192,13 @@ def render(theme: str) -> dict | None:
     if isinstance(iq, dict) and value.get("n") != st.session_state.get("_imdb_n"):
         st.session_state._imdb_n = value.get("n")
         k, refs, one = str(iq.get("key", ""))[:80], iq.get("ids"), str(iq.get("one", ""))[:20]
+        daily = iq.get("daily")
+        if k and isinstance(daily, list) and k not in imdb:      # a title page: today's IMDb rating by IMDb id
+            table = _imdb_ratings()
+            imdb[k] = {"error": True} if table is None else {i: list(table.get(i)) for i in map(str, daily[:40]) if table.get(i)}
+            while len(imdb) > 12:
+                imdb.pop(next(iter(imdb)))
+            st.rerun()
         if k and one and k not in imdb:
             imdb[k] = _imdb_live(one)
             while len(imdb) > 12:

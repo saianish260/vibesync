@@ -932,11 +932,13 @@ img{display:block}
 .rt.rtfx i{font-style:normal;margin-left:2px;font-size:13px;opacity:.85;display:inline-block}
 .rt.rtfx.busy i{animation:vsspin .8s linear infinite}
 @keyframes vsspin{to{transform:rotate(360deg)}}
-/* IMDb chip under the title on a title's page */
-.imh{display:inline-flex;align-items:center;gap:7px;margin:0 0 10px;padding:6px 12px 6px 6px;border:0;border-radius:999px;background:#F5C518;color:#121212;font:inherit;font-size:13px;line-height:1;cursor:default;-webkit-tap-highlight-color:transparent}
+/* IMDb chip under the title on a title's page: "IMDb ★ 8.2 · today ↻", the vote count underneath */
+.imh{display:inline-flex;flex-wrap:wrap;align-items:center;column-gap:7px;row-gap:2px;max-width:100%;margin:0 0 10px;padding:6px 12px 6px 6px;border:0;border-radius:16px;background:#F5C518;color:#121212;font:inherit;font-size:13px;line-height:1.1;text-align:left;cursor:default;-webkit-tap-highlight-color:transparent}
+.imh > *{white-space:nowrap}
 .imh .imh-l{padding:4px 6px;border-radius:6px;background:#121212;color:#F5C518;font-weight:900;font-size:11px;letter-spacing:.02em}
-.imh b{font-weight:850;font-size:14px}
+.imh b{font-weight:850;font-size:14.5px}
 .imh small{font-weight:650;opacity:.72;font-size:11.5px}
+.imh .imh-v{flex-basis:100%;padding-left:2px}
 .imh i{font-style:normal;font-weight:800;font-size:14px;display:inline-block}
 button.imh{cursor:pointer;transition:transform .2s}
 button.imh:active{transform:scale(.95)}
@@ -5852,13 +5854,41 @@ function imdbRefresh(id) {
   setTimeout(() => { if (IMDBQ.wait[k]) { delete IMDBQ.wait[k]; finish(null); } }, 25000);
 }
 
-/* the IMDb chip right under a title's name: its rating, and a tap refreshes this one title's latest rating */
+/* the IMDb chip right under a title's name. It shows today's IMDb rating from IMDb's daily ratings file
+   (fetched automatically when the page opens); a tap gets this one title's latest exact rating. */
+const imdbDayKey = () => new Date().toLocaleDateString("en-CA", {timeZone: "Asia/Kolkata"});
+var IMDAY = (() => { try { return JSON.parse(localStorage.getItem("vs.imdbday") || "{}") || {}; } catch (e) { return {}; } })();
+const IMDAYWAIT = {};
+function imdbDaily(it, x) {
+  const tt = x.imdbId, day = imdbDayKey();
+  if (!tt || !EMBED || IMDAYWAIT[tt] || (IMDAY[tt] && IMDAY[tt].d === day)) return;
+  IMDAYWAIT[tt] = true;
+  const k = "id" + Date.now() + Math.random().toString(36).slice(2, 6);
+  IMDBQ.wait[k] = map => {
+    delete IMDAYWAIT[tt];
+    const v = map && !map.error ? map[tt] : null;
+    IMDAY[tt] = {r: v ? +v[0] : 0, v: v ? +v[1] : 0, d: day};
+    try { const ks = Object.keys(IMDAY); if (ks.length > 400) delete IMDAY[ks[0]]; localStorage.setItem("vs.imdbday", JSON.stringify(IMDAY)); } catch (e) {}
+    if (v && !IMFRESH[it.id]) {
+      it.imdb = +v[0];
+      document.querySelectorAll(`[data-open="${CSS.escape(it.id)}"] .sc`).forEach(e => { e.textContent = `★ ${(+v[0]).toFixed(1)}`; });
+    }
+    if (openId === it.id) refreshSheet();
+  };
+  serverAsk("imdb", {key: k, daily: [tt]});
+  setTimeout(() => { if (IMDBQ.wait[k]) { delete IMDBQ.wait[k]; delete IMDAYWAIT[tt]; } }, 30000);
+}
 function imdbHeadHTML(it) {
   if (!it || it.kind === "sports") return "";
   const x = XD[it.id] || {}, fx = IMFRESH[it.id];
-  const imv = fx ? fx.r.toFixed(1) : x.omdb && x.omdb.imdb ? x.omdb.imdb : it.imdb ? it.imdb.toFixed(1) : "";
-  if (x.imdbId && EMBED) return `<button class="imh rtfx${IMBUSY[it.id] ? " busy" : ""}" data-imdbfresh="${esc(it.id)}" aria-label="IMDb rating ${imv || "unknown"}. Tap to refresh">
-    <span class="imh-l">IMDb</span><b>${imv ? "★ " + imv : "–"}</b><small>${fx ? `${(fx.v || 0).toLocaleString("en-IN")} votes · ${agoTxt(fx.at)}` : IMBUSY[it.id] ? "checking…" : "tap to refresh"}</small><i aria-hidden="true">↻</i></button>`;
+  const dy = x.imdbId && IMDAY[x.imdbId] && IMDAY[x.imdbId].d === imdbDayKey() && IMDAY[x.imdbId].r ? IMDAY[x.imdbId] : null;
+  if (x.imdbId && !fx) imdbDaily(it, x);
+  const imv = fx ? fx.r.toFixed(1) : dy ? dy.r.toFixed(1) : x.omdb && x.omdb.imdb ? x.omdb.imdb : it.imdb ? it.imdb.toFixed(1) : "";
+  const votes = fx ? fx.v : dy ? dy.v : 0;
+  const when = IMBUSY[it.id] ? "checking…" : fx ? agoTxt(fx.at) : dy ? "today" : x.imdbId && IMDAYWAIT[x.imdbId] ? "…" : "tap ↻";
+  const sub = votes ? `<small class="imh-v">${votes.toLocaleString("en-IN")} votes</small>` : "";
+  if (x.imdbId && EMBED) return `<button class="imh rtfx${IMBUSY[it.id] ? " busy" : ""}" data-imdbfresh="${esc(it.id)}" aria-label="IMDb rating ${imv || "unknown"}. Tap for the latest">
+    <span class="imh-l">IMDb</span><b>${imv ? "★ " + imv : "★ –"}</b><small class="imh-w">${when}</small><i aria-hidden="true">↻</i>${sub}</button>`;
   return imv ? `<span class="imh"><span class="imh-l">IMDb</span><b>★ ${esc(imv)}</b></span>` : "";
 }
 

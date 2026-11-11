@@ -111,3 +111,109 @@ def live_rating(imdb: str, omdb_key: str = "", table: "Ratings | None" = None, t
             pass
     got = table.get(imdb) if table is not None else None
     return {"r": got[0], "v": got[1], "src": "daily"} if got else {}
+
+
+# ───────────── kept in memory on the server, refreshed once a day ─────────────
+import threading as _threading
+import time as _time
+
+_STATE = {"table": None, "day": "", "busy": False, "failed_at": 0.0, "cur": {}, "cur_day": "", "cur_busy": False}
+_IDS: dict[str, str] = {}               # library title -> IMDb id (found once, kept)
+_LOCK = _threading.Lock()
+
+
+def _today() -> str:
+    return _time.strftime("%Y-%m-%d", _time.gmtime(_time.time() + 5.5 * 3600))   # India's date
+
+
+def ratings_table(block: bool = False) -> "Ratings | None":
+    """IMDb's ratings file, downloaded again each day. The download runs in the background (yesterday's table
+    keeps serving meanwhile); with block=True and nothing loaded yet, it waits for the first one."""
+    today = _today()
+    with _LOCK:
+        start = (_STATE["day"] != today and not _STATE["busy"] and _time.time() - _STATE["failed_at"] > 1800)
+        if start:
+            _STATE["busy"] = True
+
+    def work():
+        try:
+            _STATE["table"] = fetch_ratings()
+            _STATE["day"] = today
+        except Exception:
+            _STATE["failed_at"] = _time.time()
+        finally:
+            _STATE["busy"] = False
+
+    if start:
+        if block and _STATE["table"] is None:
+            work()
+        else:
+            _threading.Thread(target=work, daemon=True).start()
+    elif block and _STATE["table"] is None and _STATE["busy"]:
+        for _ in range(120):                             # someone else is downloading it: wait for that
+            if not _STATE["busy"]:
+                break
+            _time.sleep(0.5)
+    return _STATE["table"]
+
+
+def _loose(t: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", (t or "").lower())
+
+
+def find_imdb_id(tmdb_key: str, title: str, year: str, is_movie: bool, timeout: float = 8.0) -> str:
+    """A library title's IMDb id, through TMDB's search (only when TMDB's top match has the same name)."""
+    kind = "movie" if is_movie else "tv"
+    q = {"api_key": tmdb_key, "query": title}
+    y = (re.search(r"\d{4}", str(year or "")) or [None])[0]
+    if y:
+        q["year" if is_movie else "first_air_date_year"] = y
+    url = f"https://api.themoviedb.org/3/search/{kind}?" + urllib.parse.urlencode(q)
+    with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "VibeSync"}), timeout=timeout) as r:
+        res = json.loads(r.read().decode("utf-8")).get("results") or []
+    want = _loose(title.split(":")[0])
+    for hit in res[:3]:
+        names = {_loose(hit.get("title") or hit.get("name") or ""), _loose(hit.get("original_title") or hit.get("original_name") or "")}
+        if any(n and (n == _loose(title) or n.startswith(want)) for n in names):
+            return imdb_id(tmdb_key, kind, hit["id"], timeout)
+    return ""
+
+
+def library_ratings(items: list, tmdb_key: str) -> dict:
+    """{library id: today's IMDb rating} for the hand-picked library. Worked out in the background once a day;
+    returns what's ready (empty at first, then the app gets today's numbers on its next load)."""
+    today = _today()
+    with _LOCK:
+        start = tmdb_key and _STATE["cur_day"] != today and not _STATE["cur_busy"]
+        if start:
+            _STATE["cur_busy"] = True
+    if start:
+        todo = [(it["id"], it["title"], it.get("year", ""), it.get("kind"), it.get("meta", "")) for it in items if it.get("kind") != "sports"]
+
+        def work():
+            try:
+                from concurrent.futures import ThreadPoolExecutor
+                table = ratings_table(block=True)
+                if table is None:
+                    return
+
+                def one(t):
+                    iid, title, year, kind, meta = t
+                    if iid not in _IDS:
+                        movie = kind == "movie" or (kind == "anime" and re.search(r"\d+h|\d+ ?min|film|movie", meta or "", re.I) is not None)
+                        try:
+                            _IDS[iid] = find_imdb_id(tmdb_key, title, year, movie)
+                        except Exception:
+                            return iid, None
+                    got = table.get(_IDS.get(iid, ""))
+                    return iid, (got[0] if got else None)
+
+                with ThreadPoolExecutor(max_workers=8) as pool:
+                    out = {iid: r for iid, r in pool.map(one, todo) if r}
+                _STATE["cur"] = out
+                _STATE["cur_day"] = today
+            finally:
+                _STATE["cur_busy"] = False
+
+        _threading.Thread(target=work, daemon=True).start()
+    return dict(_STATE["cur"])
