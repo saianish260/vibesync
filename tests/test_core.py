@@ -215,3 +215,15 @@ class LangsTest(unittest.TestCase):
         self.assertEqual(s["date"], "2015-07-10")
         self.assertFalse(langs.summarize(None)["found"])
         self.assertEqual(langs.build_request("Vikram", "movie")["variables"]["searchTitlesFilter"]["objectTypes"], ["MOVIE"])
+
+
+class NewsTest(unittest.TestCase):
+    def test_parse_rss(self):
+        from core.news import parse
+        xml = ('<rss><channel><item><title>Ranabaali to stream on Netflix from November 13 - NewsBytes</title>'
+               '<link>https://n/1</link><pubDate>Tue, 10 Nov 2026 10:00:00 GMT</pubDate><source url="x">NewsBytes</source></item>'
+               '<item><title>A &amp; B</title></item></channel></rss>')
+        items = parse(xml)
+        self.assertEqual(items[0]["s"], "NewsBytes")
+        self.assertIn("November 13", items[0]["t"])
+        self.assertEqual(items[1]["t"], "A & B")

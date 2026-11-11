@@ -16,7 +16,7 @@ st.set_page_config(page_title="VibeSync", page_icon="🎬", layout="wide", initi
 # modules in memory, which breaks imports of anything new. Reload any module whose file
 # changed since it was loaded (dependency order matters).
 _OWN_MODULES = ["core.config", "core.emoji", "core.data", "core.store", "core.cards", "core.styles",
-                "core.state", "core.watchlinks", "core.langs", "views.discover", "views.lounge"]
+                "core.state", "core.watchlinks", "core.langs", "core.news", "views.discover", "views.lounge"]
 
 
 def _file_mtime(mod) -> float | None:

@@ -4604,13 +4604,28 @@ function comingBaseHTML(it) {
    Indian news headlines ("<title> OTT release date", Google News India, fetched by the app itself) and
    shows what they report: the platform, and the date when at least two sources agree. Labelled as news,
    not confirmed; TMDB's official date replaces it once it's there. Plain browsers never run this. */
-const NEWS = {mem: {}, ttl: 3 * 3600e3};
+const NEWS = {mem: {}, ttl: 3 * 3600e3, wait: {}};
+/* questions for the Streamlit server; ones asked close together are sent together (the latest value wins) */
+const SERVER_ASK = {};
+function serverAsk(kind, body) {
+  SERVER_ASK[kind] = body; const at = Date.now();
+  setTimeout(() => { if (SERVER_ASK[kind] === body && Date.now() - at >= 19000) delete SERVER_ASK[kind]; }, 20000);
+  send("streamlit:setComponentValue", {value: Object.assign({theme: document.documentElement.dataset.theme}, SERVER_ASK, {n: Date.now()}), dataType: "json"});
+}
+function gotServerNews(map) {
+  Object.entries(map || {}).forEach(([k, items]) => {
+    const cb = NEWS.wait[k]; if (!cb) return;
+    delete NEWS.wait[k]; if (SERVER_ASK.news && SERVER_ASK.news.key === k) delete SERVER_ASK.news;
+    cb(Array.isArray(items) ? items : []);
+  });
+}
 const NEWS_PLAT = [["netflix", /netflix/i], ["prime", /prime video|amazon prime|\bprime\b/i], ["hotstar", /jio\s?hotstar|disney\+?\s?hotstar|\bhotstar/i],
   ["sunnxt", /sun\s?nxt/i], ["zee5", /zee\s?5/i], ["sonyliv", /sony\s?liv/i], ["aha", /\baha\b/i], ["etvwin", /etv\s?win/i],
   ["appletv", /apple\s?tv/i], ["crunchyroll", /crunchyroll/i], ["jiocinema", /jio\s?cinema/i], ["lionsgate", /lionsgate\s?play/i], ["mxplayer", /mx\s?player/i]];
 const NEWS_NAME = {etvwin: "ETV Win", jiocinema: "JioCinema", lionsgate: "Lionsgate Play", mxplayer: "MX Player"};
 const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
 const newsApp = () => { const b = window.VibeSyncApp; return b && typeof b.newsStart === "function" && typeof b.newsTake === "function" ? b : null; };
+const newsOn = () => !!newsApp() || EMBED;          // the apps read the news themselves; the website asks its server
 const loose = t => String(t || "").toLowerCase().normalize("NFKD").replace(/[^a-z0-9 ]+/g, " ").replace(/([a-z])\1+/g, "$1").replace(/\s+/g, " ").trim();
 function newsDate(text, pub) {
   const t = text.toLowerCase(), out = [];
@@ -4655,7 +4670,8 @@ function newsRead(items, it) {
   return {plat, date, srcs, dateSrcs, n: hits.length};
 }
 function newsFor(it) {
-  const b = newsApp(); if (!b) return null;
+  if (!newsOn()) return null;
+  const b = newsApp();
   const id = it.id, mem = NEWS.mem[id];
   if (mem) return mem.busy ? null : mem.r;
   const saved = store.get("news", {})[id];
@@ -4669,6 +4685,11 @@ function newsFor(it) {
     if (openId === id && r && !r.none) refreshSheet();
   };
   const ask = (q, k, cb) => {
+    if (!b) {                                         // website: the Streamlit server fetches the headlines
+      NEWS.wait[k] = cb; serverAsk("news", {key: k, q});
+      setTimeout(() => { if (NEWS.wait[k]) { delete NEWS.wait[k]; cb([]); } }, 20000);
+      return;
+    }
     try { b.newsStart(k, q); } catch (e) { return cb([]); }
     let n = 0;
     const poll = setInterval(() => {
@@ -4689,7 +4710,7 @@ function newsFor(it) {
   return null;
 }
 function newsHTML(it) {
-  if (!newsApp()) return "";                                   // website: unchanged
+  if (!newsOn()) return "";
   const x = XD[it.id]; if (!x || x.busy || x.none || it.kind === "sports") return "";
   const det = details[it.id];
   if ((it.offers && it.offers.length) || (det && (det.apps.length || det.other.length))) return "";        // already streaming
@@ -5210,7 +5231,7 @@ async function askLangs(it) {
   } catch (e) { /* usually blocked by the browser (CORS): ask the server */ }
   if (EMBED) {
     LG[it.id] = {busy: true, asked: Date.now()};
-    send("streamlit:setComponentValue", {value: {theme: document.documentElement.dataset.theme, langs: {key: it.id, title, year, tmdb, type}, n: Date.now()}, dataType: "json"});
+    serverAsk("langs", {key: it.id, title, year, tmdb, type});
     setTimeout(() => { if (LG[it.id] && LG[it.id].busy) nativeLangs(it, done); }, 9000);
   } else nativeLangs(it, done);
 }
@@ -5719,6 +5740,7 @@ window.addEventListener("message", e => {
   if (args.omdbKey) OMDB.key = String(args.omdbKey).trim();
   if (args.firebase && D && !AUTH.cfg) { setAuthConfig(args.firebase); authBoot(); }
   if (args.langs && typeof args.langs === "object" && D) gotServerLangs(args.langs);
+  if (args.news && typeof args.news === "object" && D) gotServerNews(args.news);
   if (args.catalog) boot(args.catalog);
   if (args.resolved && typeof args.resolved === "object") {
     let fresh = false;

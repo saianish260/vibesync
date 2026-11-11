@@ -16,6 +16,7 @@ import streamlit.components.v1 as components
 
 from core.data import catalog_payload
 from core.langs import fetch_langs
+from core.news import fetch_news
 from core.watchlinks import fetch_watch_links, is_watch_url
 
 DIR = Path(__file__).resolve().parent.parent / "components" / "discover"
@@ -82,6 +83,14 @@ def _langs(title: str, year: int | None, tmdb_id: int | None, kind: str) -> dict
         return {"error": True}
 
 
+@st.cache_data(ttl=3 * 3600, max_entries=400, show_spinner=False)
+def _news(query: str) -> list:
+    try:
+        return fetch_news(query)
+    except Exception:           # Google News unreachable: the page shows TMDB's own OTT card
+        return []
+
+
 @st.cache_data(ttl=6 * 3600, max_entries=400, show_spinner=False)
 def _watch_links(url: str) -> dict[str, str]:
     try:
@@ -95,7 +104,8 @@ def render(theme: str) -> dict | None:
     _write_catalog(payload)
     resolved = st.session_state.setdefault("vs_resolved", {})
     langs = st.session_state.setdefault("vs_langs", {})
-    value = _component(catalog=payload, theme=theme, tmdbKey=tmdb_key(), ytKey=youtube_key(), omdbKey=omdb_key(), firebase=firebase_config(), resolved=resolved, langs=langs,
+    news = st.session_state.setdefault("vs_news", {})
+    value = _component(catalog=payload, theme=theme, tmdbKey=tmdb_key(), ytKey=youtube_key(), omdbKey=omdb_key(), firebase=firebase_config(), resolved=resolved, langs=langs, news=news,
                        key="discover", default=None)
     # When a live title's sheet opens, the screen asks for that title's exact per-app links.
     req = value.get("resolve") if isinstance(value, dict) else None
@@ -120,5 +130,15 @@ def render(theme: str) -> dict | None:
             langs[k] = _langs(str(lq.get("title", ""))[:120], year, tid, "tv" if lq.get("type") == "tv" else "movie")
             while len(langs) > 30:
                 langs.pop(next(iter(langs)))
+            st.rerun()
+    # ...and the latest news headlines about its OTT release (the page reads the app and date out of them)
+    nq = value.get("news") if isinstance(value, dict) else None
+    if isinstance(nq, dict) and value.get("n") != st.session_state.get("_news_n"):
+        st.session_state._news_n = value.get("n")
+        k, q = str(nq.get("key", ""))[:80], str(nq.get("q", ""))[:200]
+        if k and q and k not in news:
+            news[k] = _news(q)
+            while len(news) > 30:
+                news.pop(next(iter(news)))
             st.rerun()
     return value
