@@ -1847,7 +1847,7 @@ const GENRES = {
        [10766, "Soap", "🫧", /soap/i], [10767, "Talk", "🎙️", /talk/i]]
 };
 /* extra sub-genres TMDB doesn't tag (Mythology, Superhero, Anime…): matched on the title and synopsis */
-const XG = [["x-mythology", "Mythology", "🏺", /myth|legend|gods?\b|epic|folklore|ancient/i],
+const XG = [["x-mythology", "Mythology", "🏺", /myth|legend|gods?\b|goddess|deity|deities|divine|folklore|demigod|mahabharat|ramayan|kurukshetra|ashwatthama|arjuna|karna|vishnu|shiva|krishna|hanuman|\brama\b|ravana|asura|avatar of|dashavatar|olymp|zeus|hercules|poseidon|\bthor\b|\bodin\b|asgard|norse/i],
   ["x-superhero", "Superhero", "🦸", /superhero|super-?power|marvel|\bdc\b|avenger|mutant/i],
   ["x-anime", "Anime", "🎌", /anime|shonen|manga/i],
   ["x-sports", "Sports", "🏅", /sport|cricket|football|boxing|kabaddi|wrestl|olympic|tournament/i],
@@ -1947,21 +1947,92 @@ function mixBar(ask) {
   if (ask && Date.now() - M.askAt < 50) buzz(18);
 }
 
-/* live preview of what the mix matches */
+/* live preview of what the mix matches.
+   TMDB has real genres (Action, Sci-Fi…) but no Mythology / Superhero / Spy…; for those "extra" genres the mixer
+   searches TMDB's keywords (e.g. mythology, mahabharata, hindu mythology, greek mythology), then adds titles whose
+   description matches (Kurukshetra, Vishnu, Zeus…) from the real-genre search, so nothing obvious is missed
+   (Sci-Fi × Mythology finds Kalki 2898 AD). Telugu uses the film's original language. */
+const XK = {
+  "x-mythology": ["mythology", "mahabharata", "ramayana", "mythical", "demigod", "deity", "hindu god", "greek god", "norse god", "lord shiva", "lord krishna", "lord vishnu", "hanuman"],
+  "x-superhero": ["superhero", "super power", "superhuman", "based on comic"],
+  "x-anime": ["anime", "based on manga"],
+  "x-sports": ["sports", "cricket", "football", "boxing", "wrestling", "kabaddi", "olympics", "basketball"],
+  "x-biopic": ["biography", "biopic", "based on true story", "based on real person"],
+  "x-spy": ["spy", "espionage", "secret agent"],
+  "x-survival": ["survival", "stranded"],
+  "x-coming": ["coming of age"],
+  "x-musical": ["musical"],
+  "x-heist": ["heist", "robbery"],
+  "x-zombie": ["zombie"]
+};
+const XLANG = {"x-telugu": "te"};
+/* TMDB keyword ids for an extra genre (looked up live, remembered for a week) */
+async function xIds(id) {
+  const terms = XK[id]; if (!terms) return [];
+  const cache = store.get("mixkw", {}), hit = cache[id];
+  if (hit && Date.now() - hit.t < 7 * 864e5 && hit.ids.length) return hit.ids;
+  const lists = await Promise.all(terms.map(term => tget("/search/keyword", {query: term, page: 1}).then(j =>
+    (j.results || []).filter(k => k.name.toLowerCase().includes(term) && k.name.split(/\s+/).length <= 3).slice(0, 6).map(k => k.id)).catch(() => [])));
+  const ids = [...new Set(lists.flat())].slice(0, 40);
+  if (ids.length) { cache[id] = {t: Date.now(), ids}; store.set("mixkw", cache); }
+  return ids;
+}
 function mixParams(any) {
   const inc = picked(1).filter(x => typeof x === "number"), exc = picked(-1).filter(x => typeof x === "number");
   return Object.assign({}, STREAM, inc.length ? {with_genres: inc.join(M.all && !any ? "," : "|")} : {},
     exc.length ? {without_genres: exc.join(",")} : {}, M.good ? {"vote_average.gte": "6.5", "vote_count.gte": "40"} : {});
 }
 function xHit(i, id) {
+  if (XLANG[id]) return !!i.telugu || (i.tmdb && i.lang === XLANG[id]) || /telugu|tollywood/i.test((i.genres || []).join(" ") + " " + (i.meta || ""));
   const g = gInfo(M.type, id);
   return !!g && g[3].test(`${i.title || ""} ${i.synopsis || ""} ${(i.genres || []).join(" ")}`);
 }
-function mixFilter(items) {   // apply the extra sub-genres TMDB can't filter on
-  const ex = picked(1).filter(x => typeof x === "string"), no = picked(-1).filter(x => typeof x === "string");
+function mixFilter(items, skip) {   // the extra sub-genres TMDB can't filter on directly (skip = already matched by keywords)
+  const ex = picked(1).filter(x => typeof x === "string" && x !== skip), no = picked(-1).filter(x => typeof x === "string");
   if (!ex.length && !no.length) return items;
   return items.filter(i => (!ex.length || (M.all ? ex.every(id => xHit(i, id)) : ex.some(id => xHit(i, id))))
     && !no.some(id => xHit(i, id)));
+}
+/* the searches for the current mix: [{params, skip}] — skip = the extra genre a search already guarantees */
+async function mixQueries(any) {
+  const xin = picked(1).filter(x => typeof x === "string");
+  const base = mixParams(any), qs = [];
+  if (!xin.length) return [{params: base, skip: null}];
+  const lead = async (id, params) => {                    // one extra genre made part of the search itself
+    if (XLANG[id]) return {params: Object.assign({}, params, {with_original_language: XLANG[id]}), skip: id};
+    const ids = await xIds(id);
+    return ids.length ? {params: Object.assign({}, params, {with_keywords: ids.join("|")}), skip: id} : null;
+  };
+  if (M.all && !any) {
+    const first = await lead(xin[0], base); if (first) qs.push(first);
+    qs.push({params: XLANG[xin[0]] ? Object.assign({}, base, {with_original_language: XLANG[xin[0]]}) : base, skip: XLANG[xin[0]] ? xin[0] : null, wide: true});
+  } else {                                                 // any of them: each genre searched on its own, merged
+    const num = picked(1).filter(x => typeof x === "number");
+    if (num.length) qs.push({params: base, skip: null, any: true});
+    for (const id of xin) { const q = await lead(id, Object.assign({}, base, {with_genres: undefined})); if (q) { delete q.params.with_genres; q.any = true; qs.push(q); } }
+    if (!qs.length) qs.push({params: base, skip: null, wide: true});
+  }
+  return qs;
+}
+/* run the searches (page 1, or a given page of the main one), filter, merge without duplicates */
+async function mixRun(any, page) {
+  const qs = await mixQueries(any), seen = new Set(), out = [];
+  let total = 0, pages = 1;
+  const res = await Promise.all(qs.map((q, n) => {
+    const pg = n === 0 && page ? page : 1, more = q.wide ? [pg, pg + 1] : [pg];
+    return Promise.all(more.map(x => tget(`/discover/${M.type}`, Object.assign({page: x}, q.params)).catch(() => ({results: []}))));
+  }));
+  res.forEach((js, n) => {
+    const q = qs[n];
+    js.forEach((j, k) => {
+      if (n === 0 && k === 0) pages = Math.min(j.total_pages || 1, 20);
+      if (!q.wide && k === 0) total += j.total_results || 0;
+      const items = (j.results || []).map(r => { const it = fromTmdb(r, M.type); if (it && r.original_language) it.lang = r.original_language; return it; }).filter(Boolean);
+      const keep = q.any ? items.filter(i => !picked(-1).some(id => typeof id === "string" && xHit(i, id))) : mixFilter(items, q.skip);
+      keep.forEach(i => { if (!seen.has(i.id)) { seen.add(i.id); out.push(i); } });
+    });
+  });
+  return {items: out, total: Math.max(total, out.length), pages};
 }
 function curatedMatches() {
   const isMovie = i => i.kind === "movie" || (i.kind === "anime" && /\d+h|\d+ ?min|film|movie/i.test(i.meta || ""));
@@ -1981,17 +2052,15 @@ async function loadResults() {
   let items = [], total = 0, any = false;
   if (T.key && !T.failed) {
     try {
-      const path = `/discover/${M.type}`;
-      let j = await tget(path, Object.assign({page: 1}, mixParams()));
-      if (!j.total_results && M.all && inc.length > 1) { j = await tget(path, Object.assign({page: 1}, mixParams(true))); any = true; }
-      items = mixFilter((j.results || []).map(r => fromTmdb(r, M.type)).filter(Boolean));
-      total = xs().length ? items.length : (j.total_results || 0); M.res.pages = Math.min(j.total_pages || 1, 20);
+      let r = await mixRun(false);
+      if (!r.items.length && M.all && inc.length > 1) { r = await mixRun(true); any = true; }
+      items = r.items; total = r.total; M.res.pages = r.pages;
     } catch (e) { items = curatedMatches(); total = items.length; }
   } else { items = curatedMatches(); total = items.length; }
   if (seq !== M.res.seq) return;                     // a newer selection already took over
   Object.assign(M.res, {items, total, any});
   box.innerHTML = section(any ? "Nothing has all of them, so here's any of them" : "Matches", total ? `${total.toLocaleString("en-IN")} titles` : "")
-    + (items.length ? `<div class="row">${items.slice(0, 20).map(card).join("")}</div>` : `<div class="empty">No titles match this mix. Try fewer genres or turn off “Match every genre”.</div>`);
+    + (items.length ? `<div class="row">${items.slice(0, 30).map(card).join("")}</div>` : `<div class="empty">No titles match this mix. Try fewer genres or turn off “Match every genre”.</div>`);
   $$("#mxres .card").forEach((c, i) => { c.classList.add("fresh"); c.style.setProperty("--i", i); });
   mixBar();
 }
@@ -1999,12 +2068,11 @@ async function mixSurprise() {
   if (rolling || picked(1).length < 2) return;
   const recent = store.get("recentPicks", []);
   let pool = M.res.items.slice();
-  if (T.key && !T.failed && M.res.total > pool.length) {
-    try {   // dig into a random page so the surprise isn't always one of the top 20
+  if (T.key && !T.failed && (M.res.pages || 1) > 1) {
+    try {   // dig into a random page so the surprise isn't always one of the top results
       const page = 1 + Math.floor(Math.random() * (M.res.pages || 1));
-      const j = await tget(`/discover/${M.type}`, Object.assign({page}, mixParams(M.res.any)));
-      const more = mixFilter((j.results || []).map(r => fromTmdb(r, M.type)).filter(Boolean));
-      if (more.length) pool = more;
+      const r = await mixRun(M.res.any, page);
+      if (r.items.length) pool = r.items;
     } catch (e) { /* keep page 1 */ }
   }
   if (!pool.length) pool = curatedMatches();
