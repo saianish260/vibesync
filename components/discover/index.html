@@ -933,12 +933,12 @@ img{display:block}
 .rt.rtfx.busy i{animation:vsspin .8s linear infinite}
 @keyframes vsspin{to{transform:rotate(360deg)}}
 /* IMDb chip under the title on a title's page: "IMDb ★ 8.2 · today ↻", the vote count underneath */
-.imh{display:inline-flex;flex-wrap:wrap;align-items:center;column-gap:7px;row-gap:2px;max-width:100%;margin:0 0 10px;padding:6px 12px 6px 6px;border:0;border-radius:16px;background:#F5C518;color:#121212;font:inherit;font-size:13px;line-height:1.1;text-align:left;cursor:default;-webkit-tap-highlight-color:transparent}
+.imh{display:inline-grid;grid-template-columns:repeat(4,auto);justify-content:start;align-items:center;column-gap:7px;row-gap:2px;width:max-content;max-width:min(100%,calc(100vw - 40px));margin:0 0 10px;padding:6px 12px 6px 6px;border:0;border-radius:16px;background:#F5C518;color:#121212;font:inherit;font-size:13px;line-height:1.1;text-align:left;cursor:default;-webkit-tap-highlight-color:transparent}
 .imh > *{white-space:nowrap}
 .imh .imh-l{padding:4px 6px;border-radius:6px;background:#121212;color:#F5C518;font-weight:900;font-size:11px;letter-spacing:.02em}
 .imh b{font-weight:850;font-size:14.5px}
 .imh small{font-weight:650;opacity:.72;font-size:11.5px}
-.imh .imh-v{flex-basis:100%;padding-left:2px}
+.imh .imh-v{grid-column:1/-1;padding-left:2px}
 .imh i{font-style:normal;font-weight:800;font-size:14px;display:inline-block}
 button.imh{cursor:pointer;transition:transform .2s}
 button.imh:active{transform:scale(.95)}
