@@ -6029,6 +6029,9 @@ function rdDraw(typing) {
   };
   document.addEventListener("pointerdown", e => {
     if (!e.target.closest || !e.target.closest("[data-ratering]")) return;
+    // a tap in the middle of the dial does nothing: only the ring itself moves the rating
+    const svg = $("#ratepop .rp-svg"), r = svg.getBoundingClientRect(), k = r.width / 240;
+    if (Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) < (RD.R - 34) * k) { e.preventDefault(); return; }
     e.preventDefault(); drag = true; at(e); drag = "moving";
   });
   document.addEventListener("pointermove", e => { if (drag) at(e); });
