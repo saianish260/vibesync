@@ -1037,9 +1037,9 @@ const store = {
   set(k, v) { try { localStorage.setItem("vs." + k, JSON.stringify(v)); } catch (e) {} }
 };
 
-// Developer mode: rating titles shows only in the phone app while signed in with the developer's Google account
-// (kept here as a SHA-256 fingerprint, not the address). Anyone else, the website and the TV app see nothing of
-// it: no "Rate it" slider, no ★ badges on posters, no "Rated by you" row in Saved, nothing in Wrapped.
+// Developer mode: rating titles shows only while signed in with the developer's Google account, in the phone app
+// and on the website (the account is kept here as a SHA-256 fingerprint, not the address). Anyone else, and the
+// TV app, see nothing of it: no "Rate it" slider, no ★ badges on posters, no "Rated by you" row in Saved, nothing in Wrapped.
 // Worked out at load; signing out reloads the page, and a sign-in that changes it reloads too (see gotGoogleToken).
 const DEV_ACCOUNT = "f53edc889375f6dd6217bcdfe6ec4a8466fcd00411f8a49fda9ab9be85413df4";
 function sha256hex(str) {
@@ -1063,7 +1063,7 @@ function sha256hex(str) {
 }
 function isDevAccount(u) {
   const ua = navigator.userAgent || "";
-  if (!/VibeSyncApp\//.test(ua) || /VibeSyncTV/.test(ua)) return false;          // the phone app only
+  if (/VibeSyncTV/.test(ua)) return false;                                        // not on the TV app
   const mail = u && u.email ? String(u.email).trim().toLowerCase() : "";
   try { return !!mail && sha256hex(mail) === DEV_ACCOUNT; } catch (e) { return false; }
 }
