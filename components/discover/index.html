@@ -972,6 +972,17 @@ button.imh:active{transform:scale(.95)}
 .bnav .tthumb{width:22px;height:22px;border-radius:7px;box-shadow:none}
 .chips.qk .vsupd{display:none!important}   /* Check for updates moved to 👤 Profile */
 
+/* Describe it: "Which Vikram did you mean?" */
+.dpick{margin-top:14px}
+.dp-h{font-size:18px;font-weight:800;margin:0}
+.dp-s{font-size:13px;color:var(--muted);margin:4px 0 12px}
+.dp-list{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.dp-item{display:flex;align-items:center;gap:12px;padding:10px;border-radius:16px;background:var(--s2);text-align:left;color:var(--text);transition:transform .15s}
+.dp-item:active{transform:scale(.98)}
+.dp-item img{width:46px;height:69px;border-radius:9px;object-fit:cover;flex:0 0 auto;background:var(--s1)}
+.dp-item b{display:block;font-size:15px;font-weight:750}
+.dp-item small{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -4754,7 +4765,27 @@ function openDescribe(q) {
   if (q) runDescribe(q); else setTimeout(() => { const i = $("#dq"); if (i) i.focus(); }, 300);
 }
 const DSEQ = {n: 0};
-async function runDescribe(q) {
+/* "like Vikram": every movie and series whose name has that word (Vikram 2022, Vikram 1986, Vikram Vedha…),
+   most popular first, so you pick the one you meant instead of VibeSync guessing */
+async function likeCandidates(P) {
+  const words = P.like.toLowerCase().split(/\s+/).filter(Boolean).map(w => w.replace(/[^a-z0-9]/g, "")).filter(Boolean);
+  if (!words.length) return [];
+  const has = r => { const n = ` ${(r.title || r.name || "")} ${(r.original_title || r.original_name || "")} `.toLowerCase().replace(/[^a-z0-9]+/g, " ");
+    return words.every(w => n.includes(` ${w} `)); };
+  const [mv, tv] = await Promise.all([tget("/search/movie", {query: P.like, include_adult: "false"}).catch(() => ({})),
+                                      tget("/search/tv", {query: P.like, include_adult: "false"}).catch(() => ({}))]);
+  const all = (mv.results || []).map(r => Object.assign({media_type: "movie"}, r)).concat((tv.results || []).map(r => Object.assign({media_type: "tv"}, r)))
+    .filter(r => r.poster_path && has(r) && !serialSkip(r, r.media_type));
+  const typed = P.type ? all.filter(r => r.media_type === P.type) : all;
+  return (typed.length ? typed : all).sort((a, b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 12);
+}
+function likePickHTML(P, cands) {
+  const lang = c => { const l = LANGS.find(x => x[0] === c.original_language); return l ? l[1] : (c.original_language || "").toUpperCase(); };
+  return `<div class="dpick"><p class="dp-h">Which “${esc(P.like.replace(/\b\w/g, c => c.toUpperCase()))}” did you mean?</p><p class="dp-s">Tap one and VibeSync finds titles like it</p>
+    <div class="dp-list">${cands.map((c, i) => `<button class="dp-item" data-dspick="${i}"><img src="https://image.tmdb.org/t/p/w154${esc(c.poster_path)}" alt="" loading="lazy" referrerpolicy="no-referrer">
+      <span><b>${esc(c.title || c.name)}</b><small>${esc([(c.release_date || c.first_air_date || "").slice(0, 4), c.media_type === "tv" ? "Series" : "Movie", lang(c)].filter(Boolean).join(" · "))}</small></span></button>`).join("")}</div></div>`;
+}
+async function runDescribe(q, chosen) {
   const box = $("#dres"); if (!box || !q.trim()) return;
   const seq = ++DSEQ.n, P = parseDescribe(q);
   box.innerHTML = describeChips(P) + `<div class="grid">${skeleton(9)}</div>`;
@@ -4776,9 +4807,18 @@ async function runDescribe(q) {
   try {
     let base = null, baseTags = [];
     if (P.like) {
-      const j = await tget("/search/multi", {query: P.like, include_adult: "false"});
-      base = (j.results || []).find(r => (r.media_type === "movie" || r.media_type === "tv") && r.poster_path && (!P.type || r.media_type === P.type))
-          || (j.results || []).find(r => (r.media_type === "movie" || r.media_type === "tv") && r.poster_path);
+      if (chosen) base = chosen;                           // the title you picked from the list
+      else {
+        const cands = await likeCandidates(P).catch(() => []);
+        if (seq !== DSEQ.n) return;
+        if (cands.length > 1) { DSEQ.q = q; DSEQ.cands = cands; box.innerHTML = describeChips(P) + likePickHTML(P, cands); return; }   // you choose
+        base = cands[0] || null;
+        if (!base) {
+          const j = await tget("/search/multi", {query: P.like, include_adult: "false"});
+          base = (j.results || []).find(r => (r.media_type === "movie" || r.media_type === "tv") && r.poster_path && (!P.type || r.media_type === P.type))
+              || (j.results || []).find(r => (r.media_type === "movie" || r.media_type === "tv") && r.poster_path);
+        }
+      }
       if (base) baseTags = (base.genre_ids || []).map(g => GID_TAG[String(g)]).filter(Boolean);
     }
     if (seq !== DSEQ.n) return;
@@ -5989,6 +6029,7 @@ document.addEventListener("click", e => {
   if (t.hasAttribute("data-fkids")) { F.kids = !F.kids; renderFindCtl(); runFind(); buzz(); return; }
   if (d.xmore === "find") { t.textContent = "Loading…"; runFind(true); return; }
   if (d.dex) { $("#dq").value = d.dex; runDescribe(d.dex); buzz(); return; }
+  if (d.dspick != null) { const c = DSEQ.cands && DSEQ.cands[+d.dspick]; if (c) { runDescribe(DSEQ.q, c); buzz(); } return; }
   if (d.dk !== undefined) { deckDecide(+d.dk); return; }
   if (d.status) { setStatus(d.sid, d.status); return; }
   if (d.remind) { toggleRemind(d.remind); return; }
