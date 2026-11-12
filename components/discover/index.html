@@ -6147,7 +6147,12 @@ async function authBoot() {
   if (!AUTH.cfg || AUTH.started) return;
   AUTH.started = true;
   let justSynced = false; try { justSynced = sessionStorage.getItem("vs.synced") === "1"; sessionStorage.removeItem("vs.synced"); } catch (e) {}
-  if (!AUTH.user) return authGate();
+  if (!AUTH.user) {
+    // the app restarted the page while Google's account picker was open: finish that sign-in now
+    let t = ""; try { t = IN_APP && window.VibeSyncApp && window.VibeSyncApp.authLast ? window.VibeSyncApp.authLast() || "" : ""; } catch (e) {}
+    if (t) { authGate(); return gotGoogleToken(t); }
+    return authGate();
+  }
   try { await idToken(); }
   catch (e) {
     if (/TOKEN_EXPIRED|INVALID_REFRESH_TOKEN|USER_NOT_FOUND|USER_DISABLED/i.test(e.message)) { saveUser(null); return authGate("Please sign in again."); }
