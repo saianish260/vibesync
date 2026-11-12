@@ -1040,7 +1040,7 @@ const store = {
 // Developer mode: rating titles shows only in the phone app while signed in with the developer's Google account
 // (kept here as a SHA-256 fingerprint, not the address). Anyone else, the website and the TV app see nothing of
 // it: no "Rate it" slider, no ★ badges on posters, no "Rated by you" row in Saved, nothing in Wrapped.
-// Signing in or out reloads the page, so this is worked out once at load.
+// Worked out at load; signing out reloads the page, and a sign-in that changes it reloads too (see gotGoogleToken).
 const DEV_ACCOUNT = "f53edc889375f6dd6217bcdfe6ec4a8466fcd00411f8a49fda9ab9be85413df4";
 function sha256hex(str) {
   const b = new TextEncoder().encode(str), K = [], H = [];
@@ -1061,12 +1061,13 @@ function sha256hex(str) {
   }
   return H.map(v => (v >>> 0).toString(16).padStart(8, "0")).join("");
 }
-const RATE_DEV = (() => {
+function isDevAccount(u) {
   const ua = navigator.userAgent || "";
   if (!/VibeSyncApp\//.test(ua) || /VibeSyncTV/.test(ua)) return false;          // the phone app only
-  const u = store.get("auth", null), mail = u && u.email ? String(u.email).trim().toLowerCase() : "";
+  const mail = u && u.email ? String(u.email).trim().toLowerCase() : "";
   try { return !!mail && sha256hex(mail) === DEV_ACCOUNT; } catch (e) { return false; }
-})();
+}
+const RATE_DEV = isDevAccount(store.get("auth", null));
 
 /* ───────────── helpers ───────────── */
 const $ = (s, r = document) => r.querySelector(s);
@@ -6173,7 +6174,8 @@ async function gotGoogleToken(t) {
   catch (e) { return authGate(/OPERATION_NOT_ALLOWED|CONFIGURATION/i.test(e.message) ? "Google sign-in isn't switched on in Firebase yet." : "Couldn't sign you in. Try again.", true); }
   if (g) g.classList.remove("on");
   toast(`Signed in as ${AUTH.user.name || AUTH.user.email} ✓`);
-  syncAfterSignIn();
+  // signed in with (or away from) the developer account: reload so rating shows / hides everywhere
+  Promise.resolve(syncAfterSignIn()).catch(() => {}).then(() => { if (isDevAccount(AUTH.user) !== RATE_DEV) setTimeout(() => location.reload(), 600); });
 }
 async function authBoot() {
   if (!AUTH.cfg || AUTH.started) return;
