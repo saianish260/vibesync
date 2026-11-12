@@ -4604,8 +4604,7 @@ const gridOf = items => items.length ? `<div class="grid">${items.map(card).join
 
 /* ───────────── Explore hub on Home ───────────── */
 const TOOLS = [["swipe", "🃏", "Swipe mode", "Right to save, left to skip"], ["describe", "✨", "Describe it", "\"A thriller like Vikram but funnier\""],
-               ["time", "⏱️", "Short on time", "Only what fits your time"], ["lang", "🌐", "Languages", "Telugu, Tamil, Korean…"],
-               ["free", "🆓", "Free to watch", "No subscription needed"], ["kids", "👪", "Kids-safe", "Family-friendly picks"],
+               ["discover", "🧭", "Discover", "By length, language, genre…"],
                ["calendar", "📅", "OTT calendar", "What's new this week"], ["plan", "💳", "Which plan?", "Best subscription for your list"]];
 // Wrapped, Sync, your Google account and Check for updates live in 👤 Profile (top right)
 const APK_URL = "https://github.com/saianish260/vibesync-android/raw/apk/VibeSync.apk";   // the latest build, published by the APK repo's CI
@@ -4620,10 +4619,7 @@ document.addEventListener("click", e => { if (e.target.closest("[data-apk]")) to
 function openTool(k) {
   if (k === "swipe") return openDeck();
   if (k === "describe") return openDescribe();
-  if (k === "time") return openFind({time: 120});
-  if (k === "lang") return openFind({lang: "te"});
-  if (k === "free") return openFind({free: true});
-  if (k === "kids") return openFind({kids: true});
+  if (k === "discover" || k === "time" || k === "lang" || k === "kids") return openFind();   // one Discover (it replaced Short on time / Languages / Kids-safe)
   if (k === "calendar") return openCalendar();
   if (k === "plan") return openPlan();
   if (k === "wrapped") return openWrapped();
@@ -4636,12 +4632,14 @@ const LANGS = [["", "Any"], ["te", "Telugu"], ["ta", "Tamil"], ["hi", "Hindi"], 
 const TIMES = [[0, "Any length"], [90, "≤ 90 min"], [120, "≤ 2 hours"], [150, "≤ 2½ hours"]];
 const TV_TIMES = [[0, "Any length"], [25, "≤ 25 min episodes"], [45, "≤ 45 min episodes"], [60, "≤ 1 hour episodes"]];
 const SORTS = [["popularity.desc", "Popular"], ["vote_average.desc", "Top rated"], ["primary_release_date.desc", "Newest"]];
-const F = Object.assign({type: "movie", time: 0, lang: "", free: false, kids: false, sort: "popularity.desc"}, store.get("find", {}));
+const F = Object.assign({type: "movie", time: 0, lang: "", genre: "", kids: false, sort: "popularity.desc"}, store.get("find", {}));
+// the genres Discover offers (TMDB ids per movies / series come from TAGS)
+const FGEN = ["action", "comedy", "thriller", "crime", "drama", "romance", "horror", "scifi", "fantasy", "mystery", "family", "animation"];
 F.res = {ids: [], page: 0, total: 1, busy: false, seq: 0};
 function openFind(preset) {
-  Object.assign(F, {time: 0, lang: "", free: false, kids: false}, preset || {});
+  Object.assign(F, {time: 0, lang: "", genre: "", kids: false}, preset || {});
   if (preset && preset.time && F.type === "tv" && preset.time > 60) F.time = 45;
-  openXP(`${xpTop("Find something", "Filter everything streaming in India by length, language, price and age.")}<div id="findctl"></div><div id="findres"></div>`, "find");
+  openXP(`${xpTop("Discover", "Everything streaming in India, by length, language and genre. Tap a choice again to clear it.")}<div id="findctl"></div><div id="findres"></div>`, "find");
   renderFindCtl(); runFind();
 }
 function renderFindCtl() {
@@ -4651,13 +4649,13 @@ function renderFindCtl() {
       <button role="tab" data-ftype="movie" aria-selected="${F.type === "movie"}">🎬 Movies</button><button role="tab" data-ftype="tv" aria-selected="${F.type === "tv"}">📺 Series</button></div>
     <div class="h3">⏱️ How much time do you have?</div><div class="chips">${times.map(([v, l]) => chip("data-ftime", v, l, F.time === v)).join("")}</div>
     <div class="h3">🌐 Language</div><div class="chips">${LANGS.map(([v, l]) => chip("data-flang", v, l, F.lang === v)).join("")}</div>
-    <div class="h3">More</div><div class="chips">${chip("data-ffree", 1, "🆓 Free to watch", F.free)}${chip("data-fkids", 1, "👪 Kids-safe", F.kids)}
+    <div class="h3">🎭 Genre</div><div class="chips">${chip("data-fgenre", "", "Any", !F.genre)}${FGEN.filter(k => TAGS[k]).map(k => chip("data-fgenre", k, `${TAGS[k].e} ${TAGS[k].label}`, F.genre === k)).join("")}</div>
+    <div class="h3">More</div><div class="chips">${chip("data-fkids", 1, "👪 Kids-safe", F.kids)}
       ${SORTS.map(([v, l]) => chip("data-fsort", v, l, F.sort === v)).join("")}</div>
-    <p class="fnote">Language is the original language. Free means free or with ads in India (YouTube, MX Player, JioHotstar's free titles…).
-      Kids-safe uses U / PG certificates for movies and Kids & Family genres for series.</p>`;
+    <p class="fnote">Language is the original language. Kids-safe uses U / PG certificates for movies and Kids & Family genres for series.</p>`;
 }
 function findParams() {
-  const p = {watch_region: "IN", with_watch_monetization_types: F.free ? "free|ads" : "flatrate|free|ads", sort_by: F.sort, include_adult: "false"};
+  const p = {watch_region: "IN", with_watch_monetization_types: "flatrate|free|ads", sort_by: F.sort, include_adult: "false"};
   if (F.type === "tv" && p.sort_by === "primary_release_date.desc") p.sort_by = "first_air_date.desc";
   if (p.sort_by.startsWith("vote_average")) p["vote_count.gte"] = F.lang && F.lang !== "en" ? 60 : 300;
   if (p.sort_by.endsWith("date.desc")) p[F.type === "tv" ? "first_air_date.lte" : "primary_release_date.lte"] = new Date().toISOString().slice(0, 10);
@@ -4667,6 +4665,8 @@ function findParams() {
     if (F.type === "movie") { p.certification_country = "US"; p["certification.lte"] = "PG"; p.without_genres = "27,53,80"; }
     else { p.with_genres = "10762|10751"; p.without_genres = "80,9648"; }
   }
+  const g = F.genre && TAGS[F.genre] ? TAGS[F.genre][F.type === "tv" ? "t" : "m"] : "";
+  if (g) p.with_genres = p.with_genres ? `${p.with_genres},${g}` : g;
   return p;
 }
 async function runFind(more) {
@@ -4676,7 +4676,7 @@ async function runFind(more) {
   store.set("find", {type: F.type, sort: F.sort});
   if (!T.key || T.failed) {        // offline: the hand-picked library, filtered as far as its data allows
     const items = D.items.filter(i => i.kind !== "sports" && (F.type === "movie" ? i.kind === "movie" : i.kind !== "movie") && (!F.lang || langOf(i) === F.lang)
-      && (!F.time || (X.rt[i.id] && X.rt[i.id] <= F.time)) && (!F.kids || tagsOf(i).includes("family")) && !isWatched(i.id));
+      && (!F.time || (X.rt[i.id] && X.rt[i.id] <= F.time)) && (!F.kids || tagsOf(i).includes("family")) && (!F.genre || tagsOf(i).includes(F.genre)) && !isWatched(i.id));
     box.innerHTML = items.length ? gridOf(items) : `<div class="empty">Nothing in the hand-picked library matches. The live library has far more once TMDB is connected.</div>`;
     return;
   }
@@ -6022,10 +6022,11 @@ document.addEventListener("click", e => {
   if (d.tool) { e.stopPropagation(); openTool(d.tool); return; }
   if (t.hasAttribute("data-xpclose")) { closeXP(); return; }
   if (d.ftype) { F.type = d.ftype; F.time = 0; renderFindCtl(); runFind(); buzz(); return; }
-  if (d.ftime !== undefined) { F.time = +d.ftime; renderFindCtl(); runFind(); buzz(); return; }
-  if (d.flang !== undefined) { F.lang = d.flang; renderFindCtl(); runFind(); buzz(); return; }
-  if (d.fsort) { F.sort = d.fsort; renderFindCtl(); runFind(); buzz(); return; }
-  if (t.hasAttribute("data-ffree")) { F.free = !F.free; renderFindCtl(); runFind(); buzz(); return; }
+  // Discover: tap a choice to pick it, tap it again to clear it
+  if (d.ftime !== undefined) { F.time = F.time === +d.ftime ? 0 : +d.ftime; renderFindCtl(); runFind(); buzz(); return; }
+  if (d.flang !== undefined) { F.lang = F.lang === d.flang ? "" : d.flang; renderFindCtl(); runFind(); buzz(); return; }
+  if (d.fgenre !== undefined) { F.genre = F.genre === d.fgenre ? "" : d.fgenre; renderFindCtl(); runFind(); buzz(); return; }
+  if (d.fsort) { F.sort = F.sort === d.fsort ? "popularity.desc" : d.fsort; renderFindCtl(); runFind(); buzz(); return; }
   if (t.hasAttribute("data-fkids")) { F.kids = !F.kids; renderFindCtl(); runFind(); buzz(); return; }
   if (d.xmore === "find") { t.textContent = "Loading…"; runFind(true); return; }
   if (d.dex) { $("#dq").value = d.dex; runDescribe(d.dex); buzz(); return; }
