@@ -6417,6 +6417,11 @@ function slideIn(el, dir) {          // pages stacked on a page (a cast member f
    Turns on only when the Firebase settings are in the Streamlit secrets. */
 const AUTH = {cfg: null, user: store.get("auth", null), dirty: false, t: null, started: false, offline: false, last: store.get("authSaved", 0)};
 const CLOUD_SKIP = /^vs\.(auth|authSaved|rt|widgetMeta|tonight)$/;
+// what follows you between devices: only your own data and settings, never this device's caches (title pages,
+// IMDb numbers, news...), which change every session and made every launch look like "new data, reload"
+const CLOUD_DATA = ["favs", "favMeta", "tracker", "status", "swiped", "reminders", "themeUse", "ratings", "mysubs", "themeRecent", "taste"];
+const CLOUD_PREFS = ["titleTheme", "city", "prefLang", "find", "mix", "sound", "sndsrc", "vol2", "sndmix", "ytmode"];
+const CLOUD_KEYS = new Set(CLOUD_DATA.concat(CLOUD_PREFS).map(k => "vs." + k));
 function setAuthConfig(c) {
   if (c && c.apiKey && c.projectId && c.clientId) AUTH.cfg = {apiKey: String(c.apiKey).trim(), projectId: String(c.projectId).trim(), clientId: String(c.clientId).trim()};
 }
@@ -6451,7 +6456,7 @@ async function firebaseSignIn(googleIdToken) {
 }
 function localData() {
   const d = {};
-  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith("vs.") && !CLOUD_SKIP.test(k)) d[k] = localStorage.getItem(k); }
+  CLOUD_KEYS.forEach(k => { try { const v = localStorage.getItem(k); if (v != null) d[k] = v; } catch (e) {} });
   return d;
 }
 async function cloudLoad() {
@@ -6487,9 +6492,11 @@ function canon(v) {
   return JSON.stringify(c(x));
 }
 const canonAll = d => JSON.stringify(Object.keys(d).sort().map(k => [k, canon(d[k])]));
+const dataOnly = d => { const o = {}; CLOUD_DATA.forEach(k => { if (("vs." + k) in d) o["vs." + k] = d["vs." + k]; }); return o; };
 function mergeCloud(remote) {
   if (!remote) return false;
-  const before = canonAll(localData());
+  remote = Object.fromEntries(Object.entries(remote).filter(([k]) => CLOUD_KEYS.has(k)));    // old saves also carried caches
+  const before = canonAll(dataOnly(localData()));
   const J = (d, k) => { try { return JSON.parse(d[k]); } catch (e) { return null; } };
   const raw = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
   const local = localData();
@@ -6504,16 +6511,33 @@ function mergeCloud(remote) {
   merge("themeRecent", (a, b) => a.concat(b.filter(t => !a.some(x => x.id === t.id))).slice(0, 10));
   merge("taste", (a, b) => { const o = {t: {}, k: {}, l: {}, n: Math.max(a.n || 0, b.n || 0)};
     ["t", "k", "l"].forEach(g => [a[g] || {}, b[g] || {}].forEach(m => Object.entries(m).forEach(([k, v]) => o[g][k] = Math.max(o[g][k] || -1e9, v)))); return o; });
-  return canonAll(localData()) !== before;
+  return canonAll(dataOnly(localData())) !== before;              // settings taken from the account don't count as a change
+}
+/* the account had something new (from another device): show it right here, without reloading the page, so the
+   titles on screen stay exactly where they are */
+function applyCloudLive() {
+  favs = new Set(store.get("favs", [])); tracker = store.get("tracker", {});
+  X.st = store.get("status", {}); X.swiped = store.get("swiped", {}); X.use = store.get("themeUse", {});
+  X.taste = Object.assign({t: {}, k: {}, l: {}, n: 0}, store.get("taste", {}));
+  REM.list = store.get("reminders", {}); PLAN.mine = new Set(store.get("mysubs", [])); RATE.r = store.get("ratings", {});
+  Object.values(store.get("favMeta", {})).forEach(m => { if (m && !BY[m.id]) BY[m.id] = rehydrate(m); });
+  rehydrateAll();
+  $$("[data-fav]").forEach(b => { const on = favs.has(b.dataset.fav); if (b.getAttribute("aria-pressed") !== String(on)) b.setAttribute("aria-pressed", on); });
+  const pn = $("#panel"); if (pn && state.tab === "saved") morph(pn, panelHTML("saved"));     // only Saved shows this data
+  if (openId) refreshSheet();
 }
 // after a merge that changed this device, reload once so every screen shows the account's data
-async function syncAfterSignIn() {
+// live: on a normal launch nothing ever reloads; new data from the account is shown in place.
+// Only a fresh sign-in (you tapped Continue with Google) reloads once, so every screen shows the account.
+async function syncAfterSignIn(live) {
   let remote = null;
   try { remote = await cloudLoad(); }
-  catch (e) { toast("Signed in, but couldn't reach your saved data. VibeSync keeps trying"); AUTH.t = setTimeout(syncAfterSignIn, 30000); return; }
+  catch (e) { if (!live) toast("Signed in, but couldn't reach your saved data. VibeSync keeps trying"); AUTH.t = setTimeout(() => syncAfterSignIn(live), 30000); return; }
   const changed = mergeCloud(remote);
   await cloudSave();
-  if (changed) { try { sessionStorage.setItem("vs.synced", "1"); } catch (e) {} location.reload(); }
+  if (!changed) return;
+  if (live) { try { applyCloudLive(); } catch (e) { console.error("VibeSync sync:", e); } return; }
+  try { sessionStorage.setItem("vs.synced", "1"); } catch (e) {} location.reload();
 }
 
 /* the sign-in screen */
@@ -6592,7 +6616,7 @@ async function authBoot() {
     AUTH.offline = true; setTimeout(() => { AUTH.started = false; AUTH.offline = false; authBoot(); }, 30000); return;     // offline: keep going on this device
   }
   if (justSynced) { if (AUTH.dirty) cloudSave(); return; }
-  syncAfterSignIn();                                     // pick up changes made on your other devices
+  syncAfterSignIn(true);                                 // pick up changes made on your other devices (no reload)
 }
 function signOut(clear) {
   try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch (e) {}
