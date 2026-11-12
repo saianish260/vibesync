@@ -5435,7 +5435,7 @@ function savedHTML() {
   Object.values(RATE.r).forEach(v => { if (v.meta && !BY[v.meta.id]) BY[v.meta.id] = rehydrate(v.meta); });
   const rated = !RATE_DEV ? [] : Object.entries(RATE.r).sort((a, b) => b[1].r - a[1].r).map(([id]) => BY[id]).filter(Boolean);
   const saved = [...favs].map(id => BY[id]).filter(it => it && !isWatched(it.id)), watching = ids("watching"), watched = ids("watched");
-  const quick = `<div class="chips qk"><button class="chip" data-tool="plan">💳 Which plan?</button><button class="chip" data-tool="calendar">📅 OTT calendar</button></div>`;
+  const quick = "";                                 // Which plan? and OTT calendar live in Explore only
   if (!saved.length && !watching.length && !watched.length && !rated.length)
     return `<div class="sec"><h2>Saved</h2></div>${quick}<div class="empty">Nothing saved yet.<br>Tap the ♡ on any title, or try 🃏 Swipe mode, and it lands here.</div>`;
   // Watching first (the footer's Saved button lands there); "Coming up" (filled in a moment later) goes under it,
