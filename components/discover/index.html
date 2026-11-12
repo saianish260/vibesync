@@ -1449,16 +1449,21 @@ function setTab(tab, scrollTo) {
   movePill();
   const sel = $(`.tab[data-tab="${tab}"]`), rowEl = $(".tabrow");
   if (sel && rowEl) rowEl.scrollTo({left: sel.offsetLeft - (rowEl.clientWidth - sel.offsetWidth) / 2, behavior: REDUCED ? "auto" : "smooth"});
-  // footer Saved (and the like): always bring the tabs to just under the top bar, so the tab starts from its top
-  if (scrollTo) {
-    const tabs = $(".tabs"), sc = scroller(), bar = $("#top");
-    if (tabs) {
-      const under = bar ? bar.getBoundingClientRect().bottom : 60;
-      const y = Math.max(0, sc.scrollTop + tabs.getBoundingClientRect().top - under - 6);
-      if (Math.abs(y - sc.scrollTop) > 2) sc.scrollTo({top: y, behavior: REDUCED ? "auto" : "smooth"});
-    }
-  }
+  if (scrollTo) alignTab(tab);
   navState();
+}
+// footer Saved (and the like): wherever you are on the page, land on the start of the tab. For Saved that's the
+// "Watching" heading (else its first heading), placed just under the stuck tab bar with a little space, on any screen.
+function alignTab(tab) {
+  const sc = scroller(), tabs = $(".tabs"), p = $("#panel"); if (!tabs || !p) return;
+  const doc = sc === document.scrollingElement || sc === document.documentElement || sc === document.body;
+  const scTop = doc ? 0 : sc.getBoundingClientRect().top;
+  const stuck = (parseFloat(getComputedStyle(tabs).top) || 0) + tabs.offsetHeight;      // where the tab bar sits once stuck
+  const heads = [...p.querySelectorAll(".sec")];
+  const head = tab === "saved" ? (heads.find(h => /^\s*Watching\b/.test(h.textContent)) || heads[0]) : null;
+  const target = head || p;
+  const y = Math.max(0, Math.round(sc.scrollTop + target.getBoundingClientRect().top - scTop - stuck - (head ? 14 : 4)));
+  if (Math.abs(y - sc.scrollTop) > 2) sc.scrollTo({top: y, behavior: REDUCED ? "auto" : "smooth"});
 }
 
 /* ───────────── mood ───────────── */
@@ -5416,8 +5421,11 @@ function savedHTML() {
     <button class="chip" data-tool="wrapped">🎁 Wrapped</button>${AUTH.cfg ? `<button class="chip" data-account>👤 Account</button>` : ""}<button class="chip" data-tool="sync">🔄 Sync</button></div>`;
   if (!saved.length && !watching.length && !watched.length && !rated.length)
     return `<div class="sec"><h2>Saved</h2></div>${quick}<div class="empty">Nothing saved yet.<br>Tap the ♡ on any title, or try 🃏 Swipe mode, and it lands here.</div>`;
-  return quick + `<div id="comingup"></div>`
+  // Watching first (the footer's Saved button lands there); "Coming up" (filled in a moment later) goes under it,
+  // so nothing appears above the heading you landed on
+  return quick
     + (watching.length ? section("Watching", `${watching.length}`) + row(watching.map(i => i.id)) : "")
+    + `<div id="comingup"></div>`
     + (saved.length ? section("Saved", `${saved.length} title${saved.length > 1 ? "s" : ""}`) + grid(saved) : "")
     + (watched.length ? section("Watched", `${watched.length}`) + row(watched.map(i => i.id)) : "")
     + (rated.length ? section("Rated by you", "highest first") + row(rated.map(i => i.id)) : "");
