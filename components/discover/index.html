@@ -6284,7 +6284,7 @@ function imdbRefresh(id, quiet) {
       try { const ks = Object.keys(IMFRESH); if (ks.length > 300) delete IMFRESH[ks[0]]; localStorage.setItem("vs.imdbfix", JSON.stringify(IMFRESH)); } catch (e) {}
       it.imdb = +v.r;
       if (!notOutYet(it)) document.querySelectorAll(`[data-open="${CSS.escape(id)}"] .sc`).forEach(e => { e.textContent = `★ ${(+v.r).toFixed(1)}`; });   // cards on screen
-      toast(`IMDb ${(+v.r).toFixed(1)} · ${(+v.v || 0).toLocaleString("en-IN")} votes${v.src === "daily" ? " (today's IMDb data)" : ""}`);
+      toast(`IMDb ${(+v.r).toFixed(1)} · ${(+v.v || 0).toLocaleString("en-IN")} votes`);
     } else if (v && v.none) toast("IMDb hasn't rated this title yet");
     else toast("Couldn't reach IMDb right now. Try again in a bit.");
     imdbChipSwap(it);
@@ -6317,8 +6317,6 @@ function imdbDaily(it, x) {
       it.imdb = +v[0];
       if (!notOutYet(it)) document.querySelectorAll(`[data-open="${CSS.escape(it.id)}"] .sc`).forEach(e => { e.textContent = `★ ${(+v[0]).toFixed(1)}`; });
     }
-    // not in IMDb's file (brand-new or just rated): look it up live once a day, by itself
-    if (!v && !fx && IMLIVEDAY[tt] !== day) { IMLIVEDAY[tt] = day; imdbRefresh(it.id, true); }
     imdbChipSwap(it);                                     // in the background: only the chip changes, no page redraw
   };
   serverAsk("imdb", {key: k, daily: [tt]});

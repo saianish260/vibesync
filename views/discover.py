@@ -15,7 +15,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from core.data import catalog_payload
-from core.imdb import imdb_id, library_ratings, live_rating, rating as _imdb_rating, ratings_table
+from core.imdb import downloading as _imdb_downloading, imdb_id, library_ratings, live_rating, rating as _imdb_rating, ratings_table
 from core.langs import fetch_langs
 from core.news import fetch_news
 from core import book as _book
@@ -130,13 +130,17 @@ _LIVE_SEEN: dict = {}
 
 
 def _imdb_live(imdb: str) -> dict:
-    """A tap on the IMDb chip: this title's latest rating. A found rating is reused for a minute; a miss is
-    never kept, so the next tap asks IMDb again."""
+    """A tap on the IMDb chip: answered instantly from the IMDb list already downloaded on this server (rating and
+    votes). Only while that list is being downloaded (once a day) does the tap ask IMDb itself."""
     import time as _t
+    table = ratings_table()                              # never waits: a download runs in the background
+    if table is not None and not _imdb_downloading():
+        got = _imdb_rating(table, imdb)
+        return {"r": got[0], "v": got[1], "src": "daily"} if got else {"none": True}
     hit = _LIVE_SEEN.get(imdb)
     if hit and _t.time() - hit[0] < 60:
         return hit[1]
-    got = live_rating(imdb, omdb_key(), _imdb_ratings())
+    got = live_rating(imdb, omdb_key(), table)
     if got.get("r"):
         _LIVE_SEEN[imdb] = (_t.time(), got)
         while len(_LIVE_SEEN) > 300:

@@ -104,24 +104,22 @@ def _graphql(imdb: str, timeout: float) -> dict | None:
     return {"none": True}
 
 
-def live_rating(imdb: str, omdb_key: str = "", table: "Ratings | None" = None, timeout: float = 10.0) -> dict:
+def live_rating(imdb: str, omdb_key: str = "", table: "Ratings | None" = None, timeout: float = 4.0) -> dict:
     """One title's latest IMDb rating: IMDb's own live data first, then its title page, then OMDb (if a key is set),
     then IMDb's daily ratings file. Returns {"r": 7.3, "v": 152340, "src": "imdb"|"omdb"|"daily"},
     {"none": True} when IMDb itself has no rating for the title yet, or {} if none of them could be reached."""
     if not re.fullmatch(r"tt\d{5,10}", imdb or ""):
         return {}
     unrated = False
-    for _ in range(2):                                   # one retry: a single slow answer shouldn't fail the tap
-        try:
-            g = _graphql(imdb, timeout)
-            if g and g.get("r"):
-                remember(imdb, g["r"], g["v"])
-                return {"r": g["r"], "v": g["v"], "src": "imdb"}
-            if g and g.get("none"):
-                unrated = True
-            break
-        except Exception:
-            continue
+    try:
+        g = _graphql(imdb, timeout)
+        if g and g.get("r"):
+            remember(imdb, g["r"], g["v"])
+            return {"r": g["r"], "v": g["v"], "src": "imdb"}
+        if g and g.get("none"):
+            unrated = True
+    except Exception:
+        pass
     try:
         req = urllib.request.Request(f"https://www.imdb.com/title/{imdb}/", headers={
             "User-Agent": "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36",
@@ -168,6 +166,11 @@ _LOCK = _threading.Lock()
 
 def _today() -> str:
     return _time.strftime("%Y-%m-%d", _time.gmtime(_time.time() + 5.5 * 3600))   # India's date
+
+
+def downloading() -> bool:
+    """True while today's ratings file is being downloaded (or none has been loaded yet)."""
+    return _STATE["busy"] or _STATE["table"] is None
 
 
 def remember(imdb: str, r: float, v: int) -> None:
