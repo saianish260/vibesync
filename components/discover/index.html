@@ -5926,10 +5926,7 @@ function langsHTML(it) {
       if (g) { add(g.audio, a.audio); add(g.subs, a.subs); add(g.types, a.types); return; }
       apps.push({name: a.name.replace(/\s*with ads\b/i, ""), k, url: a.url, types: [...a.types], audio: [...a.audio], subs: [...a.subs]});
     });
-    // the title's original language is always on the app it streams on (JustWatch often lists only the dubs,
-    // e.g. Hindi for a Telugu film): add it when the app lists other audio languages but not that one
-    const orig = (XD[it.id] && XD[it.id].lang) || it.lang || (it.telugu ? "te" : "");
-    if (orig) apps.forEach(a => { if (a.audio.length && !a.audio.some(x => lcode(x) === orig)) a.audio.unshift(orig); });
+    // only the languages each app itself lists: nothing is added or guessed
     const all = apps.filter(a => a.types.some(t => STREAM_TYPES.includes(t))), rent = apps.filter(a => !all.includes(a));
     const det = details[it.id];
     const shown = new Set((it.offers || []).map(o => o.p).concat(det ? det.apps.map(p => p.key) : []).filter(k => k && nativeSub(it, k) !== false));
