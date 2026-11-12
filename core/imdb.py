@@ -160,9 +160,8 @@ import threading as _threading
 import time as _time
 
 _STATE = {"table": None, "day": "", "busy": False, "failed_at": 0.0, "cur": {}, "cur_day": "", "cur_busy": False,
-          "stamp": "", "checked": 0.0, "ticker": False}
+          "ticker": False}
 _FRESH: dict[str, tuple[float, int, float]] = {}   # IMDb id -> (rating, votes, when): ratings fetched live, newer than the file
-CHECK_EVERY = 2 * 3600                              # how often the server asks IMDb whether a newer ratings file is out
 _IDS: dict[str, str] = {}               # library title -> IMDb id (found once, kept)
 _LOCK = _threading.Lock()
 
@@ -186,17 +185,11 @@ def rating(table: "Ratings | None", imdb: str) -> "tuple[float, int] | None":
     return table.get(imdb) if table is not None else None
 
 
-def _file_stamp(timeout: float = 15.0) -> str:
-    """When IMDb last published its ratings file (asked without downloading it)."""
-    req = urllib.request.Request(RATINGS_URL, method="HEAD", headers={"User-Agent": "VibeSync"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.headers.get("Last-Modified") or r.headers.get("ETag") or ""
-
-
 def _ticker() -> None:
-    """While the server is running, check every 2 hours for IMDb's newer file and download it right away."""
+    """While the server is running, download the new day's file right after midnight (India)."""
     while True:
-        _time.sleep(CHECK_EVERY)
+        now = _time.time() + 5.5 * 3600
+        _time.sleep(86400 - now % 86400 + 60)           # a minute past India's midnight
         try:
             ratings_table()
         except Exception:
@@ -204,33 +197,24 @@ def _ticker() -> None:
 
 
 def ratings_table(block: bool = False) -> "Ratings | None":
-    """IMDb's ratings file. Downloaded when the server starts, again on every new day (India), and whenever IMDb
-    publishes a newer one (checked every 2 hours). The download runs in the background (the previous table keeps
-    serving meanwhile); with block=True and nothing loaded yet, it waits for the first one."""
+    """IMDb's ratings file, downloaded once a day (India's date), and when the server starts. The download runs in
+    the background (yesterday's table keeps serving meanwhile); with block=True and nothing loaded yet, it waits
+    for the first one. A failed download is tried again 10 minutes later."""
     today, now = _today(), _time.time()
     with _LOCK:
         if not _STATE["ticker"]:
             _STATE["ticker"] = True
             _threading.Thread(target=_ticker, daemon=True).start()
-        due = _STATE["day"] != today or now - _STATE["checked"] > CHECK_EVERY
-        start = due and not _STATE["busy"] and now - _STATE["failed_at"] > 600
+        start = _STATE["day"] != today and not _STATE["busy"] and now - _STATE["failed_at"] > 600
         if start:
             _STATE["busy"] = True
 
     def work():
         try:
-            stamp = ""
-            try:
-                stamp = _file_stamp()
-            except Exception:
-                pass
-            if _STATE["table"] is None or not stamp or stamp != _STATE["stamp"] or _STATE["day"] != today:
-                _STATE["table"] = fetch_ratings()
-                _STATE["loaded_at"] = _time.time()
-                _STATE["stamp"] = stamp
-                _STATE["cur_day"] = ""                   # the library's ratings are worked out again from the new file
+            _STATE["table"] = fetch_ratings()
+            _STATE["loaded_at"] = _time.time()
+            _STATE["cur_day"] = ""                       # the library's ratings are worked out again from the new file
             _STATE["day"] = today
-            _STATE["checked"] = _time.time()
         except Exception:
             _STATE["failed_at"] = _time.time()
         finally:
