@@ -6131,6 +6131,7 @@ function nativeGoogle() {
     if (!r || r.startsWith("error:")) {
       const why = r.slice(6);
       authGate(/Cancel/i.test(why) ? "Sign-in was cancelled." : /NoCredential/i.test(why) ? "No Google account on this phone. Add one in Settings → Accounts, then try again."
+               : /ProviderConfiguration|Unsupported|NoClassDef|NoSuchMethod|play.?services/i.test(why) ? "This phone doesn't have Google sign-in (Google Play services). You can use VibeSync without signing in."
                : "Google sign-in didn't work. Try again.", !/Cancel/i.test(why));
     } else gotGoogleToken(r);
   }, 150);
