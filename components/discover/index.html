@@ -1199,7 +1199,18 @@ function ytLink(it) { return linkFor(it.trailer, "youtube"); }
 function kindLabel(it) { return D.kinds[it.kind] || ""; }
 /* a title's IMDb rating you refreshed by hand (the IMDb chip on its page) wins over the stored one */
 var IMFRESH = (() => { try { return JSON.parse(localStorage.getItem("vs.imdbfix") || "{}") || {}; } catch (e) { return {}; } })();
-const scoreOf = it => (IMFRESH[it.id] && IMFRESH[it.id].r) || it.imdb || it.score;
+// Not out yet in India (or anywhere, when India has no date): no ratings at all for it (IMDb, TMDB, critics),
+// since early ratings come from festival screenings, other countries or hype. India's date is learnt when the
+// title's page loads and remembered, so its cards stop showing a rating too.
+var NOTOUT = store.get("notout", {});
+const todayIN = () => new Date().toLocaleDateString("en-CA", {timeZone: "Asia/Kolkata"});
+function notOutYet(it) {
+  if (!it || it.kind === "sports" || it.kind === "reality") return false;
+  const d = String(NOTOUT[it.id] || it.rel || "").slice(0, 10);
+  if (d) return d > todayIN();
+  return !!it.year && +String(it.year).slice(0, 4) > +todayIN().slice(0, 4);
+}
+const scoreOf = it => notOutYet(it) ? null : (IMFRESH[it.id] && IMFRESH[it.id].r) || it.imdb || it.score;
 
 /* ───────────── cards ───────────── */
 function provBadges(it) {
@@ -2142,7 +2153,7 @@ function imdbFor(items) {
     setTimeout(() => { if (IMDBQ.wait[k]) { delete IMDBQ.wait[k]; res(null); } }, 30000);
   });
 }
-const imdbOf = i => typeof i.imdb === "number" ? i.imdb : 0;
+const imdbOf = i => !notOutYet(i) && typeof i.imdb === "number" ? i.imdb : 0;
 async function imdbApply(items) {
   if (!imdbOn() || !items.length) return items;
   const ok = await imdbFor(items);
@@ -4290,7 +4301,7 @@ function tmdbSheetHTML(it) {
     <div class="h3">Where to watch in India</div>${where}${bookHTML(it)}${comingHTML(it)}${langsHTML(it)}
     ${rateHTML(it)}<div class="acts"><button class="btn tint" data-trailer="${esc(it.id)}">${ICON.play}Trailer</button>${saveBtn(it)}</div>
     <p class="foot2">Streaming data from JustWatch via TMDB. Line-ups change, so the app may differ slightly.</p>`;
-  return sheetShell(it, [fact(it.score ? `★ ${it.score.toFixed(1)} TMDB` : "", "sc"), fact(esc(it.year)), d ? fact(esc(d.len)) : "", fact(esc(kindLabel(it)))], body);
+  return sheetShell(it, [fact(it.score && !notOutYet(it) ? `★ ${it.score.toFixed(1)} TMDB` : "", "sc"), fact(esc(it.year)), d ? fact(esc(d.len)) : "", fact(esc(kindLabel(it)))], body);
 }
 
 /* search */
@@ -4795,6 +4806,12 @@ async function loadExtras(it) {
     if (!it.lang) it.lang = x.lang;
     if (runtime) { X.rt[it.id] = runtime; store.set("rt", X.rt); }
     XD[it.id] = x;
+    if (x.release && x.release.date) {                      // remember whether it's out in India yet (see notOutYet)
+      const up = x.release.date.slice(0, 10) > todayIN(), had = !!NOTOUT[it.id];
+      if (up) NOTOUT[it.id] = x.release.date.slice(0, 10); else delete NOTOUT[it.id];
+      if (up || had) { const ks = Object.keys(NOTOUT); if (ks.length > 400) delete NOTOUT[ks[0]]; store.set("notout", NOTOUT); }
+      if (up) document.querySelectorAll(`[data-open="${CSS.escape(it.id)}"] .sc`).forEach(e => e.remove());   // cards on screen
+    }
     if (OMDB.key && x.imdbId) {
       fetch(`https://www.omdbapi.com/?i=${x.imdbId}&apikey=${encodeURIComponent(OMDB.key)}`).then(r => r.json()).then(o => {
         if (!o || o.Response === "False") return;
@@ -5067,9 +5084,10 @@ function sheetExtras(it) {
   const x = XD[it.id] || {}, s = statusOf(it.id);
   const chips = [];
   // (IMDb has its own chip right under the title: imdbHeadHTML)
-  if (x.score) chips.push(`<span class="rt tmdb">TMDB <b>${x.score.toFixed(1)}</b><small>${(x.votes || 0).toLocaleString("en-IN")} votes</small></span>`);
-  if (x.omdb && x.omdb.rt) chips.push(`<span class="rt tomato">🍅 <b>${esc(x.omdb.rt)}</b></span>`);
-  if (x.omdb && x.omdb.mc) chips.push(`<span class="rt mc">Metascore <b>${esc(x.omdb.mc)}</b></span>`);
+  const out = !notOutYet(it);                              // no ratings before it's released
+  if (out && x.score) chips.push(`<span class="rt tmdb">TMDB <b>${x.score.toFixed(1)}</b><small>${(x.votes || 0).toLocaleString("en-IN")} votes</small></span>`);
+  if (out && x.omdb && x.omdb.rt) chips.push(`<span class="rt tomato">🍅 <b>${esc(x.omdb.rt)}</b></span>`);
+  if (out && x.omdb && x.omdb.mc) chips.push(`<span class="rt mc">Metascore <b>${esc(x.omdb.mc)}</b></span>`);
   if (x.release) { const rd = new Date(x.release.date + "T12:00:00"), up = rd > new Date();
     chips.unshift(`<span class="rt rel">📅 <b>${rd.toLocaleDateString("en-IN", {day: "numeric", month: "short", year: "numeric"})}</b><small>${x.release.tv ? (up ? "premieres" : "first aired") : up ? "releases" : "released"}${x.release.india ? " in India" : ""}</small></span>`); }
   else if (LG[it.id] && LG[it.id].date) chips.unshift(`<span class="rt rel">📅 <b>${new Date(LG[it.id].date + "T12:00:00").toLocaleDateString("en-IN", {day: "numeric", month: "short", year: "numeric"})}</b><small>released</small></span>`);
@@ -5900,7 +5918,7 @@ function imdbRefresh(id) {
       IMFRESH[id] = {r: +v.r, v: +v.v || 0, at: Date.now(), src: v.src || ""};
       try { const ks = Object.keys(IMFRESH); if (ks.length > 300) delete IMFRESH[ks[0]]; localStorage.setItem("vs.imdbfix", JSON.stringify(IMFRESH)); } catch (e) {}
       it.imdb = +v.r;
-      document.querySelectorAll(`[data-open="${CSS.escape(id)}"] .sc`).forEach(e => { e.textContent = `★ ${(+v.r).toFixed(1)}`; });   // cards on screen
+      if (!notOutYet(it)) document.querySelectorAll(`[data-open="${CSS.escape(id)}"] .sc`).forEach(e => { e.textContent = `★ ${(+v.r).toFixed(1)}`; });   // cards on screen
       toast(`IMDb ${(+v.r).toFixed(1)} · ${(+v.v || 0).toLocaleString("en-IN")} votes${v.src === "daily" ? " (today's IMDb data)" : ""}`);
     } else toast("Couldn't reach IMDb right now. Try again in a bit.");
     imdbChipSwap(it);
@@ -5927,7 +5945,7 @@ function imdbDaily(it, x) {
     try { const ks = Object.keys(IMDAY); if (ks.length > 400) delete IMDAY[ks[0]]; localStorage.setItem("vs.imdbday", JSON.stringify(IMDAY)); } catch (e) {}
     if (v && !IMFRESH[it.id]) {
       it.imdb = +v[0];
-      document.querySelectorAll(`[data-open="${CSS.escape(it.id)}"] .sc`).forEach(e => { e.textContent = `★ ${(+v[0]).toFixed(1)}`; });
+      if (!notOutYet(it)) document.querySelectorAll(`[data-open="${CSS.escape(it.id)}"] .sc`).forEach(e => { e.textContent = `★ ${(+v[0]).toFixed(1)}`; });
     }
     imdbChipSwap(it);                                     // in the background: only the chip changes, no page redraw
   };
@@ -5935,7 +5953,7 @@ function imdbDaily(it, x) {
   setTimeout(() => { if (IMDBQ.wait[k]) { delete IMDBQ.wait[k]; delete IMDAYWAIT[tt]; } }, 30000);
 }
 function imdbHeadHTML(it) {
-  if (!it || it.kind === "sports") return "";
+  if (!it || it.kind === "sports" || notOutYet(it)) return "";            // not released yet: no rating
   const x = XD[it.id] || {}, fx = IMFRESH[it.id];
   const dy = x.imdbId && IMDAY[x.imdbId] && IMDAY[x.imdbId].d === imdbDayKey() && IMDAY[x.imdbId].r ? IMDAY[x.imdbId] : null;
   if (x.imdbId && !fx) imdbDaily(it, x);
@@ -5952,7 +5970,8 @@ function imdbHeadHTML(it) {
 function imdbChipSwap(it) {
   if (!it || openId !== it.id) return;
   const old = document.querySelector("#sheet .imh"), html = imdbHeadHTML(it);
-  if (old && html) { const t = document.createElement("template"); t.innerHTML = html.trim(); old.replaceWith(t.content.firstChild); }
+  if (old && !html) old.remove();
+  else if (old && html) { const t = document.createElement("template"); t.innerHTML = html.trim(); old.replaceWith(t.content.firstChild); }
   else if (!old && html) { const h = document.querySelector("#sheet .stitle"); if (h) h.insertAdjacentHTML("afterend", html); }
 }
 
