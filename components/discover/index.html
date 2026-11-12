@@ -983,6 +983,28 @@ button.imh:active{transform:scale(.95)}
 .dp-item b{display:block;font-size:15px;font-weight:750}
 .dp-item small{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
 
+/* rating (developer): a small pill on the title's page, and the round dial */
+.rate-pill{display:inline-flex;align-items:center;gap:7px;margin-top:14px;height:42px;padding:0 18px;border-radius:16px;corner-shape:squircle;background:var(--s2);color:var(--text);font-weight:750;font-size:14px;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--text) 10%,transparent);transition:transform .15s}
+.rate-pill:active{transform:scale(.96)}
+.rate-pill.on{color:var(--tint)}.rate-pill b{font-size:16px}
+.ratepop{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s}
+.ratepop.on{opacity:1;pointer-events:auto}
+.rp-card{position:relative;width:min(330px,88vw);padding:22px 20px 20px;border-radius:28px;background:var(--s1,#1b1622);box-shadow:0 24px 70px rgba(0,0,0,.55);text-align:center;transform:scale(.94);transition:transform .25s cubic-bezier(.16,1,.3,1)}
+.ratepop.on .rp-card{transform:none}
+.rp-x{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--s2);color:var(--text)}
+.rp-x svg{width:16px;height:16px;stroke:currentColor;stroke-width:2.4;fill:none;stroke-linecap:round}
+.rp-t{font-weight:800;font-size:16px;margin:2px 40px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rp-dial{position:relative;width:240px;height:240px;margin:0 auto}
+.rp-svg{width:100%;height:100%;touch-action:none;cursor:pointer}
+.rp-track{fill:none;stroke:color-mix(in srgb,var(--text) 12%,transparent);stroke-width:16}
+.rp-arc{fill:none;stroke:var(--tint,#FFB547);stroke-width:16;stroke-linecap:round}
+.rp-knob{fill:#fff;stroke:var(--tint,#FFB547);stroke-width:4;filter:drop-shadow(0 3px 6px rgba(0,0,0,.4))}
+.rp-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.rp-mid input{pointer-events:auto;width:140px;background:none;border:0;outline:0;text-align:center;color:var(--text);font-family:inherit;font-weight:900;font-size:52px;line-height:1.05;letter-spacing:-.03em;padding:0;caret-color:var(--tint);-webkit-appearance:none;appearance:none}
+.rp-mid small{color:var(--muted);font-weight:700;font-size:14px;margin-top:2px}
+.rp-acts{display:flex;gap:10px;justify-content:center;margin-top:14px}
+.rp-acts .btn{min-width:110px;justify-content:center}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -5934,16 +5956,84 @@ function parseRating(s) {
 }
 const myRating = id => RATE_DEV && RATE.r[id] ? RATE.r[id].r : null;
 const myRatingBadge = id => myRating(id) != null ? `<span class="myr">★ ${fmtR(myRating(id))}</span>` : "";
+// on a title's page: one small "Rate it" pill (or your rating); tapping it opens the round rating dial
 function rateHTML(it) {
   if (!it || !RATE_DEV) return "";
-  const r = myRating(it.id), v = r != null ? r : 7;
-  return `<div class="rate"><div class="rate-h"><b>${r != null ? "Your rating" : "Rate it"}</b><span class="rate-big" id="ratebig">${r != null ? fmtR(r) : "–"}<small>/10</small></span></div>
-    <input class="rate-sl" type="range" min="0" max="10" step="0.05" value="${v}" data-ratesl="${esc(it.id)}" aria-label="Your rating out of 10" style="--p:${v * 10}%">
-    <form class="rate-f" data-ratef="${esc(it.id)}"><label class="sr" for="ratein">Exact rating</label>
-      <input id="ratein" name="r" inputmode="decimal" autocomplete="off" maxlength="7" placeholder="e.g. 8.75" value="${r != null ? fmtR(r) : ""}">
-      <button class="btn tint sm" type="submit">${r != null ? "Update" : "Save rating"}</button>${r != null ? `<button class="btn soft sm" type="button" data-rateclear="${esc(it.id)}">Remove</button>` : ""}</form>
-    <small class="rate-n">Any number from 0 to 10. Decimals are fine; more than 2 places are rounded (8.756 → 8.76).</small></div>`;
+  const r = myRating(it.id);
+  return `<button class="rate-pill${r != null ? " on" : ""}" data-rateopen="${esc(it.id)}">★ Rate now${r != null ? ` · <b>${fmtR(r)}</b>/10` : ""}</button>`;
 }
+/* the rating dial: drag round the ring (0 at the top, clockwise to 10) or type the exact number in the middle */
+const RD = {id: "", v: 0, R: 96, C: 2 * Math.PI * 96};
+function openRateDial(id) {
+  const it = BY[id]; if (!it) return;
+  RD.id = id; RD.v = myRating(id) != null ? myRating(id) : 0;
+  let pop = $("#ratepop");
+  if (!pop) { pop = document.createElement("div"); pop.id = "ratepop"; pop.className = "ratepop"; document.body.appendChild(pop); }
+  const had = myRating(id) != null;
+  pop.innerHTML = `<div class="rp-card" role="dialog" aria-modal="true" aria-label="Rate ${esc(it.title)}">
+      <button class="rp-x" data-rateclose aria-label="Close">${ICON.close || "✕"}</button>
+      <div class="rp-t">${esc(it.title)}</div>
+      <div class="rp-dial"><svg viewBox="0 0 240 240" class="rp-svg" data-ratering aria-hidden="true">
+          <circle cx="120" cy="120" r="${RD.R}" class="rp-track"/>
+          <circle cx="120" cy="120" r="${RD.R}" class="rp-arc" stroke-dasharray="${RD.C}" stroke-dashoffset="${RD.C}" transform="rotate(-90 120 120)"/>
+          <circle r="13" class="rp-knob" cx="120" cy="${120 - RD.R}"/></svg>
+        <div class="rp-mid"><input id="rpin" inputmode="decimal" autocomplete="off" maxlength="5" aria-label="Your rating out of 10" value="${fmtR(RD.v)}"><small>/10</small></div></div>
+      <div class="rp-acts"><button class="btn tint" data-ratesave>Save</button>${had ? `<button class="btn soft" data-rateclear="${esc(id)}">Remove</button>` : ""}</div></div>`;
+  pop.classList.add("on");
+  rdDraw(false);
+}
+function closeRateDial() { const p = $("#ratepop"); if (p) p.classList.remove("on"); }
+function rdDraw(typing) {
+  const v = Math.max(0, Math.min(10, RD.v)), a = v / 10 * 2 * Math.PI;
+  const arc = $("#ratepop .rp-arc"), knob = $("#ratepop .rp-knob"), inp = $("#rpin"); if (!arc) return;
+  arc.setAttribute("stroke-dashoffset", RD.C * (1 - v / 10));
+  knob.setAttribute("cx", 120 + RD.R * Math.sin(a)); knob.setAttribute("cy", 120 - RD.R * Math.cos(a));
+  if (!typing && inp) inp.value = fmtR(Math.round(v * 100) / 100);
+}
+(() => {
+  let drag = false;
+  const at = e => {
+    const svg = $("#ratepop .rp-svg"); if (!svg) return;
+    const r = svg.getBoundingClientRect(), x = e.clientX - (r.left + r.width / 2), y = e.clientY - (r.top + r.height / 2);
+    let ang = Math.atan2(x, -y); if (ang < 0) ang += 2 * Math.PI;
+    let v = Math.round(ang / (2 * Math.PI) * 10 * 20) / 20;                 // steps of 0.05
+    if (RD.v > 7.5 && v < 2.5) v = 10; else if (RD.v < 2.5 && v > 7.5 && drag === "moving") v = 0;   // no jump across the top
+    RD.v = v; rdDraw(false);
+  };
+  document.addEventListener("pointerdown", e => {
+    if (!e.target.closest || !e.target.closest("[data-ratering]")) return;
+    e.preventDefault(); drag = true; const inp = $("#rpin"); if (inp) inp.blur(); at(e); drag = "moving";
+  });
+  document.addEventListener("pointermove", e => { if (drag) at(e); });
+  addEventListener("pointerup", () => { drag = false; });
+  addEventListener("pointercancel", () => { drag = false; });
+  document.addEventListener("input", e => {
+    if (e.target.id !== "rpin") return;
+    const v = parseRating(e.target.value);
+    if (v != null && !Number.isNaN(v)) { RD.v = v; rdDraw(true); }
+  });
+  document.addEventListener("keydown", e => {
+    const p = $("#ratepop"); if (!p || !p.classList.contains("on")) return;
+    if (e.key === "Escape") { closeRateDial(); return; }
+    if (e.key === "Enter") { e.preventDefault(); rdSave(); }
+  });
+  document.addEventListener("click", e => {
+    const t = e.target;
+    if (t.closest && t.closest("[data-rateopen]")) { openRateDial(t.closest("[data-rateopen]").dataset.rateopen); buzz(); return; }
+    const p = $("#ratepop"); if (!p || !p.classList.contains("on")) return;
+    if (t === p || (t.closest && t.closest("[data-rateclose]"))) { closeRateDial(); return; }
+    if (t.closest && t.closest("[data-ratesave]")) rdSave();
+  });
+  function rdSave() {
+    const inp = $("#rpin"), typed = inp ? parseRating(inp.value) : null;
+    if (inp && document.activeElement === inp) {
+      if (typed === null) { toast("Type a number, like 8.75"); return; }
+      if (Number.isNaN(typed)) { toast("Ratings go from 0 to 10"); return; }
+      RD.v = typed;
+    }
+    closeRateDial(); saveRating(RD.id, Math.round(Math.max(0, Math.min(10, RD.v)) * 100) / 100);
+  }
+})();
 function saveRating(id, v) {
   const it = BY[id]; if (!it) return;
   const first = myRating(id) == null;
@@ -5953,24 +6043,9 @@ function saveRating(id, v) {
   toast(`Rated ${fmtR(v)} / 10 ★`); refreshSheet(); buzz();
   $$(`.card[data-open="${CSS.escape(id)}"] .pw`).forEach(pw => { const b = pw.querySelector(".myr"); if (b) b.remove(); pw.insertAdjacentHTML("beforeend", myRatingBadge(id)); });
 }
-document.addEventListener("input", e => {
-  const sl = e.target.closest && e.target.closest("[data-ratesl]"); if (!sl) return;
-  const v = Math.round(+sl.value * 100) / 100, inp = $("#ratein"), big = $("#ratebig");
-  sl.style.setProperty("--p", v * 10 + "%");
-  if (inp) inp.value = fmtR(v);
-  if (big) big.innerHTML = `${fmtR(v)}<small>/10</small>`;
-});
-document.addEventListener("change", e => { const sl = e.target.closest && e.target.closest("[data-ratesl]"); if (sl) saveRating(sl.dataset.ratesl, Math.round(+sl.value * 100) / 100); });
-document.addEventListener("submit", e => {
-  const f = e.target.closest && e.target.closest("[data-ratef]"); if (!f) return;
-  e.preventDefault();
-  const v = parseRating(f.r.value);
-  if (v === null) { toast("Type a number, like 8.75"); return; }
-  if (Number.isNaN(v)) { toast("Ratings go from 0 to 10"); return; }
-  f.r.blur(); saveRating(f.dataset.ratef, v);
-});
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-rateclear]"); if (!b) return;
+  closeRateDial();
   delete RATE.r[b.dataset.rateclear]; store.set("ratings", RATE.r); toast("Rating removed"); refreshSheet();
   $$(`.card[data-open="${CSS.escape(b.dataset.rateclear)}"] .myr`).forEach(x => x.remove());
 });
