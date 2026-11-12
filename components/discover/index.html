@@ -1019,6 +1019,10 @@ button.imh:active{transform:scale(.95)}
 .rp-acts .btn.tint{background:#F5C518;color:#121212;box-shadow:0 10px 26px rgba(245,197,24,.3)}
 .rp-acts .btn.soft{background:#1F1F1F;color:#fff}
 
+/* the IMDb chip: just "IMDb ★ 8.9"; while it fetches the latest it glows softly */
+.imh.rtfx.busy{animation:imhpulse .9s ease-in-out infinite alternate}
+@keyframes imhpulse{to{opacity:.6}}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -5913,7 +5917,8 @@ function langsHTML(it) {
   else {
     // the same apps as "Where to watch in India" above: only the apps VibeSync opens (no add-on channels like
     // "Crunchyroll Amazon Channel", which are extra subscriptions bought inside Prime Video)
-    const apps = L.apps.filter(a => !isChannel(a.name));
+    const apps = L.apps.filter(a => !isChannel(a.name) && !/with ads/i.test(a.name))
+      .filter((a, i, all) => { const k = provKey(a.name); return !k || all.findIndex(b => provKey(b.name) === k && !isChannel(b.name) && !/with ads/i.test(b.name)) === i; });
     const all = apps.filter(a => a.types.some(t => STREAM_TYPES.includes(t))), rent = apps.filter(a => !all.includes(a));
     const det = details[it.id];
     const shown = new Set((it.offers || []).map(o => o.p).concat(det ? det.apps.map(p => p.key) : []).filter(k => k && nativeSub(it, k) !== false));
@@ -5975,7 +5980,7 @@ function rateHTML(it) {
   if (!it || !RATE_DEV) return "";
   const r = myRating(it.id);
   // styled exactly like the IMDb chip: yellow, black label box
-  return `<button class="imh rate-pill" data-rateopen="${esc(it.id)}"><span class="imh-l">★ YOU</span><b>${r != null ? `${fmtR(r)}<small>/10</small>` : "Rate now"}</b>${r != null ? `<small>Rate now</small>` : ""}</button>`;
+  return `<button class="imh rate-pill" data-rateopen="${esc(it.id)}"><span class="imh-l">★</span><b>${r != null ? `${fmtR(r)}<small>/10</small>` : "Rate now"}</b>${r != null ? `<small>Rate now</small>` : ""}</button>`;
 }
 /* the rating dial: drag round the ring (0 at the top, clockwise to 10) or type the exact number in the middle */
 const RD = {id: "", v: 0, R: 96, C: 2 * Math.PI * 96};
@@ -6311,18 +6316,17 @@ function imdbHeadHTML(it) {
   const dy = x.imdbId && IMDAY[x.imdbId] && IMDAY[x.imdbId].d === imdbDayKey() && IMDAY[x.imdbId].r ? IMDAY[x.imdbId] : null;
   if (x.imdbId && !fx) imdbDaily(it, x);
   const imv = fx ? fx.r.toFixed(1) : dy ? dy.r.toFixed(1) : x.omdb && x.omdb.imdb ? x.omdb.imdb : it.imdb ? it.imdb.toFixed(1) : "";
-  const votes = fx ? fx.v : dy ? dy.v : 0;
-  const when = IMBUSY[it.id] ? "checking…" : fx ? agoTxt(fx.at) : dy ? "today" : x.imdbId && IMDAYWAIT[x.imdbId] ? "…" : "tap ↻";
-  const sub = votes ? `<small class="imh-v">${votes.toLocaleString("en-IN")} votes</small>` : "";
+  // clean chip: "IMDb ★ 8.9" only. A tap still fetches the latest rating; the votes and how fresh it is show in the
+  // little message that pops up then, not on the chip
   if (x.imdbId && EMBED) return `<button class="imh rtfx${IMBUSY[it.id] ? " busy" : ""}" data-imdbfresh="${esc(it.id)}" aria-label="IMDb rating ${imv || "unknown"}. Tap for the latest">
-    <span class="imh-l">IMDb</span><b>${imv ? "★ " + imv : "★ –"}</b><small class="imh-w">${when}</small><i aria-hidden="true">↻</i>${sub}</button>`;
+    <span class="imh-l">IMDb</span><b>${imv ? "★ " + imv : "★ –"}</b></button>`;
   return imv ? `<span class="imh"><span class="imh-l">IMDb</span><b>★ ${esc(imv)}</b></span>` : "";
 }
 
 /* swap just the IMDb chip on the open title page (nothing else is redrawn, so nothing flickers) */
 function imdbChipSwap(it) {
   if (!it || openId !== it.id) return;
-  const old = document.querySelector("#sheet .imh"), html = imdbHeadHTML(it);
+  const old = document.querySelector("#sheet .imh:not(.rate-pill)"), html = imdbHeadHTML(it);
   if (old && !html) old.remove();
   else if (old && html) { const t = document.createElement("template"); t.innerHTML = html.trim(); const n = t.content.firstChild;
     if (mSame(old, n)) mNode(old, n); else old.replaceWith(n); }                  // update the chip in place (no flash)
