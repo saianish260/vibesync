@@ -1000,7 +1000,7 @@ button.imh:active{transform:scale(.95)}
 .rp-arc{fill:none;stroke:var(--tint,#FFB547);stroke-width:16;stroke-linecap:round}
 .rp-knob{fill:#fff;stroke:var(--tint,#FFB547);stroke-width:4;filter:drop-shadow(0 3px 6px rgba(0,0,0,.4))}
 .rp-mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
-.rp-mid input{pointer-events:auto;width:140px;background:none;border:0;outline:0;text-align:center;color:var(--text);font-family:inherit;font-weight:900;font-size:52px;line-height:1.05;letter-spacing:-.03em;padding:0;caret-color:var(--tint);-webkit-appearance:none;appearance:none}
+.rp-mid b{color:var(--text);font-weight:900;font-size:52px;line-height:1.05;letter-spacing:-.03em;font-variant-numeric:tabular-nums;user-select:none}
 .rp-mid small{color:var(--muted);font-weight:700;font-size:14px;margin-top:2px}
 .rp-acts{display:flex;gap:10px;justify-content:center;margin-top:14px}
 .rp-acts .btn{min-width:110px;justify-content:center}
@@ -1009,8 +1009,7 @@ button.imh:active{transform:scale(.95)}
 .imh.rate-pill b{color:#121212}
 .imh.rate-pill b small{font-size:12px;opacity:.7;font-weight:750;margin-left:1px}
 .rp-card{background:#121212;box-shadow:0 24px 70px rgba(0,0,0,.6),inset 0 0 0 1px rgba(245,197,24,.18)}
-.rp-t,.rp-mid input{color:#fff}
-.rp-mid input{caret-color:#F5C518}
+.rp-t,.rp-mid b{color:#fff}
 .rp-mid small{color:#F5C518;opacity:.85}
 .rp-x{background:#1F1F1F;color:#F5C518}
 .rp-track{stroke:#2A2A2A}
@@ -5990,7 +5989,7 @@ function rateHTML(it) {
   // styled exactly like the IMDb chip: yellow, black label box
   return `<button class="imh rate-pill" data-rateopen="${esc(it.id)}"><span class="imh-l">★</span><b>${r != null ? `${fmtR(r)}<small>/10</small>` : "Rate now"}</b>${r != null ? `<small>Rate now</small>` : ""}</button>`;
 }
-/* the rating dial: drag round the ring (0 at the top, clockwise to 10) or type the exact number in the middle */
+/* the rating dial: drag round the ring (0 at the top, clockwise to 10); the middle just shows the number */
 const RD = {id: "", v: 0, R: 96, C: 2 * Math.PI * 96};
 function openRateDial(id) {
   const it = BY[id]; if (!it) return;
@@ -6005,7 +6004,7 @@ function openRateDial(id) {
           <circle cx="120" cy="120" r="${RD.R}" class="rp-track"/>
           <circle cx="120" cy="120" r="${RD.R}" class="rp-arc" stroke-dasharray="${RD.C}" stroke-dashoffset="${RD.C}" transform="rotate(-90 120 120)"/>
           <circle r="13" class="rp-knob" cx="120" cy="${120 - RD.R}"/></svg>
-        <div class="rp-mid"><input id="rpin" inputmode="decimal" autocomplete="off" maxlength="5" aria-label="Your rating out of 10" value="${fmtR(RD.v)}"><small>/10</small></div></div>
+        <div class="rp-mid"><b id="rpin" aria-live="polite">${fmtR(RD.v)}</b><small>/10</small></div></div>
       <div class="rp-acts"><button class="btn tint" data-ratesave>Save</button>${had ? `<button class="btn soft" data-rateclear="${esc(id)}">Remove</button>` : ""}</div></div>`;
   pop.classList.add("on");
   rdDraw(false);
@@ -6016,7 +6015,7 @@ function rdDraw(typing) {
   const arc = $("#ratepop .rp-arc"), knob = $("#ratepop .rp-knob"), inp = $("#rpin"); if (!arc) return;
   arc.setAttribute("stroke-dashoffset", RD.C * (1 - v / 10));
   knob.setAttribute("cx", 120 + RD.R * Math.sin(a)); knob.setAttribute("cy", 120 - RD.R * Math.cos(a));
-  if (!typing && inp) inp.value = fmtR(Math.round(v * 100) / 100);
+  if (inp) inp.textContent = fmtR(Math.round(v * 100) / 100);
 }
 (() => {
   let drag = false;
@@ -6030,16 +6029,11 @@ function rdDraw(typing) {
   };
   document.addEventListener("pointerdown", e => {
     if (!e.target.closest || !e.target.closest("[data-ratering]")) return;
-    e.preventDefault(); drag = true; const inp = $("#rpin"); if (inp) inp.blur(); at(e); drag = "moving";
+    e.preventDefault(); drag = true; at(e); drag = "moving";
   });
   document.addEventListener("pointermove", e => { if (drag) at(e); });
   addEventListener("pointerup", () => { drag = false; });
   addEventListener("pointercancel", () => { drag = false; });
-  document.addEventListener("input", e => {
-    if (e.target.id !== "rpin") return;
-    const v = parseRating(e.target.value);
-    if (v != null && !Number.isNaN(v)) { RD.v = v; rdDraw(true); }
-  });
   document.addEventListener("keydown", e => {
     const p = $("#ratepop"); if (!p || !p.classList.contains("on")) return;
     if (e.key === "Escape") { closeRateDial(); return; }
@@ -6053,12 +6047,6 @@ function rdDraw(typing) {
     if (t.closest && t.closest("[data-ratesave]")) rdSave();
   });
   function rdSave() {
-    const inp = $("#rpin"), typed = inp ? parseRating(inp.value) : null;
-    if (inp && document.activeElement === inp) {
-      if (typed === null) { toast("Type a number, like 8.75"); return; }
-      if (Number.isNaN(typed)) { toast("Ratings go from 0 to 10"); return; }
-      RD.v = typed;
-    }
     closeRateDial(); saveRating(RD.id, Math.round(Math.max(0, Math.min(10, RD.v)) * 100) / 100);
   }
 })();
