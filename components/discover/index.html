@@ -944,6 +944,18 @@ button.imh{cursor:pointer;transition:transform .2s}
 button.imh:active{transform:scale(.95)}
 .imh.busy i{animation:vsspin .8s linear infinite}
 
+/* Where to watch: just the apps' icons, rounded squares in a row (swipe sideways when there are many); tap one to open the title in that app */
+.offers.wicons{display:flex;flex-wrap:nowrap;gap:12px;overflow-x:auto;overflow-y:hidden;padding:4px 2px 10px;margin:0 -2px;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.offers.wicons::-webkit-scrollbar{display:none}
+.wicons .wi{--pcol:#3a3442;flex:0 0 auto;width:62px;height:62px;border-radius:28%;corner-shape:squircle;overflow:hidden;display:grid;place-items:center;
+  background:var(--pcol);box-shadow:0 8px 22px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,255,255,.08);transition:transform .16s cubic-bezier(.16,1,.3,1),opacity .2s;-webkit-tap-highlight-color:transparent}
+.wicons .wi:active{transform:scale(.9)}
+.wicons .wi img{width:100%;height:100%;object-fit:cover;display:block;border-radius:0}
+.wicons .wi .logo{width:100%;height:100%;border-radius:0;font-size:26px;background:var(--pcol)}
+.wicons .wi[data-pending]{opacity:.55;animation:wipulse 1.1s ease-in-out infinite alternate}
+@keyframes wipulse{to{opacity:.85}}
+@media (hover:hover){.wicons .wi:hover{transform:translateY(-2px) scale(1.04)}}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -1236,7 +1248,8 @@ function notOutYet(it) {
   if (d) return d > todayIN();
   return !!it.year && +String(it.year).slice(0, 4) > +todayIN().slice(0, 4);
 }
-const scoreOf = it => notOutYet(it) ? null : (IMFRESH[it.id] && IMFRESH[it.id].r) || it.imdb || it.score;
+// ratings are IMDb only (TMDB's own score is never shown)
+const scoreOf = it => notOutYet(it) ? null : (IMFRESH[it.id] && IMFRESH[it.id].r) || it.imdb || null;
 
 /* ───────────── cards ───────────── */
 function provBadges(it) {
@@ -1448,8 +1461,8 @@ const saveBtn = it => { const s = favs.has(it.id);
 function sheetHTML(it) {
   if (it.tmdb) return tmdbSheetHTML(it);
   const offers = it.offers.length
-    ? `<div class="offers">${it.offers.map(o => { const p = D.providers[o.p]; return `<a class="offer" style="--pcol:${p.color}" href="${esc(linkFor(o.url, o.p))}" target="_blank" rel="noopener">
-        <span class="logo">${esc(p.name[0])}</span><span><b>${esc(p.name)}</b><small>${it.kind === "sports" ? "Opens the app" : "Opens this exact title"}</small></span><span class="go">${ICON.play}Watch</span></a>`; }).join("")}</div>`
+    ? `<div class="offers wicons">${it.offers.map(o => { const p = D.providers[o.p]; const lg = typeof PLOGO !== "undefined" && PLOGO[o.p];
+        return `<a class="wi" style="--pcol:${p.color}" href="${esc(linkFor(o.url, o.p))}" target="_blank" rel="noopener" title="${esc(p.name)}" aria-label="${esc(`${p.name}: ${it.kind === "sports" ? "Opens the app" : "Opens this exact title"}`)}">${lg ? `<img class="plogo" src="https://image.tmdb.org/t/p/w154${lg}" alt="">` : `<span class="logo">${esc(p.name[0])}</span>`}</a>`; }).join("")}</div>`
     : `<div class="note">Not streaming in India right now. Watch the trailer, or check back later.</div>`;
   const body = `<div class="tags">${it.telugu ? `<span class="tag tel">Telugu audio</span>` : ""}${it.status === "live" ? `<span class="live"><i></i>Live now</span>` : ""}${it.genres.filter(g => !(it.telugu && /^telugu$/i.test(g))).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
     <p class="syn">${esc(it.synopsis)}</p>
@@ -1663,7 +1676,7 @@ function renderSearch(q) {
 /* Truly random: the whole library (hand-picked + live titles already loaded), filtered by the
    selected mood if there is one, never repeating the last few picks. Saved titles get a small boost. */
 function surprisePool() {
-  const playable = i => i && hasPoster(i) && watchableNow(i) && !isWatched(i.id);
+  const playable = i => i && !i.serial && hasPoster(i) && watchableNow(i) && !isWatched(i.id);
   let pool = D.items.filter(playable);
   Object.values(liveState).forEach(st => st.ids.forEach(id => { const it = BY[id]; if (playable(it) && !pool.includes(it)) pool.push(it); }));
   if (state.mood) {
@@ -4123,9 +4136,55 @@ function tmdbFail() {
   document.querySelectorAll("[data-livebox]").forEach(b => b.remove());
 }
 
+/* ───────────── no regional TV serials (daily soaps) anywhere in VibeSync ─────────────
+   An Indian series is a serial when TMDB calls it a soap, it has 100+ episodes, or it airs on a TV channel
+   (Star Maa, Zee Telugu, Sun TV, Colors…). Reality shows (Bigg Boss…), talk shows, news and documentaries
+   aren't serials. TMDB's lists don't carry episode counts or channels, so each Indian series is checked once
+   (its details) and the answer is remembered; serials found that way leave the screen and never come back. */
+const IND_LANGS = new Set(["hi", "te", "ta", "ml", "kn", "bn", "mr", "pa", "gu", "or", "as", "ur", "bho"]);
+const SERIAL_NET = /\b(star (maa|plus|bharat|vijay|jalsha|pravah|suvarna|utsav)|maa tv|zee (tv|telugu|tamil|kannada|marathi|bangla|keralam|anmol|punjabi|odia|sarthak|yuva)|colors( (tv|kannada|bangla|marathi|tamil|gujarati|rishtey|odia))?|sony (entertainment television|sab|tv|marathi)|sab tv|&tv|and tv|sun (tv|bangla|marathi)|gemini tv|etv( telugu| plus| bal bharat)?|surya tv|udaya tv|kalaignar|asianet|mazhavil manorama|flowers tv|vijay tv|dangal|dd national|doordarshan|shemaroo|ishara|nazara|raj tv|polimer|jaya tv|colors rishtey|sun neo|kalaignar tv)\b/i;
+var SERIALS = store.get("serials", {});                 // {"tmdb:tv:123": 1 serial | 0 not}
+const serialish = r => IND_LANGS.has(r.original_language) || (r.origin_country || []).includes("IN");
+const notSoapKind = g => g.includes(10764) || g.includes(10767) || g.includes(99) || g.includes(10763);
+function serialVerdict(d) {                              // from a series' TMDB details
+  const g = (d.genres || []).map(x => x.id);
+  if (!serialish(d) || notSoapKind(g)) return 0;
+  if (g.includes(10766) || (d.number_of_episodes || 0) >= 100) return 1;
+  return (d.networks || []).some(n => SERIAL_NET.test(n.name || "")) ? 1 : 0;
+}
+function serialSkip(r, type) {
+  if (type !== "tv") return false;
+  const g = r.genre_ids || [];
+  if (notSoapKind(g)) return false;
+  return (g.includes(10766) && serialish(r)) || SERIALS[`tmdb:tv:${r.id}`] === 1;
+}
+function serialSave(id, v) {
+  if (SERIALS[id] === v) return;
+  SERIALS[id] = v;
+  const ks = Object.keys(SERIALS); if (ks.length > 4000) delete SERIALS[ks[0]];
+  store.set("serials", SERIALS);
+  if (v !== 1) return;
+  if (BY[id]) BY[id].serial = true;
+  Object.values(liveState).forEach(st => { if (st && st.ids) st.ids = st.ids.filter(x => x !== id); });
+  document.querySelectorAll(`[data-open="${CSS.escape(id)}"]`).forEach(el => { if (!el.closest("#sheet")) el.remove(); });
+}
+const SQ = []; let SQrun = 0;
+function serialCheck(it, r) {
+  if (!it || !it.tmdb || it.tmdb.type !== "tv" || it.id in SERIALS || !serialish(r) || notSoapKind(r.genre_ids || []) || !T.key) return;
+  if (SQ.includes(it)) return;
+  SQ.push(it); serialPump();
+}
+function serialPump() {
+  while (SQrun < 3 && SQ.length) {
+    const it = SQ.shift(); SQrun++;
+    tget(`/tv/${it.tmdb.id}`, {}).then(d => serialSave(it.id, serialVerdict(d)), () => {}).finally(() => { SQrun--; serialPump(); });
+  }
+}
+
 function fromTmdb(r, typeHint) {
   const type = r.media_type || typeHint;
   if ((type !== "movie" && type !== "tv") || !r.poster_path) return null;
+  if (serialSkip(r, type)) return null;                  // a regional serial: not in VibeSync
   const g = r.genre_ids || [];
   const kind = g.includes(16) && r.original_language === "ja" ? "anime" : g.includes(10764) ? "reality" : type === "tv" ? "series" : "movie";
   const title = r.title || r.name || "";
@@ -4137,6 +4196,7 @@ function fromTmdb(r, typeHint) {
   const twin = curatedTwin(it);
   if (twin) return twin;                                 // prefer our hand-checked version
   if (!BY[it.id]) BY[it.id] = it;
+  serialCheck(BY[it.id], r);                             // an Indian series: find out once whether it's a serial
   return BY[it.id];
 }
 function curatedTwin(it) {
@@ -4261,6 +4321,7 @@ function ensureProviders() {
 }
 
 /* detail sheet for live titles */
+var PLOGO = store.get("plogo", {});                      // each app's icon (from TMDB), for the hand-picked titles too
 const details = {};
 async function loadDetails(it) {
   if (details[it.id]) return;
@@ -4272,6 +4333,8 @@ async function loadDetails(it) {
       if (seen.has(p.provider_id)) return; seen.add(p.provider_id);
       provs.push({name: p.provider_name, logo: p.logo_path, key: provKey(p.provider_name), kind});
     }));
+    if (it.tmdb.type === "tv") serialSave(it.id, serialVerdict(d));
+    provs.forEach(p => { if (p.key && p.logo && PLOGO[p.key] !== p.logo) { PLOGO[p.key] = p.logo; store.set("plogo", PLOGO); } });
     const byKey = new Map(), other = [];          // one button per app
     provs.forEach(p => { if (!p.key) other.push(p); else if (!byKey.has(p.key)) byKey.set(p.key, p); });
     details[it.id] = {genres: (d.genres || []).map(g => g.name).slice(0, 4),
@@ -4309,25 +4372,24 @@ function tmdbSheetHTML(it) {
       if (c) c.outerHTML = `<div class="note">Taking longer than usual. <button class="btn soft" data-retryd="${esc(it.id)}">Retry</button></div>`; } }, 15000); }
   else if (d.error) where = `<div class="note">Couldn't load streaming info. Try again in a moment.</div>`;
   else if (!d.apps.length && !d.other.length) where = `<div class="note">Not streaming in India right now.</div>`;
-  else where = `<div class="offers">` + d.apps.map(p => {
+  else where = `<div class="offers wicons">` + d.apps.map(p => {
       // TMDB's watch page (powered by JustWatch) links to this exact title on each app.
       // Without it, fall back to searching inside the app.
       const direct = exactLink(d, p.name) || jwLink(it, p.name);
       const pending = !direct && ((d.link && EMBED && !RESOLVED[d.link]) || !LG[it.id] || LG[it.id].busy);
       const url = direct ? linkFor(direct, p.key) : FIND[p.key] ? linkFor(FIND[p.key](it.title), p.key) : linkFor(HOME[p.key], p.key);
       const sub = direct ? "Opens this exact title" : pending ? "Finding the exact link…" : FIND[p.key] ? "Opens the app and searches this title" : "Opens the app";
-      return `<a class="offer" style="--pcol:${D.providers[p.key].color}" href="${esc(url)}" target="_blank" rel="noopener">${logo(p)}
-        <span><b>${esc(D.providers[p.key].name)}</b><small>${sub}</small></span><span class="go">${ICON.play}Watch</span></a>`;
+      const nm = D.providers[p.key].name;
+      return `<a class="wi" style="--pcol:${D.providers[p.key].color}" href="${esc(url)}" target="_blank" rel="noopener" title="${esc(nm)}" aria-label="${esc(`${nm}: ${sub}`)}"${pending ? " data-pending" : ""}>${logo(p)}</a>`;
     }).join("") + d.other.map(p => { const direct = exactLink(d, p.name) || jwLink(it, p.name);
       const exact = direct || (IN_APP && d.link);
-      return `<a class="offer" href="${esc(direct || (d.link ? viaApp(d.link, p.name) : it.trailer))}" target="_blank" rel="noopener">${logo(p)}
-        <span><b>${esc(p.name)}</b><small>${exact ? "Opens this exact title" : "See watch options"}</small></span><span class="go">${exact ? ICON.play + "Watch" : "View"}</span></a>`; }).join("") + `</div>`;
+      return `<a class="wi" href="${esc(direct || (d.link ? viaApp(d.link, p.name) : it.trailer))}" target="_blank" rel="noopener" title="${esc(p.name)}" aria-label="${esc(`${p.name}: ${exact ? "Opens this exact title" : "See watch options"}`)}">${logo(p)}</a>`; }).join("") + `</div>`;
   const body = `<div class="tags">${it.telugu ? `<span class="tag tel">Telugu</span>` : ""}${(d ? d.genres : []).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
     <p class="syn">${esc(it.synopsis || "No description yet.")}</p>
     <div class="h3">Where to watch in India</div>${where}${bookHTML(it)}${comingHTML(it)}${langsHTML(it)}
     ${rateHTML(it)}<div class="acts"><button class="btn tint" data-trailer="${esc(it.id)}">${ICON.play}Trailer</button>${saveBtn(it)}</div>
     <p class="foot2">Streaming data from JustWatch via TMDB. Line-ups change, so the app may differ slightly.</p>`;
-  return sheetShell(it, [fact(it.score && !notOutYet(it) ? `★ ${it.score.toFixed(1)} TMDB` : "", "sc"), fact(esc(it.year)), d ? fact(esc(d.len)) : "", fact(esc(kindLabel(it)))], body);
+  return sheetShell(it, [fact(esc(it.year)), d ? fact(esc(d.len)) : "", fact(esc(kindLabel(it)))], body);
 }
 
 /* search */
@@ -5149,7 +5211,6 @@ function sheetExtras(it) {
   const chips = [];
   // (IMDb has its own chip right under the title: imdbHeadHTML)
   const out = !notOutYet(it);                              // no ratings before it's released
-  if (out && x.score) chips.push(`<span class="rt tmdb">TMDB <b>${x.score.toFixed(1)}</b><small>${(x.votes || 0).toLocaleString("en-IN")} votes</small></span>`);
   if (out && x.omdb && x.omdb.rt) chips.push(`<span class="rt tomato">🍅 <b>${esc(x.omdb.rt)}</b></span>`);
   if (out && x.omdb && x.omdb.mc) chips.push(`<span class="rt mc">Metascore <b>${esc(x.omdb.mc)}</b></span>`);
   if (x.release) { const rd = new Date(x.release.date + "T12:00:00"), up = rd > new Date();
@@ -5561,6 +5622,7 @@ function pushWidget() {
   Object.keys(X.st).forEach(id => { avoid.add(id); const t = tid(BY[id]); if (t) avoid.add(t); });
   Object.entries(X.swiped).forEach(([id, v]) => { if (v === -1) { avoid.add(id); const t = tid(BY[id]); if (t) avoid.add(t); } });
   queue.forEach(it => { const t = tid(it); if (t) avoid.add(t); });
+  Object.entries(SERIALS).forEach(([id, v]) => { if (v === 1) avoid.add(id); });       // regional serials: never
   try { b.setPick(JSON.stringify({queue: queue.map(widgetCard), key: T.key || "", likeGenres, avoid: [...avoid].slice(-1500)})); } catch (e) {}
 }
 // "Watched it" taps on the widget, made while VibeSync was closed
