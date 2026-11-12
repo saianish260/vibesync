@@ -1543,8 +1543,9 @@ const saveBtn = it => { const s = favs.has(it.id);
   return `<button class="btn soft${s ? " saved" : ""}" data-fav="${it.id}" aria-pressed="${s}">${ICON.heart}<span>${s ? "Saved" : "Save"}</span></button>`; };
 function sheetHTML(it) {
   if (it.tmdb) return tmdbSheetHTML(it);
-  const offers = it.offers.length
-    ? `<div class="offers wicons">${it.offers.map(o => { const p = D.providers[o.p]; const lg = typeof PLOGO !== "undefined" && PLOGO[o.p];
+  const subs = it.kind === "sports" ? it.offers : it.offers.filter(o => nativeSub(it, o.p) !== false);   // only the apps' own subscriptions
+  const offers = subs.length
+    ? `<div class="offers wicons">${subs.map(o => { const p = D.providers[o.p]; const lg = typeof PLOGO !== "undefined" && PLOGO[o.p];
         return `<a class="wi" style="--pcol:${p.color}" href="${esc(linkFor(o.url, o.p))}" target="_blank" rel="noopener" title="${esc(p.name)}" aria-label="${esc(`${p.name}: ${it.kind === "sports" ? "Opens the app" : "Opens this exact title"}`)}">${lg ? `<img class="plogo" src="https://image.tmdb.org/t/p/w154${lg}" alt="">` : `<span class="logo">${esc(p.name[0])}</span>`}</a>`; }).join("")}</div>`
     : `<div class="note">Not streaming in India right now. Watch the trailer, or check back later.</div>`;
   const body = `<div class="tags">${it.telugu ? `<span class="tag tel">Telugu audio</span>` : ""}${it.status === "live" ? `<span class="live"><i></i>Live now</span>` : ""}${it.genres.filter(g => !(it.telugu && /^telugu$/i.test(g))).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
@@ -4454,12 +4455,13 @@ function tmdbSheetHTML(it) {
   const logo = p => p.logo ? `<img class="plogo" src="https://image.tmdb.org/t/p/w92${p.logo}" alt="">`
                            : `<span class="logo">${esc(p.name[0])}</span>`;
   let where;
+  const apps = d && !d.error ? d.apps.filter(p => nativeSub(it, p.key) !== false) : [];     // only the apps' own subscriptions
   if (!d) { where = `<div class="checking"><i></i>Checking where it streams in India…</div>`;
     clearTimeout(T.slowT); T.slowT = setTimeout(() => { if (openId === it.id && !details[it.id]) { const c = document.querySelector("#sheet .checking");
       if (c) c.outerHTML = `<div class="note">Taking longer than usual. <button class="btn soft" data-retryd="${esc(it.id)}">Retry</button></div>`; } }, 15000); }
   else if (d.error) where = `<div class="note">Couldn't load streaming info. Try again in a moment.</div>`;
-  else if (!d.apps.length) where = `<div class="note">Not streaming in India right now.</div>`;
-  else where = `<div class="offers wicons">` + d.apps.map(p => {
+  else if (!apps.length) where = `<div class="note">Not streaming in India right now.</div>`;
+  else where = `<div class="offers wicons">` + apps.map(p => {
       // TMDB's watch page (powered by JustWatch) links to this exact title on each app.
       // Without it, fall back to searching inside the app.
       const direct = exactLink(d, p.name) || jwLink(it, p.name);
@@ -5854,6 +5856,14 @@ function gotServerLangs(map) {
   });
 }
 const STREAM_TYPES = ["FLATRATE", "FREE", "ADS"];
+/* Is this title part of the app's own subscription? JustWatch lists every offer with its type: FLATRATE / FREE / ADS
+   are included, RENT / BUY cost extra, and add-on channels ("Apple TV Amazon Channel") or "with ads" plans are
+   separate packages. true = included, false = only to rent / buy / through an add-on (not shown), null = not known yet. */
+function nativeSub(it, key) {
+  const L = it && LG[it.id]; if (!L || L.busy || L.error || !L.found) return null;
+  const mine = L.apps.filter(a => !isChannel(a.name) && !/with ads/i.test(a.name) && provKey(a.name) === key);
+  return mine.some(a => a.types.some(t => STREAM_TYPES.includes(t)));
+}
 function langsHTML(it) {
   if (!it || it.kind === "sports") return "";
   const x = XD[it.id]; if (!x || !x.ref) return "";
@@ -5870,7 +5880,7 @@ function langsHTML(it) {
     const apps = L.apps.filter(a => !isChannel(a.name));
     const all = apps.filter(a => a.types.some(t => STREAM_TYPES.includes(t))), rent = apps.filter(a => !all.includes(a));
     const det = details[it.id];
-    const shown = new Set((it.offers || []).map(o => o.p).concat(det ? det.apps.map(p => p.key) : []).filter(Boolean));
+    const shown = new Set((it.offers || []).map(o => o.p).concat(det ? det.apps.map(p => p.key) : []).filter(k => k && nativeSub(it, k) !== false));
     const keyOf = a => isChannel(a.name) ? null : provKey(a.name);
     const main = all.filter(a => { const k = keyOf(a); return k && (!shown.size || shown.has(k)); });
     const extra = all.filter(a => !main.includes(a));
