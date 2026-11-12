@@ -1,11 +1,9 @@
 """Book tickets: find a movie's own page on a ticketing site and give it in that site's official link format.
 
-The page has only the title, year and the person's city, and the sites' title ids (BookMyShow ET00…, PVR's
-session id, District MV…) aren't public data, so this asks a web search (DuckDuckGo's plain HTML page, then
+The page has only the title, year and the person's city, and the sites' title ids (BookMyShow ET00…,
+District MV…) aren't public data, so this asks a web search (DuckDuckGo's plain HTML page, then
 Bing) for the site's page and rebuilds the link the way the site itself writes it:
   BookMyShow  https://in.bookmyshow.com/movies/<city>/<name>/ET00521598
-  PVR INOX    https://www.pvrcinemas.com/moviesessions/<name>/35308
-  Cinépolis   https://cinepolisindia.com/movie-details/<NAME>-HO00003185
   District    https://www.district.in/movies/<name>-movie-tickets-MV233661
 """
 from __future__ import annotations
@@ -57,18 +55,10 @@ def official(url: str, city: str = "") -> str:
             found = segs[0]
         c = bms_city(city) if city else found
         return f"https://in.bookmyshow.com/movies/{c}/{slug}/{et}" if c else ""
-    if host.endswith("pvrcinemas.com"):
-        # https://www.pvrcinemas.com/moviesessions/<name>/35308 (the form PVR INOX's app opens; no city in it)
-        m = re.search(r"/moviesessions/(?:[^/]+/)?([^/]+)/(\d+)", path, re.I)
-        return f"https://www.pvrcinemas.com/moviesessions/{urllib.parse.quote(m.group(1).lower())}/{m.group(2)}" if m else ""
     if host.endswith("district.in"):
         # https://www.district.in/movies/<name>-movie-tickets-MV233661 (a found "-in-<city>" part is dropped)
         m = re.search(r"/movies/([a-z0-9-]+?)-movie-tickets(?:-in-[a-z0-9-]+?)?-(MV\d+)", path, re.I)
         return f"https://www.district.in/movies/{m.group(1).lower()}-movie-tickets-{m.group(2).upper()}" if m else ""
-    if host.endswith("cinepolisindia.com"):
-        # https://cinepolisindia.com/movie-details/<NAME>-HO00003185 (its ?cid= city number is left out: the site asks)
-        m = re.search(r"/movie-details/([^/?#]+-HO\d+)", path, re.I)
-        return "https://cinepolisindia.com/movie-details/" + urllib.parse.quote(m.group(1), safe="-._") if m else ""
     return ""
 
 
@@ -121,8 +111,7 @@ def _candidates(q: str, timeout: float) -> list[str]:
 def _name_of(official_url: str) -> str:
     """The movie name part of an official link (to compare with the title)."""
     path = urllib.parse.unquote(urllib.parse.urlparse(official_url).path)
-    m = (re.search(r"/movies/[^/]+/([^/]+)/ET\d+", path) or re.search(r"/moviesessions/([^/]+)/\d+", path)
-         or re.search(r"/movie-details/(.+)-HO\d+", path) or re.search(r"/movies/(.+)-movie-tickets-MV\d+", path))
+    m = re.search(r"/movies/[^/]+/([^/]+)/ET\d+", path) or re.search(r"/movies/(.+)-movie-tickets-MV\d+", path)
     return _loose(m.group(1)) if m else ""
 
 

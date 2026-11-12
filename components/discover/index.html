@@ -4860,10 +4860,9 @@ function theatreState(it) {
 function bookHTML(it) {
   const st = theatreState(it); if (!st) return "";
   return `<button class="bookbtn" data-book="${esc(it.id)}"><span class="bk-i" aria-hidden="true">🎟️</span>
-    <span><b>${st === "soon" ? "Pre-book tickets" : "Book tickets"}</b><small>${st === "soon" ? "Opening in theatres soon" : "Running in theatres now"} · BookMyShow, District & more</small></span><span class="go">${ICON.arrow}</span></button>`;
+    <span><b>${st === "soon" ? "Pre-book tickets" : "Book tickets"}</b><small>${st === "soon" ? "Opening in theatres soon" : "Running in theatres now"} · BookMyShow & District</small></span><span class="go">${ICON.arrow}</span></button>`;
 }
-const BOOK_APPS = [["BookMyShow", "in.bookmyshow.com", "#E5343F", "B"], ["District", "district.in", "#7B3FE4", "D"],
-                   ["PVR INOX", "pvrcinemas.com", "#F2B31B", "P"], ["Cinépolis", "cinepolisindia.com", "#1C4FA0", "C"]];
+const BOOK_APPS = [["BookMyShow", "in.bookmyshow.com", "#E5343F", "B"], ["District", "district.in", "#7B3FE4", "D"]];
 const CITIES = ["Hyderabad", "Bengaluru", "Chennai", "Mumbai", "Delhi NCR", "Kolkata", "Pune", "Kochi", "Vijayawada", "Visakhapatnam", "Ahmedabad", "Warangal", "Tirupati", "Coimbatore"];
 function bookLink(it, host) {
   const name = String(it.title).split(":")[0].trim(), city = store.get("city", "");
@@ -4874,7 +4873,7 @@ function bookLink(it, host) {
   return `https://duckduckgo.com/?q=${encodeURIComponent(q)}&vs_book=${host}&vs_t=${encodeURIComponent(name)}&vs_city=${encodeURIComponent(city)}`;
 }
 // The movie's own page on each site in the site's official link format (BookMyShow …/movies/<city>/<name>/ET…,
-// PVR …/moviesessions/<City>/<NAME>/<id>), found by the website's server while the Book sheet is open.
+// District …/movies/<name>-movie-tickets-MV…), found by the website's server while the Book sheet is open.
 // Until it arrives (or if it can't be found) the button keeps the search link above.
 const BOOKF = {};
 const bookKey = it => `${it.id}|${store.get("city", "")}`;
