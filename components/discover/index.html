@@ -1171,8 +1171,8 @@ function sonyShare(url) {
     const u = new URL(url); if (!/(^|\.)sonyliv\.com$/.test(u.hostname)) return url;
     const segs = u.pathname.split("/").filter(Boolean), last = segs[segs.length - 1] || "";
     if (!/-\d{6,}$/.test(decodeURIComponent(last))) return url;
-    const path = /^movie/i.test(segs[0]) ? "/movie-bundle/" + last : u.pathname;
-    return `https://www.sonyliv.com${path}?utm_source=shared-content&UTM_MEDIUM=more`;
+    const path = /^movie/i.test(segs[0]) ? "/movies/" + last.replace(/%3A|:/gi, "") : u.pathname;      // SonyLIV's official title page
+    return `https://www.sonyliv.com${path}`;
   } catch (e) { return url; }
 }
 function hotstarId(url) {
