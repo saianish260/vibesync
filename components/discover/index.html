@@ -1316,7 +1316,15 @@ function setTab(tab, scrollTo) {
   movePill();
   const sel = $(`.tab[data-tab="${tab}"]`), rowEl = $(".tabrow");
   if (sel && rowEl) rowEl.scrollTo({left: sel.offsetLeft - (rowEl.clientWidth - sel.offsetWidth) / 2, behavior: REDUCED ? "auto" : "smooth"});
-  if (scrollTo) { const tabs = $(".tabs"), sc = scroller(); if (tabs && sc.scrollTop < tabs.offsetTop - 60) sc.scrollTo({top: tabs.offsetTop - 60, behavior: REDUCED ? "auto" : "smooth"}); }
+  // footer Saved (and the like): always bring the tabs to just under the top bar, so the tab starts from its top
+  if (scrollTo) {
+    const tabs = $(".tabs"), sc = scroller(), bar = $("#top");
+    if (tabs) {
+      const under = bar ? bar.getBoundingClientRect().bottom : 60;
+      const y = Math.max(0, sc.scrollTop + tabs.getBoundingClientRect().top - under - 6);
+      if (Math.abs(y - sc.scrollTop) > 2) sc.scrollTo({top: y, behavior: REDUCED ? "auto" : "smooth"});
+    }
+  }
   navState();
 }
 
