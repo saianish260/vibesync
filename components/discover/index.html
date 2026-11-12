@@ -4870,7 +4870,28 @@ function bookLink(it, host) {
   // DuckDuckGo's "first result" (\) search, pinned to the ticketing site; VibeSync's Android app looks it up
   // itself and opens the movie straight in the ticketing app
   const q = `\\ site:${host} ${name} ${it.year || ""} ${city}`.replace(/\s+/g, " ").trim();
-  return `https://duckduckgo.com/?q=${encodeURIComponent(q)}&vs_book=${host}&vs_t=${encodeURIComponent(name)}`;
+  return `https://duckduckgo.com/?q=${encodeURIComponent(q)}&vs_book=${host}&vs_t=${encodeURIComponent(name)}&vs_city=${encodeURIComponent(city)}`;
+}
+// The movie's own page on each site in the site's official link format (BookMyShow …/movies/<city>/<name>/ET…,
+// PVR …/moviesessions/<City>/<NAME>/<id>), found by the website's server while the Book sheet is open.
+// Until it arrives (or if it can't be found) the button keeps the search link above.
+const BOOKF = {};
+const bookKey = it => `${it.id}|${store.get("city", "")}`;
+function bookAsk(it) {
+  const k = bookKey(it); if (!EMBED || k in BOOKF) return;
+  BOOKF[k] = null;
+  serverAsk("book", {key: k, sites: BOOK_APPS.map(a => a[1]), title: String(it.title).split(":")[0].trim(), year: String(it.year || "").slice(0, 4), city: store.get("city", "")});
+  setTimeout(() => { if (BOOKF[k] === null) delete BOOKF[k]; }, 30000);       // no answer: ask again next time
+}
+function bookHref(it, host) { const f = BOOKF[bookKey(it)]; return f && f[host] ? f[host] : bookLink(it, host); }
+function gotServerBook(map) {
+  Object.entries(map || {}).forEach(([k, sites]) => {
+    if (BOOKF[k] && Object.keys(BOOKF[k]).length) return;
+    BOOKF[k] = sites || {};
+    if (SERVER_ASK.book && SERVER_ASK.book.key === k) delete SERVER_ASK.book;
+    const v = $("#bk"), it = v && v.classList.contains("on") ? BY[v.dataset.id] : null;
+    if (it && bookKey(it) === k) v.querySelectorAll("[data-bkhost]").forEach(a => { a.href = bookHref(it, a.dataset.bkhost); });
+  });
 }
 function openBook(id) {
   const it = BY[id]; if (!it) return;
@@ -4882,10 +4903,11 @@ function openBook(id) {
       <button class="chip" data-city="__other" aria-pressed="${!!city && !CITIES.includes(city)}">${city && !CITIES.includes(city) ? esc(city) : "Other…"}</button></div>
     <form class="dform" id="bkcity" hidden><label class="sr" for="bkc">Your city</label><input id="bkc" name="c" placeholder="Type your city" autocomplete="address-level2"><button class="btn tint" type="submit">Set</button></form>
     <div class="h3">Book with</div><div class="offers">${BOOK_APPS.map(([n, host, col, l]) =>
-      `<a class="offer" style="--pcol:${col}" href="${esc(bookLink(it, host))}" target="_blank" rel="noopener" data-bkgo>
+      `<a class="offer" style="--pcol:${col}" href="${esc(bookHref(it, host))}" target="_blank" rel="noopener" data-bkgo data-bkhost="${esc(host)}">
         <span class="logo">${l}</span><span><b>${esc(n)}</b><small>Opens ${esc(it.title.split(":")[0])}${city ? ` in ${esc(city)}` : ""}</small></span><span class="go">🎟️ Book</span></a>`).join("")}</div>
     <p class="fnote">${city ? "" : "Pick your city first so the app opens with your cinemas. "}VibeSync finds the movie's page on each site; prices and seats are on their side.</p></div>`;
   v.classList.add("on");
+  bookAsk(it);
   if (!REDUCED) v.querySelector(".bk-in").animate([{transform: "translate3d(0,40px,0)", opacity: 0}, {transform: "none", opacity: 1}], {duration: 520, easing: FLUID.glide});
   buzz();
 }
@@ -6272,6 +6294,7 @@ window.addEventListener("message", e => {
   if (args.firebase && D && !AUTH.cfg) { setAuthConfig(args.firebase); authBoot(); }
   if (args.langs && typeof args.langs === "object" && D) gotServerLangs(args.langs);
   if (args.news && typeof args.news === "object" && D) gotServerNews(args.news);
+  if (args.book && typeof args.book === "object" && D) gotServerBook(args.book);
   if (args.imdb && typeof args.imdb === "object" && D) gotServerImdb(args.imdb);
   if (args.catalog) boot(args.catalog);
   if (args.resolved && typeof args.resolved === "object") {

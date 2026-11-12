@@ -18,6 +18,7 @@ from core.data import catalog_payload
 from core.imdb import imdb_id, library_ratings, live_rating, ratings_table
 from core.langs import fetch_langs
 from core.news import fetch_news
+from core.book import find as find_ticket_page
 from core.watchlinks import fetch_watch_links, is_watch_url
 
 DIR = Path(__file__).resolve().parent.parent / "components" / "discover"
@@ -92,6 +93,14 @@ def _news(query: str) -> list:
         return []
 
 
+@st.cache_data(ttl=6 * 3600, max_entries=300, show_spinner=False)
+def _ticket_page(site: str, title: str, year: str, city: str) -> str:
+    try:
+        return find_ticket_page(site, title, year, city)
+    except Exception:           # search unreachable: the page keeps its search link
+        return ""
+
+
 def _imdb_ratings():
     """IMDb's ratings file, downloaded again every day (kept in memory; None if IMDb can't be reached)."""
     return ratings_table(block=True)
@@ -151,8 +160,9 @@ def render(theme: str) -> dict | None:
     langs = st.session_state.setdefault("vs_langs", {})
     news = st.session_state.setdefault("vs_news", {})
     imdb = st.session_state.setdefault("vs_imdb", {})
+    book = st.session_state.setdefault("vs_book", {})
     value = _component(catalog=payload, theme=theme, tmdbKey=tmdb_key(), ytKey=youtube_key(), omdbKey=omdb_key(), firebase=firebase_config(), resolved=resolved, langs=langs, news=news,
-                       imdb=imdb, key="discover", default=None)
+                       imdb=imdb, book=book, key="discover", default=None)
     # When a live title's sheet opens, the screen asks for that title's exact per-app links.
     req = value.get("resolve") if isinstance(value, dict) else None
     if req and value.get("n") != st.session_state.get("_resolve_n"):
@@ -208,5 +218,20 @@ def render(theme: str) -> dict | None:
             imdb[k] = _imdb_for(refs)
             while len(imdb) > 12:
                 imdb.pop(next(iter(imdb)))
+            st.rerun()
+    # ...and Book tickets: the movie's own page on each ticketing site, in the site's official link format
+    bq = value.get("book") if isinstance(value, dict) else None
+    if isinstance(bq, dict) and value.get("n") != st.session_state.get("_book_n"):
+        st.session_state._book_n = value.get("n")
+        k = str(bq.get("key", ""))[:120]
+        sites = [str(x)[:40] for x in (bq.get("sites") or [])[:6] if isinstance(x, str)]
+        if k and sites and k not in book:
+            title, year, city = str(bq.get("title", ""))[:120], str(bq.get("year", ""))[:4], str(bq.get("city", ""))[:40]
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=len(sites)) as pool:
+                found = list(pool.map(lambda site: _ticket_page(site, title, year, city), sites))
+            book[k] = {site: url for site, url in zip(sites, found) if url}
+            while len(book) > 20:
+                book.pop(next(iter(book)))
             st.rerun()
     return value

@@ -255,3 +255,22 @@ class JustWatchLinkTest(unittest.TestCase):
         app = langs.summarize(node)["apps"][0]
         self.assertEqual(app["url"], "https://www.primevideo.com/detail/STREAM")
         self.assertNotIn("_s", app)
+
+
+class TicketLinkTest(unittest.TestCase):
+    def test_official_formats(self):
+        from core.book import official
+        self.assertEqual(official("https://in.bookmyshow.com/hyderabad/movies/bachelor-party-deux/ET00521598", "Vijayawada"),
+                         "https://in.bookmyshow.com/movies/vijayawada/bachelor-party-deux/ET00521598")
+        self.assertEqual(official("https://in.bookmyshow.com/movies/vijayawada/bachelor-party-deux/ET00521598", ""),
+                         "https://in.bookmyshow.com/movies/vijayawada/bachelor-party-deux/ET00521598")
+        self.assertEqual(official("https://www.pvrcinemas.com/moviesessions/Vijayawada/RAMAYANA/35308", "delhi ncr"),
+                         "https://www.pvrcinemas.com/moviesessions/Delhi-NCR/RAMAYANA/35308")
+        self.assertEqual(official("https://cinepolisindia.com/movie-details/AK47..AADARSHA-KUTUMBAM-HOUSE-NO-47-HO00003185?cid=12", ""),
+                         "https://cinepolisindia.com/movie-details/AK47..AADARSHA-KUTUMBAM-HOUSE-NO-47-HO00003185")
+        self.assertEqual(official("https://www.district.in/movies/dc-movie-tickets-in-vizag-MV208920", "Hyderabad"),
+                         "https://www.district.in/movies/dc-movie-tickets-MV208920")
+        self.assertEqual(official("https://www.district.in/movies/bachelor-party-d-eux-movie-tickets-MV233661", ""),
+                         "https://www.district.in/movies/bachelor-party-d-eux-movie-tickets-MV233661")
+        self.assertEqual(official("https://www.district.in/movies/inox-cmr-central-gajuwaka-in-vizag-CD1029270", ""), "")
+        self.assertEqual(official("https://in.bookmyshow.com/explore/movies-hyderabad", "Hyderabad"), "")
