@@ -12,6 +12,8 @@ Streaming availability changes. Re-check on justwatch.com/in and edit the offers
 """
 from __future__ import annotations
 
+import re
+
 UPDATED = "10 Nov 2026"
 
 # Provider key -> display name, brand colour, Android package (for "open in app / Play Store")
@@ -629,16 +631,29 @@ def items_for_mood(mood: str) -> list[dict]:
     return [i for i in CATALOG if tags & set(i["moods"])]
 
 
+def _native_offers(it: dict) -> tuple[list, str]:
+    """Only what the app's own subscription plays: an offer that comes through another service's add-on channel
+    (e.g. Prime Video's "Apple TV" or "Anime Times" channel, an extra subscription) isn't shown, and neither is the
+    note about it."""
+    note = it["note"] or ""
+    offers = list(it["offers"])
+    if re.search(r"channel add-on", note, re.I):
+        offers = [(p, u) for p, u in offers if p != "prime"]
+        note = re.sub(r"\s*(Also )?[Oo]n Prime Video through the [^.]+ channel add-on\.", "", note).strip()
+    return offers, note
+
+
 def catalog_payload() -> dict:
     """Everything the Discover screen needs, as plain JSON."""
     items = []
     for it in CATALOG:
+        offers, note = _native_offers(it)
         items.append({
             "id": it["id"], "title": it["title"], "kind": it["kind"], "year": it["year"], "meta": it["meta"],
             "genres": it["genres"], "synopsis": it["synopsis"], "moods": it["moods"], "telugu": it["telugu"],
-            "imdb": it["imdb"], "poster": it["poster"], "status": it["status"], "note": it["note"],
+            "imdb": it["imdb"], "poster": it["poster"], "status": it["status"], "note": note,
             "emoji": it["emoji"], "colors": it["colors"], "trailer": youtube_url(it),
-            "offers": [{"p": p, "url": u} for p, u in it["offers"]],
+            "offers": [{"p": p, "url": u} for p, u in offers],
         })
     return {"updated": UPDATED, "providers": PROVIDERS, "kinds": KIND_LABELS, "items": items,
             "rows": {k: [[t, ids] for t, ids in v] for k, v in ROWS.items()}, "featured": FEATURED,

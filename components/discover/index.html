@@ -4396,6 +4396,7 @@ function ensureProviders() {
       // Only subscription services: skip rent/buy stores (Apple TV store = 2, Amazon Video = 10, Google Play = 3...)
       // and add-on channels, or rows fill up with titles you can only rent there.
       if (!k || STORE_IDS.has(p.provider_id) || /channel|with ads|store|rent|buy/i.test(p.provider_name)) return;
+      if (p.logo_path && !PLOGO[k]) { PLOGO[k] = p.logo_path; store.set("plogo2", PLOGO); }   // the app's icon, for every title
       T.provIds[k] = T.provIds[k] || [];
       if (!T.provIds[k].includes(p.provider_id)) T.provIds[k].push(p.provider_id);
     }));
@@ -4404,7 +4405,7 @@ function ensureProviders() {
 }
 
 /* detail sheet for live titles */
-var PLOGO = store.get("plogo", {});                      // each app's icon (from TMDB), for the hand-picked titles too
+var PLOGO = store.get("plogo2", {});                     // each app's icon (from TMDB), for the hand-picked titles too
 const details = {};
 async function loadDetails(it) {
   if (details[it.id]) return;
@@ -4414,11 +4415,13 @@ async function loadDetails(it) {
     const seen = new Set(), provs = [];
     ["flatrate", "free", "ads"].forEach(kind => (ind[kind] || []).forEach(p => {
       if (seen.has(p.provider_id)) return; seen.add(p.provider_id);
-      if (/channel/i.test(p.provider_name)) return;       // Prime Video / Apple TV "Channels": extra subscriptions, never shown
+      // only the apps' own subscriptions: no add-on channels (extra subscriptions inside Prime Video / Apple TV),
+      // no "with ads" variants (Prime Video with ads), no rent / buy stores
+      if (STORE_IDS.has(p.provider_id) || /channel|with ads|store|rent|buy/i.test(p.provider_name)) return;
       provs.push({name: p.provider_name, logo: p.logo_path, key: provKey(p.provider_name), kind});
     }));
     if (it.tmdb.type === "tv") serialSave(it.id, serialVerdict(d));
-    provs.forEach(p => { if (p.key && p.logo && PLOGO[p.key] !== p.logo) { PLOGO[p.key] = p.logo; store.set("plogo", PLOGO); } });
+    provs.forEach(p => { if (p.key && p.logo && !PLOGO[p.key]) { PLOGO[p.key] = p.logo; store.set("plogo2", PLOGO); } });
     const byKey = new Map(), other = [];          // one button per app
     provs.forEach(p => { if (!p.key) other.push(p); else if (!byKey.has(p.key)) byKey.set(p.key, p); });
     details[it.id] = {genres: (d.genres || []).map(g => g.name).slice(0, 4),
@@ -5893,7 +5896,7 @@ function langsHTML(it) {
       ${a.audio.length ? `<small>🔊 ${lsort(a.audio, pref).map(lname).join(", ")}</small>` : `<small>Audio languages not listed</small>`}
       ${a.subs.length ? `<small>💬 ${lsort(a.subs, pref).map(lname).join(", ")}</small>` : ""}</span></div>`; };
     body = answer + (main.length ? `<div class="lg-list">${main.map(row).join("")}</div>` : "")
-      + (rent.length ? `<details class="lg-rent"><summary>Rent or buy (${rent.length})</summary>${rent.map(row).join("")}</details>` : "");
+;                                                    // no rent / buy (only the apps' own subscriptions)
   }
   return `<div class="h3">Languages on each app</div><div class="langs"><div class="lg-q">Your language</div>${chips}${body}
     <p class="fnote">Audio and subtitle languages as each app lists them on JustWatch (India).</p></div>`;
