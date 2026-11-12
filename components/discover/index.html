@@ -6098,7 +6098,7 @@ function platSoonHTML(k) {
   const n = esc(D.providers[k].name);
   return `<div class="sec"><h2>Coming soon to ${n}</h2><p class="live-sub"><i></i>Movies</p></div><div class="row" id="psoon-m">${skeleton(5)}</div>
     <div class="sec"><h2>New episodes coming on ${n}</h2><p class="live-sub"><i></i>Next 30 days</p></div><div class="row" id="psoon-t">${skeleton(5)}</div>
-    <div class="sec"><h2>Recently added to ${n}</h2><p class="live-sub"><i></i>Last 3 days</p></div><div class="row" id="padd">${skeleton(5)}</div>`;
+    <div class="sec"><h2>Recently added to ${n}</h2><p class="live-sub"><i></i>Last 7 days</p></div><div class="row" id="padd">${skeleton(5)}</div>`;
 }
 // India's calendar date n days ago, as YYYY-MM-DD
 const dayIN = n => new Date(Date.parse(todayIN() + "T00:00:00Z") - n * dayMs).toISOString().slice(0, 10);
@@ -6144,18 +6144,18 @@ async function fillPlatSoon(k) {
           `No new episodes announced on ${esc(name)} for the next 30 days.`);
     } catch (e) { put("#psoon-t", "", "Couldn't load upcoming episodes right now."); }
   })();
-  // recently added: movies that came out on this app in India in the last 3 days (today included), and series
-  // that started, or began a new season, on it in the last 3 days
+  // recently added: movies that came out on this app in India in the past 7 days (today included), and series
+  // that started, or began a new season, on it in those 7 days
   (async () => {
     try {
-      const from = dayIN(3), inWin = d => { const x = String(d || "").slice(0, 10); return !!x && x >= from && x <= todayS; };
+      const from = dayIN(6), inWin = d => { const x = String(d || "").slice(0, 10); return !!x && x >= from && x <= todayS; };
       const win = {"release_date.gte": from, "release_date.lte": todayS};
       const [dig, onApp, tv] = await Promise.all([
-        Promise.all([1, 2].map(p => tget("/discover/movie", Object.assign({region: "IN", with_release_type: "4|6", sort_by: "popularity.desc", page: p}, win)).catch(() => ({})))),
+        Promise.all([1, 2, 3].map(p => tget("/discover/movie", Object.assign({region: "IN", with_release_type: "4|6", sort_by: "popularity.desc", page: p}, win)).catch(() => ({})))),
         ids ? tget("/discover/movie", Object.assign({with_watch_providers: ids, watch_region: "IN", region: "IN", with_release_type: "4|6", sort_by: "popularity.desc"}, win)).catch(() => ({})) : {},
         ids ? tget("/discover/tv", {with_watch_providers: ids, watch_region: "IN", "air_date.gte": from, "air_date.lte": todayS, sort_by: "popularity.desc"}).catch(() => ({})) : {}]);
       const listed = new Set((onApp.results || []).map(r => r.id));
-      const seen = new Set(), cands = (onApp.results || []).concat(dig.flatMap(j => j.results || [])).filter(r => r.poster_path && !seen.has(r.id) && seen.add(r.id)).slice(0, 40);
+      const seen = new Set(), cands = (onApp.results || []).concat(dig.flatMap(j => j.results || [])).filter(r => r.poster_path && !seen.has(r.id) && seen.add(r.id)).slice(0, 56);
       const movies = [];
       for (let i = 0; i < cands.length; i += 8) {
         await Promise.all(cands.slice(i, i + 8).map(async r => {
@@ -6168,7 +6168,7 @@ async function fillPlatSoon(k) {
         }));
         if (PSOON.seq !== seq) return;
       }
-      const shows = (await Promise.all((tv.results || []).filter(r => r.poster_path).slice(0, 20).map(async r => {
+      const shows = (await Promise.all((tv.results || []).filter(r => r.poster_path).slice(0, 30).map(async r => {
         try {
           const d = await tget(`/tv/${r.id}`, {});
           const s = (d.seasons || []).filter(x => x.season_number > 0 && inWin(x.air_date)).pop();      // a brand-new show or a new season
@@ -6179,7 +6179,7 @@ async function fillPlatSoon(k) {
       const all = movies.concat(shows).sort((a, b) => b.date.localeCompare(a.date));          // newest first
       const when = d => d === todayS ? "Today" : d === dayIN(1) ? "Yesterday" : shortDate(d);
       put("#padd", all.map(x => { const it = fromTmdb(x.r, x.type); return it ? dcard(it, x.label ? `${when(x.date)} · ${x.label}` : when(x.date)) : ""; }).join(""),
-          `Nothing new on ${esc(name)} in the last 3 days.`);
+          `Nothing new on ${esc(name)} in the past 7 days.`);
     } catch (e) { put("#padd", "", "Couldn't load recently added titles right now."); }
   })();
 }
