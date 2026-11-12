@@ -1083,9 +1083,10 @@ button.imh:active{transform:scale(.95)}
   var t0 = Date.now(), seen = 0;
   var tick = setInterval(function () {
     var app = /VibeSyncApp\//.test(ua) && !/VibeSyncTV/.test(ua);           // the phone app: wait for its own spotlight row
-    var content = app ? (document.querySelectorAll("#vsrow .vsp").length >= 4 || document.querySelector("#auth.on")) : document.querySelector("#app .hp, #app .card, #app .t10, #auth.on");
+    var row = app || !/VibeSyncApp\//.test(ua);                            // the website has the same poster row
+    var content = row ? (document.querySelectorAll("#vsrow .vsp").length >= 4 || document.querySelector("#auth.on")) : document.querySelector("#app .hp, #app .card, #app .t10, #auth.on");
     if (content && !seen) seen = Date.now();
-    var img = document.querySelector(app ? "#vsrow .vsp img" : "#hero img, #app .card img");
+    var img = document.querySelector(row ? "#vsrow .vsp img" : "#hero img, #app .card img");
     if ((seen && ((img && img.complete) || Date.now() - seen > 1500)) || Date.now() - t0 > 9000) { clearInterval(tick); gone(); }
   }, 120);
 })();
@@ -1220,7 +1221,7 @@ function isDevAccount(u) {
   const mail = u && u.email ? String(u.email).trim().toLowerCase() : "";
   try { return !!mail && sha256hex(mail) === DEV_ACCOUNT; } catch (e) { return false; }
 }
-const RATE_DEV = isDevAccount(store.get("auth", null));
+let RATE_DEV = isDevAccount(store.get("auth", null));          // can switch on / off live when you sign in
 
 /* ───────────── helpers ───────────── */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1921,6 +1922,7 @@ function render() {
   $("#panel").innerHTML = panelHTML(state.tab);
   if (yc) $("#ytslot").appendChild(yc);
   $("#bnav").innerHTML = navHTML(); navState();
+  if (window.__vsRowBuild) window.__vsRowBuild();      // website poster row: part of the first frame, never added late
   themeBtn();
   requestAnimationFrame(() => { movePill(); showSlide(0); startHero(); onScroll(); preloadHero(); watchTabs(); });
 }
@@ -6522,13 +6524,25 @@ function applyCloudLive() {
   REM.list = store.get("reminders", {}); PLAN.mine = new Set(store.get("mysubs", [])); RATE.r = store.get("ratings", {});
   Object.values(store.get("favMeta", {})).forEach(m => { if (m && !BY[m.id]) BY[m.id] = rehydrate(m); });
   rehydrateAll();
+  const th = store.get("titleTheme", null);                     // a theme taken from the account (new device)
+  if (th && (!TT.cur || TT.cur.id !== th.id)) { TT.cur = th; try { applyTitle(th, true); } catch (e) {} }
+  refreshInPlace();
+}
+/* bring what's on screen up to date without redrawing it: Save hearts, your-rating badges, Saved, an open title */
+function refreshInPlace() {
   $$("[data-fav]").forEach(b => { const on = favs.has(b.dataset.fav); if (b.getAttribute("aria-pressed") !== String(on)) b.setAttribute("aria-pressed", on); });
+  $$(".card[data-open] .pw").forEach(pw => {
+    const id = pw.closest("[data-open]").dataset.open, old = pw.querySelector(".myr"), html = myRatingBadge(id);
+    if (old && old.outerHTML === html.trim()) return;
+    if (old) old.remove();
+    if (html) pw.insertAdjacentHTML("beforeend", html);
+  });
   const pn = $("#panel"); if (pn && state.tab === "saved") morph(pn, panelHTML("saved"));     // only Saved shows this data
   if (openId) refreshSheet();
 }
 // after a merge that changed this device, reload once so every screen shows the account's data
-// live: on a normal launch nothing ever reloads; new data from the account is shown in place.
-// Only a fresh sign-in (you tapped Continue with Google) reloads once, so every screen shows the account.
+// nothing ever reloads, not on launch and not when you sign in: the account's data is shown in place
+// (live: a launch, so no "couldn't reach" message)
 async function syncAfterSignIn(live) {
   let remote = null;
   try { remote = await cloudLoad(); }
@@ -6536,8 +6550,7 @@ async function syncAfterSignIn(live) {
   const changed = mergeCloud(remote);
   await cloudSave();
   if (!changed) return;
-  if (live) { try { applyCloudLive(); } catch (e) { console.error("VibeSync sync:", e); } return; }
-  try { sessionStorage.setItem("vs.synced", "1"); } catch (e) {} location.reload();
+  try { applyCloudLive(); } catch (e) { console.error("VibeSync sync:", e); }
 }
 
 /* the sign-in screen */
@@ -6597,8 +6610,11 @@ async function gotGoogleToken(t) {
   catch (e) { return authGate(/OPERATION_NOT_ALLOWED|CONFIGURATION/i.test(e.message) ? "Google sign-in isn't switched on in Firebase yet." : "Couldn't sign you in. Try again.", true); }
   if (g) g.classList.remove("on");
   toast(`Signed in as ${AUTH.user.name || AUTH.user.email} ✓`);
-  // signed in with (or away from) the developer account: reload so rating shows / hides everywhere
-  Promise.resolve(syncAfterSignIn()).catch(() => {}).then(() => { if (isDevAccount(AUTH.user) !== RATE_DEV) setTimeout(() => location.reload(), 600); });
+  // signed in with (or away from) the developer account: rating switches on / off right here, no reload
+  Promise.resolve(syncAfterSignIn()).catch(() => {}).then(() => {
+    const dev = isDevAccount(AUTH.user);
+    if (dev !== RATE_DEV) { RATE_DEV = dev; try { refreshInPlace(); } catch (e) {} }
+  });
 }
 async function authBoot() {
   if (!AUTH.cfg || AUTH.started) return;
@@ -6746,7 +6762,8 @@ document.addEventListener("click", e => {
     fill();
   }
   build();
-  setInterval(build, 1200);                              // the page loads more rows / can rebuild the spotlight
+  window.__vsRowBuild = build;                           // the home page builds the row in the same moment it draws itself
+  setInterval(build, 1200);                              // more rows load later: their posters join at the end (off screen)
 
 
 
