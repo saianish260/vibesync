@@ -4869,7 +4869,8 @@ function bookLink(it, host) {
   const name = String(it.title).split(":")[0].trim(), city = store.get("city", "");
   // DuckDuckGo's "first result" (\) search, pinned to the ticketing site; VibeSync's Android app looks it up
   // itself and opens the movie straight in the ticketing app
-  const q = `\\ site:${host} ${name} ${it.year || ""} ${city}`.replace(/\s+/g, " ").trim();
+  // (the website uses DuckDuckGo's "!ducky" bang, which jumps to the first result)
+  const q = `${IN_APP ? "\\" : "!ducky"} site:${host} ${name} ${it.year || ""} ${city}`.replace(/\s+/g, " ").trim();
   return `https://duckduckgo.com/?q=${encodeURIComponent(q)}&vs_book=${host}&vs_t=${encodeURIComponent(name)}&vs_city=${encodeURIComponent(city)}`;
 }
 // The movie's own page on each site in the site's official link format (BookMyShow …/movies/<city>/<name>/ET…,

@@ -265,7 +265,9 @@ class TicketLinkTest(unittest.TestCase):
         self.assertEqual(official("https://in.bookmyshow.com/movies/vijayawada/bachelor-party-deux/ET00521598", ""),
                          "https://in.bookmyshow.com/movies/vijayawada/bachelor-party-deux/ET00521598")
         self.assertEqual(official("https://www.pvrcinemas.com/moviesessions/Vijayawada/RAMAYANA/35308", "delhi ncr"),
-                         "https://www.pvrcinemas.com/moviesessions/Delhi-NCR/RAMAYANA/35308")
+                         "https://www.pvrcinemas.com/moviesessions/ramayana/35308")
+        self.assertEqual(official("https://www.pvrcinemas.com/moviesessions/ramayana/35308", ""),
+                         "https://www.pvrcinemas.com/moviesessions/ramayana/35308")
         self.assertEqual(official("https://cinepolisindia.com/movie-details/AK47..AADARSHA-KUTUMBAM-HOUSE-NO-47-HO00003185?cid=12", ""),
                          "https://cinepolisindia.com/movie-details/AK47..AADARSHA-KUTUMBAM-HOUSE-NO-47-HO00003185")
         self.assertEqual(official("https://www.district.in/movies/dc-movie-tickets-in-vizag-MV208920", "Hyderabad"),

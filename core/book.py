@@ -4,7 +4,7 @@ The page has only the title, year and the person's city, and the sites' title id
 session id, District MV…) aren't public data, so this asks a web search (DuckDuckGo's plain HTML page, then
 Bing) for the site's page and rebuilds the link the way the site itself writes it:
   BookMyShow  https://in.bookmyshow.com/movies/<city>/<name>/ET00521598
-  PVR INOX    https://www.pvrcinemas.com/moviesessions/<City>/<NAME>/35308
+  PVR INOX    https://www.pvrcinemas.com/moviesessions/<name>/35308
   Cinépolis   https://cinepolisindia.com/movie-details/<NAME>-HO00003185
   District    https://www.district.in/movies/<name>-movie-tickets-MV233661
 """
@@ -23,7 +23,6 @@ BMS_CITY = {"delhi ncr": "national-capital-region-ncr", "delhi": "national-capit
             "ncr": "national-capital-region-ncr", "gurgaon": "national-capital-region-ncr", "gurugram": "national-capital-region-ncr",
             "noida": "national-capital-region-ncr", "visakhapatnam": "vizag-visakhapatnam", "vizag": "vizag-visakhapatnam",
             "bangalore": "bengaluru", "cochin": "kochi", "bombay": "mumbai", "calcutta": "kolkata", "madras": "chennai"}
-PVR_CITY = {"delhi ncr": "Delhi-NCR", "delhi": "Delhi-NCR", "new delhi": "Delhi-NCR", "bangalore": "Bengaluru", "vizag": "Visakhapatnam"}
 
 
 def _loose(s: str) -> str:
@@ -37,11 +36,6 @@ def _slug(s: str) -> str:
 def bms_city(city: str) -> str:
     c = (city or "").strip().lower()
     return BMS_CITY.get(c) or _slug(c)
-
-
-def pvr_city(city: str) -> str:
-    c = (city or "").strip()
-    return PVR_CITY.get(c.lower()) or "-".join(w[:1].upper() + w[1:].lower() for w in re.split(r"[\s-]+", c) if w)
 
 
 def official(url: str, city: str = "") -> str:
@@ -64,12 +58,9 @@ def official(url: str, city: str = "") -> str:
         c = bms_city(city) if city else found
         return f"https://in.bookmyshow.com/movies/{c}/{slug}/{et}" if c else ""
     if host.endswith("pvrcinemas.com"):
-        m = re.search(r"/moviesessions/([^/]+)/([^/]+)/(\d+)", path, re.I)
-        if not m:
-            return ""
-        c = pvr_city(city) if city else m.group(1)
-        return "https://www.pvrcinemas.com/moviesessions/{}/{}/{}".format(
-            urllib.parse.quote(c), urllib.parse.quote(m.group(2)), m.group(3))
+        # https://www.pvrcinemas.com/moviesessions/<name>/35308 (the form PVR INOX's app opens; no city in it)
+        m = re.search(r"/moviesessions/(?:[^/]+/)?([^/]+)/(\d+)", path, re.I)
+        return f"https://www.pvrcinemas.com/moviesessions/{urllib.parse.quote(m.group(1).lower())}/{m.group(2)}" if m else ""
     if host.endswith("district.in"):
         # https://www.district.in/movies/<name>-movie-tickets-MV233661 (a found "-in-<city>" part is dropped)
         m = re.search(r"/movies/([a-z0-9-]+?)-movie-tickets(?:-in-[a-z0-9-]+?)?-(MV\d+)", path, re.I)
@@ -130,7 +121,7 @@ def _candidates(q: str, timeout: float) -> list[str]:
 def _name_of(official_url: str) -> str:
     """The movie name part of an official link (to compare with the title)."""
     path = urllib.parse.unquote(urllib.parse.urlparse(official_url).path)
-    m = (re.search(r"/movies/[^/]+/([^/]+)/ET\d+", path) or re.search(r"/moviesessions/[^/]+/([^/]+)/\d+", path)
+    m = (re.search(r"/movies/[^/]+/([^/]+)/ET\d+", path) or re.search(r"/moviesessions/([^/]+)/\d+", path)
          or re.search(r"/movie-details/(.+)-HO\d+", path) or re.search(r"/movies/(.+)-movie-tickets-MV\d+", path))
     return _loose(m.group(1)) if m else ""
 
