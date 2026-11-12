@@ -10,6 +10,7 @@ Bing) for the site's page and rebuilds the link the way the site itself writes i
 """
 from __future__ import annotations
 
+import base64
 import html as _html
 import re
 import urllib.parse
@@ -80,42 +81,82 @@ def official(url: str, city: str = "") -> str:
     return ""
 
 
-def _get(url: str, timeout: float) -> str:
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept-Language": "en-IN,en;q=0.9", "Accept": "text/html"})
+def _get(url: str, timeout: float, data: bytes | None = None) -> str:
+    req = urllib.request.Request(url, data=data, headers={"User-Agent": UA, "Accept-Language": "en-IN,en;q=0.9", "Accept": "text/html",
+                                                        **({"Content-Type": "application/x-www-form-urlencoded"} if data else {})})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read(1_500_000).decode("utf-8", "replace")
 
 
-def _candidates(q: str, timeout: float) -> list[str]:
-    out: list[str] = []
-    try:
-        page = _get("https://html.duckduckgo.com/html/?q=" + urllib.parse.quote(q), timeout)
-        out += [urllib.parse.unquote(m) for m in re.findall(r"uddg=([^&\"']+)", page)]
-    except Exception:
-        pass
-    if not out:
+def _bing_url(href: str) -> str:
+    """Bing wraps results as bing.com/ck/a?…&u=a1<base64 of the address>; unwrap them."""
+    href = _html.unescape(href)
+    if "bing.com/ck/a" not in href:
+        return href
+    u = urllib.parse.parse_qs(urllib.parse.urlparse(href).query).get("u", [""])[0]
+    if u.startswith("a1"):
+        b = u[2:]
         try:
-            page = _get("https://www.bing.com/search?setlang=en-IN&cc=IN&q=" + urllib.parse.quote(q), timeout)
-            out += [_html.unescape(m) for m in re.findall(r'<a[^>]+href="(https?://[^"]+)"', page)]
+            return base64.urlsafe_b64decode(b + "=" * (-len(b) % 4)).decode("utf-8", "replace")
         except Exception:
-            pass
-    return out
+            return ""
+    return ""
+
+
+ENGINES = [   # (name, how to ask, how to read the result links)
+    ("ddg", lambda q, t: _get("https://html.duckduckgo.com/html/", t, urllib.parse.urlencode({"q": q, "kl": "in-en"}).encode()),
+     lambda page: [urllib.parse.unquote(m) for m in re.findall(r"uddg=([^&\"']+)", page)]),
+    ("ddg-lite", lambda q, t: _get("https://lite.duckduckgo.com/lite/?kl=in-en&q=" + urllib.parse.quote(q), t),
+     lambda page: [urllib.parse.unquote(m) for m in re.findall(r"uddg=([^&\"']+)", page)]
+                  + [_html.unescape(m) for m in re.findall(r'href="(https?://(?!duckduckgo)[^"]+)"', page)]),
+    ("bing", lambda q, t: _get("https://www.bing.com/search?setlang=en-IN&cc=IN&q=" + urllib.parse.quote(q), t),
+     lambda page: [_bing_url(m) for m in re.findall(r'<a[^>]+href="(https?://[^"]+)"', page)]),
+]
+LAST: dict = {}          # what the last lookups ran into (shown to the page for troubleshooting)
+
+
+def _candidates(q: str, timeout: float) -> list[str]:
+    for name, ask, read in ENGINES:
+        try:
+            links = [u for u in read(ask(q, timeout)) if u.startswith("http")]
+            LAST[name] = len(links)
+            if links:
+                return links
+        except Exception as e:
+            LAST[name] = type(e).__name__ + (f" {getattr(e, 'code', '')}" if getattr(e, "code", None) else "")
+    return []
+
+
+def _name_of(official_url: str) -> str:
+    """The movie name part of an official link (to compare with the title)."""
+    path = urllib.parse.unquote(urllib.parse.urlparse(official_url).path)
+    m = (re.search(r"/movies/[^/]+/([^/]+)/ET\d+", path) or re.search(r"/moviesessions/[^/]+/([^/]+)/\d+", path)
+         or re.search(r"/movie-details/(.+)-HO\d+", path) or re.search(r"/movies/(.+)-movie-tickets-MV\d+", path))
+    return _loose(m.group(1)) if m else ""
 
 
 def find(site: str, title: str, year: str = "", city: str = "", timeout: float = 8.0) -> str:
-    """The movie's page on one ticketing site, in its official format ("" if it couldn't be found)."""
+    """The movie's page on one ticketing site, in its official format ("" if it couldn't be found).
+    The page whose movie name matches the title best wins (exactly > starts with it > contains it)."""
     name = (title or "").split(":")[0].strip()
     want = _loose(name)
     if not want:
         return ""
+    best, best_score = "", 0
     for q in (f"site:{site} {name} {year} {city}", f"site:{site} {name} {year}", f"site:{site} {name} movie tickets"):
         for url in _candidates(re.sub(r"\s+", " ", q).strip(), timeout):
             host = (urllib.parse.urlparse(url).hostname or "").lower()
             if not (host == site or host.endswith("." + site)):
                 continue
-            if want not in _loose(urllib.parse.unquote(urllib.parse.urlparse(url).path)):
-                continue
             got = official(url, city)
-            if got:
+            if not got:
+                continue
+            n = _name_of(got)
+            score = 3 if n in (want, want + _loose(year)) else 2 if n.startswith(want) and len(want) >= 4 else 1 if want in n and len(want) >= 5 else 0
+            if score > best_score:
+                best, best_score = got, score
+            if score == 3:
                 return got
-    return ""
+        if best:
+            return best
+    return best

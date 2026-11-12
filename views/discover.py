@@ -18,7 +18,7 @@ from core.data import catalog_payload
 from core.imdb import imdb_id, library_ratings, live_rating, ratings_table
 from core.langs import fetch_langs
 from core.news import fetch_news
-from core.book import find as find_ticket_page
+from core import book as _book
 from core.watchlinks import fetch_watch_links, is_watch_url
 
 DIR = Path(__file__).resolve().parent.parent / "components" / "discover"
@@ -93,12 +93,32 @@ def _news(query: str) -> list:
         return []
 
 
+def _ticket_pages_now(sites: tuple, title: str, year: str, city: str) -> dict:
+    from concurrent.futures import ThreadPoolExecutor
+
+    def one(site):
+        try:
+            return _book.find(site, title, year, city)
+        except Exception:       # search unreachable: the page keeps its search link
+            return ""
+    with ThreadPoolExecutor(max_workers=max(1, len(sites))) as pool:
+        found = dict(zip(sites, pool.map(one, sites)))
+    out = {site: url for site, url in found.items() if url}
+    if len(out) < len(sites):
+        out["_why"] = dict(_book.LAST)          # what the searches ran into (for troubleshooting)
+    return out
+
+
 @st.cache_data(ttl=6 * 3600, max_entries=300, show_spinner=False)
-def _ticket_page(site: str, title: str, year: str, city: str) -> str:
-    try:
-        return find_ticket_page(site, title, year, city)
-    except Exception:           # search unreachable: the page keeps its search link
-        return ""
+def _ticket_pages_cached(sites: tuple, title: str, year: str, city: str) -> dict:
+    return _ticket_pages_now(sites, title, year, city)
+
+
+def _ticket_pages(sites: tuple, title: str, year: str, city: str) -> dict:
+    got = _ticket_pages_cached(sites, title, year, city)
+    if not any(k != "_why" for k in got):       # found nothing: don't keep that for 6 hours
+        _ticket_pages_cached.clear()
+    return got
 
 
 def _imdb_ratings():
@@ -227,10 +247,7 @@ def render(theme: str) -> dict | None:
         sites = [str(x)[:40] for x in (bq.get("sites") or [])[:6] if isinstance(x, str)]
         if k and sites and k not in book:
             title, year, city = str(bq.get("title", ""))[:120], str(bq.get("year", ""))[:4], str(bq.get("city", ""))[:40]
-            from concurrent.futures import ThreadPoolExecutor
-            with ThreadPoolExecutor(max_workers=len(sites)) as pool:
-                found = list(pool.map(lambda site: _ticket_page(site, title, year, city), sites))
-            book[k] = {site: url for site, url in zip(sites, found) if url}
+            book[k] = _ticket_pages(tuple(sites), title, year, city)
             while len(book) > 20:
                 book.pop(next(iter(book)))
             st.rerun()

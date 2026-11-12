@@ -4881,16 +4881,32 @@ function bookAsk(it) {
   const k = bookKey(it); if (!EMBED || k in BOOKF) return;
   BOOKF[k] = null;
   serverAsk("book", {key: k, sites: BOOK_APPS.map(a => a[1]), title: String(it.title).split(":")[0].trim(), year: String(it.year || "").slice(0, 4), city: store.get("city", "")});
-  setTimeout(() => { if (BOOKF[k] === null) delete BOOKF[k]; }, 30000);       // no answer: ask again next time
+  setTimeout(() => { if (BOOKF[k] === null) { delete BOOKF[k]; const v = $("#bk"); if (v && v.dataset.id === it.id) bookRefresh(it); } }, 30000);   // no answer: ask again next time
 }
 function bookHref(it, host) { const f = BOOKF[bookKey(it)]; return f && f[host] ? f[host] : bookLink(it, host); }
+function bookSub(it, host) {                               // the small line under each site's button
+  const f = BOOKF[bookKey(it)], city = store.get("city", "");
+  const where = city ? ` in ${esc(city)}` : "";
+  if (f && f[host]) return `Opens ${esc(it.title.split(":")[0])}${where} ✓`;
+  if (f === null) return `Finding ${esc(it.title.split(":")[0])}${where}…`;
+  return IN_APP ? `Finds ${esc(it.title.split(":")[0])}${where}` : `Searches for ${esc(it.title.split(":")[0])}${where}`;
+}
+function bookWhy(it) {                                     // developer only: why the website couldn't find the pages
+  const f = BOOKF[bookKey(it)];
+  return RATE_DEV && f && f._why ? `<p class="fnote">Search: ${esc(Object.entries(f._why).map(([k, v]) => `${k} ${v}`).join(" · "))}</p>` : "";
+}
+function bookRefresh(it) {
+  const v = $("#bk"); if (!v) return;
+  v.querySelectorAll("[data-bkhost]").forEach(a => { a.href = bookHref(it, a.dataset.bkhost); const sm = a.querySelector("small"); if (sm) sm.innerHTML = bookSub(it, a.dataset.bkhost); });
+  const w = v.querySelector("#bkwhy"); if (w) w.innerHTML = bookWhy(it);
+}
 function gotServerBook(map) {
   Object.entries(map || {}).forEach(([k, sites]) => {
     if (BOOKF[k] && Object.keys(BOOKF[k]).length) return;
     BOOKF[k] = sites || {};
     if (SERVER_ASK.book && SERVER_ASK.book.key === k) delete SERVER_ASK.book;
     const v = $("#bk"), it = v && v.classList.contains("on") ? BY[v.dataset.id] : null;
-    if (it && bookKey(it) === k) v.querySelectorAll("[data-bkhost]").forEach(a => { a.href = bookHref(it, a.dataset.bkhost); });
+    if (it && bookKey(it) === k) bookRefresh(it);
   });
 }
 function openBook(id) {
@@ -4904,10 +4920,10 @@ function openBook(id) {
     <form class="dform" id="bkcity" hidden><label class="sr" for="bkc">Your city</label><input id="bkc" name="c" placeholder="Type your city" autocomplete="address-level2"><button class="btn tint" type="submit">Set</button></form>
     <div class="h3">Book with</div><div class="offers">${BOOK_APPS.map(([n, host, col, l]) =>
       `<a class="offer" style="--pcol:${col}" href="${esc(bookHref(it, host))}" target="_blank" rel="noopener" data-bkgo data-bkhost="${esc(host)}">
-        <span class="logo">${l}</span><span><b>${esc(n)}</b><small>Opens ${esc(it.title.split(":")[0])}${city ? ` in ${esc(city)}` : ""}</small></span><span class="go">🎟️ Book</span></a>`).join("")}</div>
+        <span class="logo">${l}</span><span><b>${esc(n)}</b><small>${bookSub(it, host)}</small></span><span class="go">🎟️ Book</span></a>`).join("")}</div><div id="bkwhy"></div>
     <p class="fnote">${city ? "" : "Pick your city first so the app opens with your cinemas. "}VibeSync finds the movie's page on each site; prices and seats are on their side.</p></div>`;
   v.classList.add("on");
-  bookAsk(it);
+  bookAsk(it); bookRefresh(it);
   if (!REDUCED) v.querySelector(".bk-in").animate([{transform: "translate3d(0,40px,0)", opacity: 0}, {transform: "none", opacity: 1}], {duration: 520, easing: FLUID.glide});
   buzz();
 }
