@@ -5524,10 +5524,18 @@ function pushWidget() {
   const b = window.VibeSyncApp; if (!b || typeof b.setPick !== "function") return;
   const first = pickTonight(); if (!first) return;
   const pool = surprisePool().filter(it => it !== first && !isWatched(it.id) && X.swiped[it.id] !== -1 && watchableNow(it));
-  const rest = pool.map(it => [tasteScore(it) + (favs.has(it.id) ? 3 : 0) + Math.random() * 5, it]).sort((a, b) => b[0] - a[0]).slice(0, 14).map(([, it]) => it);
+  const rest = pool.map(it => [tasteScore(it) + (favs.has(it.id) ? 3 : 0) + Math.random() * 5, it]).sort((a, b) => b[0] - a[0]).slice(0, 39).map(([, it]) => it);
   const queue = [first].concat(rest);
   const meta = {}; queue.forEach(it => { if (it.tmdb) meta[it.id] = slim(it); }); store.set("widgetMeta", meta);
-  try { b.setPick(JSON.stringify({queue: queue.map(widgetCard)})); } catch (e) {}
+  // for the widget's own endless refills: the TMDB key, the genres you like most, and titles to leave out
+  const likeTags = new Set(topOf(X.taste.t, 3));
+  const likeGenres = [...likeTags].flatMap(t => String((TAGS[t] && TAGS[t].m) || "").split(/[,|]/)).filter(Boolean).map(Number).slice(0, 6);   // movie genre ids
+  const avoid = new Set();
+  const tid = it => it && it.tmdb ? `tmdb:${it.tmdb.type}:${it.tmdb.id}` : "";
+  Object.keys(X.st).forEach(id => { avoid.add(id); const t = tid(BY[id]); if (t) avoid.add(t); });
+  Object.entries(X.swiped).forEach(([id, v]) => { if (v === -1) { avoid.add(id); const t = tid(BY[id]); if (t) avoid.add(t); } });
+  queue.forEach(it => { const t = tid(it); if (t) avoid.add(t); });
+  try { b.setPick(JSON.stringify({queue: queue.map(widgetCard), key: T.key || "", likeGenres, avoid: [...avoid].slice(-1500)})); } catch (e) {}
 }
 // "Watched it" taps on the widget, made while VibeSync was closed
 function syncWidgetWatched() {
@@ -5535,6 +5543,7 @@ function syncWidgetWatched() {
   let ids = [], skipped = []; try { ids = JSON.parse(b.takeWidgetWatched() || "[]"); } catch (e) {}
   try { if (typeof b.takeWidgetSkipped === "function") skipped = JSON.parse(b.takeWidgetSkipped() || "[]"); } catch (e) {}
   const meta = store.get("widgetMeta", {});
+  try { if (typeof b.widgetMeta === "function") Object.assign(meta, JSON.parse(b.widgetMeta() || "{}")); } catch (e) {}   // titles the widget found itself
   if (skipped.length) {            // skipped on the widget: not suggested again, and taste leans away a little
     skipped.forEach(id => { if (!BY[id] && meta[id]) BY[id] = rehydrate(meta[id]); if (!(id in X.swiped)) { X.swiped[id] = -1; if (BY[id]) learn(BY[id], -1); } });
     store.set("swiped", X.swiped);
@@ -5550,7 +5559,10 @@ async function openFromApp() {
   const b = window.VibeSyncApp; if (!b || typeof b.takeOpen !== "function" || !D) return;
   let id = ""; try { id = b.takeOpen() || ""; } catch (e) {}
   if (!id) return;
-  if (!BY[id]) { const m = store.get("widgetMeta", {})[id] || (X.st[id] || {}).meta || store.get("favMeta", {})[id]; if (m) BY[id] = rehydrate(m); }
+  if (!BY[id]) {
+    let wm = {}; try { if (typeof b.widgetMeta === "function") wm = JSON.parse(b.widgetMeta() || "{}"); } catch (e) {}
+    const m = store.get("widgetMeta", {})[id] || wm[id] || (X.st[id] || {}).meta || store.get("favMeta", {})[id]; if (m) BY[id] = rehydrate(m);
+  }
   const t = /^tmdb:(movie|tv):(\d+)$/.exec(id);
   if (!BY[id] && t && T.key) { try { const d = await tget(`/${t[1]}/${t[2]}`, {}); fromTmdb(Object.assign({media_type: t[1], genre_ids: (d.genres || []).map(g => g.id)}, d), t[1]); } catch (e) {} }
   if (!BY[id]) return;
