@@ -5621,8 +5621,12 @@ function parseRating(s) {
 }
 const myRating = id => RATE.r[id] ? RATE.r[id].r : null;
 const myRatingBadge = id => myRating(id) != null ? `<span class="myr">★ ${fmtR(myRating(id))}</span>` : "";
+// Rating a title is only in the developer's own phone app (its build adds "VibeSyncDev" to the browser's
+// name); the website, the TV app and everyone else's phone app don't show the slider. Ratings already
+// given still show everywhere else (★ badges, Saved, Wrapped).
+const RATE_DEV = /VibeSyncDev/.test(navigator.userAgent || "");
 function rateHTML(it) {
-  if (!it) return "";
+  if (!it || !RATE_DEV) return "";
   const r = myRating(it.id), v = r != null ? r : 7;
   return `<div class="rate"><div class="rate-h"><b>${r != null ? "Your rating" : "Rate it"}</b><span class="rate-big" id="ratebig">${r != null ? fmtR(r) : "–"}<small>/10</small></span></div>
     <input class="rate-sl" type="range" min="0" max="10" step="0.05" value="${v}" data-ratesl="${esc(it.id)}" aria-label="Your rating out of 10" style="--p:${v * 10}%">
