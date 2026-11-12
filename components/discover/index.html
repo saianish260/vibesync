@@ -1022,6 +1022,11 @@ button.imh:active{transform:scale(.95)}
 .imh.rtfx.busy{animation:imhpulse .9s ease-in-out infinite alternate}
 @keyframes imhpulse{to{opacity:.6}}
 
+/* a title open: the page behind is still (no glass blur to recompute under the veil), and the veil fades on the sheet's curve */
+.veil{transition:opacity .38s cubic-bezier(.32,.72,0,1)}
+html.sheeting #app *, html.sheeting #bnav, html.sheeting .bnav{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.sheet{backface-visibility:hidden}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -1629,14 +1634,22 @@ function openSheet(id, from) {
   sh.querySelector(".sbody").scrollTop = 0;
   const src = from && from.querySelector && from.querySelector(".pw");
   const r = src && src.getBoundingClientRect();
+  clearTimeout(closeSheet.t);
+  // smooth as liquid: while a title is open, the page behind it does no work. Its glass blurs are switched off
+  // (the dark veil covers them) and the page colour changes only once the sheet has settled, never mid-motion
+  document.documentElement.classList.add("sheeting");
   $("#veil").classList.add("on"); sh.classList.add("on");
-  pauseHero(true); setTint(tintOf(it));
+  pauseHero(true);
+  let moving = null;
   if (!REDUCED) {
     if (r && r.width && r.bottom > 0 && r.top < innerHeight) flyPoster(src, r, sh.querySelector(".shead .pw"));   // measure before the sheet starts moving
-    sh.animate(isMobile() ? [{translate: "0 100%"}, {translate: "0 0"}] : [{opacity: 0, scale: ".96"}, {opacity: 1, scale: "1"}],
-               {duration: isMobile() ? 640 : 420, easing: EASE});
+    moving = sh.animate(isMobile() ? [{translate: "0 100%"}, {translate: "0 0"}] : [{opacity: 0, scale: ".96"}, {opacity: 1, scale: "1"}],
+               {duration: isMobile() ? 560 : 420, easing: EASE});
   }
-  sampleTint(it).then(c => { if (openId === id) { sh.style.setProperty("--st", c); setTint(c); } });
+  const settled = moving ? moving.finished.catch(() => {}) : Promise.resolve();
+  const tint0 = tintOf(it);
+  settled.then(() => { if (openId === id) setTint(tint0); });
+  Promise.all([sampleTint(it), settled]).then(([c]) => { if (openId === id) { sh.style.setProperty("--st", c); setTint(c); } });
   sh.querySelector("[data-close]").focus({preventScroll: true});
   buzz();
 }
@@ -1645,17 +1658,23 @@ function closeSheet() {
   openId = null;
   const sh = $("#sheet");
   $("#veil").classList.remove("on");
-  const done = () => { sh.classList.remove("on"); sh.style.transform = ""; };
+  // the page goes back to its own colour, glass and motion only after the sheet has gone (nothing redraws mid-motion)
+  const after = () => {
+    if (openId) return;                                   // another title opened meanwhile
+    document.documentElement.classList.remove("sheeting");
+    if (!heroOff) pauseHero(false);
+    setTint(tintOf(BY[D.featured[state.slide]]));
+  };
+  const done = () => { sh.classList.remove("on"); sh.style.transform = ""; clearTimeout(closeSheet.t); closeSheet.t = setTimeout(after, 60); };
   if (REDUCED) done();
   else {
     const v = SHEETV.v || 0;            // a flick carries its speed into the slide-out
-    const a = sh.animate(isMobile() ? [{translate: "0 0"}, {translate: "0 110%"}] : [{opacity: 1}, {opacity: 0, scale: ".96"}],
-                         {duration: v > .4 ? Math.max(160, 340 - v * 120) : 320, easing: v > .4 ? "cubic-bezier(.2,.6,.4,1)" : "cubic-bezier(.5,0,.75,0)", fill: "forwards"});
+    // one fluid curve: it leaves with a little speed and glides out (no slow start, no hard stop)
+    const a = sh.animate(isMobile() ? [{translate: "0 0"}, {translate: "0 110%"}] : [{opacity: 1, scale: "1"}, {opacity: 0, scale: ".97"}],
+                         {duration: v > .4 ? Math.max(180, 360 - v * 120) : (isMobile() ? 380 : 300), easing: v > .4 ? "cubic-bezier(.2,.6,.4,1)" : "cubic-bezier(.32,.72,0,1)", fill: "forwards"});
     SHEETV.v = 0;
     a.onfinish = () => { done(); a.cancel(); };
   }
-  if (!heroOff) pauseHero(false);
-  setTint(tintOf(BY[D.featured[state.slide]]));
   if (lastFocus && lastFocus.focus) lastFocus.focus({preventScroll: true});
 }
 function refreshSheet() {
