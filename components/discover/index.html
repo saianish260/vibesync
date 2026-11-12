@@ -5038,7 +5038,7 @@ async function loadExtras(it) {
     const vids = ((d.videos || {}).results || []).filter(v => v.site === "YouTube" && v.key && /Trailer|Teaser/.test(v.type))
       .sort((a, b) => (a.type === "Trailer" ? 0 : 1) - (b.type === "Trailer" ? 0 : 1) || (b.official ? 1 : 0) - (a.official ? 1 : 0) || (b.size || 0) - (a.size || 0));
     const runtime = d.runtime || (d.episode_run_time || [])[0] || (d.last_episode_to_air && d.last_episode_to_air.runtime) || 0;
-    const x = {ref, runtime, score: d.vote_average, votes: d.vote_count, cast: crew.concat(cast), trailer: vids.map(v => v.key),
+    const x = {ref, runtime, lang: d.original_language || "", score: d.vote_average, votes: d.vote_count, cast: crew.concat(cast), trailer: vids.map(v => v.key),
                cert: certOf(d, ref.type), next: d.next_episode_to_air || null, last: d.last_episode_to_air || null, tvstatus: d.status || "",
                seasons: (d.seasons || []).filter(s => s.season_number > 0), imdbId: (d.external_ids || {}).imdb_id || d.imdb_id || "",
                lang: d.original_language || "", gids: (d.genres || []).map(g => g.id),
@@ -5917,8 +5917,19 @@ function langsHTML(it) {
   else {
     // the same apps as "Where to watch in India" above: only the apps VibeSync opens (no add-on channels like
     // "Crunchyroll Amazon Channel", which are extra subscriptions bought inside Prime Video)
-    const apps = L.apps.filter(a => !isChannel(a.name) && !/with ads/i.test(a.name))
-      .filter((a, i, all) => { const k = provKey(a.name); return !k || all.findIndex(b => provKey(b.name) === k && !isChannel(b.name) && !/with ads/i.test(b.name)) === i; });
+    // one row per app: an app's plans (e.g. Prime Video and Prime Video with ads) are put together, so every
+    // audio / subtitle language JustWatch lists for any of them shows
+    const apps = [];
+    L.apps.filter(a => !isChannel(a.name)).forEach(a => {
+      const k = provKey(a.name), g = k && apps.find(x => x.k === k);
+      const add = (to, list) => (list || []).forEach(v => { if (!to.includes(v)) to.push(v); });
+      if (g) { add(g.audio, a.audio); add(g.subs, a.subs); add(g.types, a.types); return; }
+      apps.push({name: a.name.replace(/\s*with ads\b/i, ""), k, url: a.url, types: [...a.types], audio: [...a.audio], subs: [...a.subs]});
+    });
+    // the title's original language is always on the app it streams on (JustWatch often lists only the dubs,
+    // e.g. Hindi for a Telugu film): add it when the app lists other audio languages but not that one
+    const orig = (XD[it.id] && XD[it.id].lang) || it.lang || (it.telugu ? "te" : "");
+    if (orig) apps.forEach(a => { if (a.audio.length && !a.audio.some(x => lcode(x) === orig)) a.audio.unshift(orig); });
     const all = apps.filter(a => a.types.some(t => STREAM_TYPES.includes(t))), rent = apps.filter(a => !all.includes(a));
     const det = details[it.id];
     const shown = new Set((it.offers || []).map(o => o.p).concat(det ? det.apps.map(p => p.key) : []).filter(k => k && nativeSub(it, k) !== false));
