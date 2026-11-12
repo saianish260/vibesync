@@ -1004,6 +1004,20 @@ button.imh:active{transform:scale(.95)}
 .rp-mid small{color:var(--muted);font-weight:700;font-size:14px;margin-top:2px}
 .rp-acts{display:flex;gap:10px;justify-content:center;margin-top:14px}
 .rp-acts .btn{min-width:110px;justify-content:center}
+/* Rate now: the IMDb chip's black and yellow, whatever the title's colours */
+.imh.rate-pill{display:inline-grid;margin:14px 0 0;cursor:pointer;height:auto;box-shadow:none;background:#F5C518;color:#121212;padding:6px 12px 6px 6px;border-radius:16px;font-size:13px;gap:0 7px}
+.imh.rate-pill b{color:#121212}
+.imh.rate-pill b small{font-size:12px;opacity:.7;font-weight:750;margin-left:1px}
+.rp-card{background:#121212;box-shadow:0 24px 70px rgba(0,0,0,.6),inset 0 0 0 1px rgba(245,197,24,.18)}
+.rp-t,.rp-mid input{color:#fff}
+.rp-mid input{caret-color:#F5C518}
+.rp-mid small{color:#F5C518;opacity:.85}
+.rp-x{background:#1F1F1F;color:#F5C518}
+.rp-track{stroke:#2A2A2A}
+.rp-arc{stroke:#F5C518}
+.rp-knob{fill:#121212;stroke:#F5C518}
+.rp-acts .btn.tint{background:#F5C518;color:#121212;box-shadow:0 10px 26px rgba(245,197,24,.3)}
+.rp-acts .btn.soft{background:#1F1F1F;color:#fff}
 
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
@@ -5960,7 +5974,8 @@ const myRatingBadge = id => myRating(id) != null ? `<span class="myr">★ ${fmtR
 function rateHTML(it) {
   if (!it || !RATE_DEV) return "";
   const r = myRating(it.id);
-  return `<button class="rate-pill${r != null ? " on" : ""}" data-rateopen="${esc(it.id)}">★ Rate now${r != null ? ` · <b>${fmtR(r)}</b>/10` : ""}</button>`;
+  // styled exactly like the IMDb chip: yellow, black label box
+  return `<button class="imh rate-pill" data-rateopen="${esc(it.id)}"><span class="imh-l">★ YOU</span><b>${r != null ? `${fmtR(r)}<small>/10</small>` : "Rate now"}</b>${r != null ? `<small>Rate now</small>` : ""}</button>`;
 }
 /* the rating dial: drag round the ring (0 at the top, clockwise to 10) or type the exact number in the middle */
 const RD = {id: "", v: 0, R: 96, C: 2 * Math.PI * 96};
