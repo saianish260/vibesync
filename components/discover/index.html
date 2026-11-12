@@ -956,6 +956,22 @@ button.imh:active{transform:scale(.95)}
 @keyframes wipulse{to{opacity:.85}}
 @media (hover:hover){.wicons .wi:hover{transform:translateY(-2px) scale(1.04)}}
 
+/* 👤 Profile: the plain avatar at the top right, and the Profile page's rows */
+.icon.pfbtn{padding:0}
+.icon.pfbtn svg.avt,.acct-i.pf-anon svg.avt{width:30px;height:30px;stroke:none;border-radius:50%;box-shadow:0 0 0 2px color-mix(in srgb,var(--text) 18%,transparent)}
+.acct-i.pf-anon{background:none;padding:0;display:grid;place-items:center}
+.acct-i.pf-anon svg.avt{width:100%;height:100%;box-shadow:none}
+.pf-list{display:grid;gap:10px;margin-top:20px}
+.pf-row{display:flex;align-items:center;gap:14px;width:100%;padding:14px 16px;border-radius:18px;background:var(--s2);text-align:left;color:var(--text);transition:transform .15s}
+.pf-row:active{transform:scale(.98)}
+.pf-row .te{font-size:24px;flex:0 0 auto;width:30px;text-align:center}
+.pf-row b{display:block;font-size:16px;font-weight:750}
+.pf-row small{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.pf-row>span:nth-child(2){flex:1}
+.pf-row svg{width:18px;height:18px;opacity:.6;flex:0 0 auto}
+.bnav .tthumb{width:22px;height:22px;border-radius:7px;box-shadow:none}
+.chips.qk .vsupd{display:none!important}   /* Check for updates moved to 👤 Profile */
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -1175,6 +1191,8 @@ const scroller = () => $("#app");
 
 const ICON = {
   search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  // the plain "no profile picture" avatar: a grey circle with a person
+  user: '<svg class="avt" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#C3C7CF" stroke="none"/><circle cx="12" cy="9.4" r="4.3" fill="#fff" stroke="none"/><path d="M3.9 20.4c1.6-3.6 4.6-5.5 8.1-5.5s6.5 1.9 8.1 5.5A11.9 11.9 0 0 1 12 24a11.9 11.9 0 0 1-8.1-3.6Z" fill="#fff" stroke="none"/></svg>',
   palette: '<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.6-1.9-.3-1.4.6-2.6 2-2.6H18a3 3 0 0 0 3-3A9 9 0 0 0 12 3Z"/><circle cx="7.5" cy="11" r="1" fill="currentColor"/><circle cx="10" cy="7.5" r="1" fill="currentColor"/><circle cx="14.5" cy="7.5" r="1" fill="currentColor"/></svg>',
   close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   play: '<svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></svg>',
@@ -1809,7 +1827,7 @@ function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.ad
 /* ───────────── bottom bar ───────────── */
 function navHTML() {
   return `<button data-nav="home">${ICON.home}<span>Home</span></button>
-    <button data-search>${ICON.search}<span>Search</span></button>
+    <button data-theme-btn aria-label="Themes">${ICON.palette}<span>Themes</span></button>
     <button class="bdice" data-surprise aria-label="Surprise me"><span aria-hidden="true">🎲</span></button>
     <button data-nav="saved">${ICON.saved}<span>Saved</span></button>
     <button data-nav="lounge">${ICON.lounge}<span>Lounge</span></button>`;
@@ -1833,7 +1851,7 @@ function render() {
     <header class="top" id="top"><div class="mark">Vibe<i>Sync</i></div><div class="tools">
       <button class="icon" data-sound hidden aria-label="Theme sound"></button>
       <button class="icon" data-search aria-label="Search">${ICON.search}</button>
-      <button class="icon" data-theme-btn aria-label="Change look" aria-haspopup="menu">${ICON.palette}</button></div></header>
+      <button class="icon pfbtn" data-profile aria-label="Profile">${ICON.user}</button></div></header>
     ${heroHTML()}
     <main class="wrap">
       <div id="ytslot"></div>
@@ -2474,7 +2492,7 @@ function themeFlash(it, srcEl) {
 }
 function themeBtn() {
   const b = $("[data-theme-btn]"); if (!b) return;
-  b.innerHTML = TT.cur && TT.cur.poster ? `<img class="tthumb" src="${esc(TT.cur.poster)}" alt="">` : ICON.palette;
+  b.innerHTML = (TT.cur && TT.cur.poster ? `<img class="tthumb" src="${esc(TT.cur.poster)}" alt="">` : ICON.palette) + (b.closest("#bnav") ? "<span>Themes</span>" : "");
   b.setAttribute("aria-label", TT.cur ? `Theme: ${TT.cur.title}. Change theme` : "Change theme");
 }
 
@@ -4577,8 +4595,8 @@ const gridOf = items => items.length ? `<div class="grid">${items.map(card).join
 const TOOLS = [["swipe", "🃏", "Swipe mode", "Right to save, left to skip"], ["describe", "✨", "Describe it", "\"A thriller like Vikram but funnier\""],
                ["time", "⏱️", "Short on time", "Only what fits your time"], ["lang", "🌐", "Languages", "Telugu, Tamil, Korean…"],
                ["free", "🆓", "Free to watch", "No subscription needed"], ["kids", "👪", "Kids-safe", "Family-friendly picks"],
-               ["calendar", "📅", "OTT calendar", "What's new this week"], ["plan", "💳", "Which plan?", "Best subscription for your list"],
-               ["wrapped", "🎁", "Wrapped", "Your year on VibeSync"], ["sync", "🔄", "Sync", "Move your data to another device"]];
+               ["calendar", "📅", "OTT calendar", "What's new this week"], ["plan", "💳", "Which plan?", "Best subscription for your list"]];
+// Wrapped, Sync, your Google account and Check for updates live in 👤 Profile (top right)
 const APK_URL = "https://github.com/saianish260/vibesync-android/raw/apk/VibeSync.apk";   // the latest build, published by the APK repo's CI
 function exploreHTML() {
   // the Android app download, shown everywhere except inside the Android app itself
@@ -5417,8 +5435,7 @@ function savedHTML() {
   Object.values(RATE.r).forEach(v => { if (v.meta && !BY[v.meta.id]) BY[v.meta.id] = rehydrate(v.meta); });
   const rated = !RATE_DEV ? [] : Object.entries(RATE.r).sort((a, b) => b[1].r - a[1].r).map(([id]) => BY[id]).filter(Boolean);
   const saved = [...favs].map(id => BY[id]).filter(it => it && !isWatched(it.id)), watching = ids("watching"), watched = ids("watched");
-  const quick = `<div class="chips qk"><button class="chip" data-tool="plan">💳 Which plan?</button><button class="chip" data-tool="calendar">📅 OTT calendar</button>
-    <button class="chip" data-tool="wrapped">🎁 Wrapped</button>${AUTH.cfg ? `<button class="chip" data-account>👤 Account</button>` : ""}<button class="chip" data-tool="sync">🔄 Sync</button></div>`;
+  const quick = `<div class="chips qk"><button class="chip" data-tool="plan">💳 Which plan?</button><button class="chip" data-tool="calendar">📅 OTT calendar</button></div>`;
   if (!saved.length && !watching.length && !watched.length && !rated.length)
     return `<div class="sec"><h2>Saved</h2></div>${quick}<div class="empty">Nothing saved yet.<br>Tap the ♡ on any title, or try 🃏 Swipe mode, and it lands here.</div>`;
   // Watching first (the footer's Saved button lands there); "Coming up" (filled in a moment later) goes under it,
@@ -6426,7 +6443,29 @@ function signOut(clear) {
     location.reload();
   });
 }
-function openAccount() {
+/* 👤 Profile (top right): your Google account, Check for updates (in the apps), Sync and Wrapped, all in one place */
+function openProfile() {
+  const u = AUTH.user, tv = /VibeSyncTV/.test(navigator.userAgent || ""), app = window.VibeSyncApp;
+  const canUpd = !!(app && typeof app.checkUpdate === "function");
+  let ver = ""; try { ver = app && app.appVersion ? String(app.appVersion()) : ""; } catch (e) {}
+  const when = AUTH.last ? ` · last saved ${new Date(AUTH.last).toLocaleString("en-IN", {day: "numeric", month: "short", hour: "numeric", minute: "2-digit"})}` : "";
+  const acct = tv ? "" : !AUTH.cfg ? `<div class="note">Google sign-in isn't switched on for this VibeSync yet. Use 🔄 Sync below to move your data between devices.</div>`
+    : u ? `<div class="acct-card">${u.photo ? `<img src="${esc(u.photo)}" alt="" referrerpolicy="no-referrer">` : `<span class="acct-i pf-anon">${ICON.user}</span>`}
+        <div><b>${esc(u.name || "")}</b><small>${esc(u.email || "")}</small></div></div>
+      <div class="note">☁️ Saved to your Google account${when}. Sign in on any phone or browser to get it all back.</div>
+      <div class="acts"><button class="btn tint" data-acctsave>☁️ Save now</button><button class="btn soft" data-signout>Sign out</button></div>
+      <button class="au-skip" data-signoutclear>Sign out and remove my data from this device</button>`
+    : `<div class="acct-card"><span class="acct-i pf-anon">${ICON.user}</span><div><b>Not signed in</b><small>Sign in to keep your saved titles on every device</small></div></div>
+      <div class="acts"><button class="btn tint" data-pfsignin>Sign in with Google</button></div>`;
+  const row = (attr, e, t, s) => `<button class="pf-row" ${attr}><span class="te" aria-hidden="true">${e}</span><span><b>${t}</b><small>${s}</small></span>${ICON.arrow}</button>`;
+  const rows = [
+    canUpd ? row("data-pfupd", "⬆️", "Check for updates", ver ? `You have v${esc(ver)}` : "See if a newer VibeSync is out") : "",
+    row(`data-tool="sync"`, "🔄", "Sync", "Move your data to another device"),
+    row(`data-tool="wrapped"`, "🎁", "Wrapped", "Your year on VibeSync")].join("");
+  openXP(xpTop("Profile", "") + acct + `<div class="pf-list">${rows}</div>`, "acct");
+}
+function openAccount() { return openProfile(); }
+function openAccountOld() {
   const u = AUTH.user;
   if (!AUTH.cfg) return openXP(xpTop("Account", "") + `<div class="empty">Accounts aren't switched on for this VibeSync yet. Use 🔄 Sync to move your data between devices.</div>`, "acct");
   if (!u) return authGate();
@@ -6437,12 +6476,15 @@ function openAccount() {
     <button class="au-skip" data-signoutclear>Sign out and remove my data from this device</button>`, "acct");
 }
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-gsi],[data-authoffline],[data-signout],[data-signoutclear],[data-acctsave],[data-account]"); if (!t) return;
+  const t = e.target.closest("[data-gsi],[data-authoffline],[data-signout],[data-signoutclear],[data-acctsave],[data-account],[data-profile],[data-pfsignin],[data-pfupd]"); if (!t) return;
+  if (t.hasAttribute("data-profile")) { openProfile(); buzz(); return; }
+  if (t.hasAttribute("data-pfsignin")) { authGate(); return; }
+  if (t.hasAttribute("data-pfupd")) { try { window.VibeSyncApp.checkUpdate(); toast("Checking for updates…"); } catch (err) {} return; }
   if (t.hasAttribute("data-gsi")) { nativeGoogle(); return; }
-  if (t.hasAttribute("data-authoffline")) { $("#auth").classList.remove("on"); toast("Using VibeSync on this device only. Sign in any time from Saved → 👤 Account"); return; }
+  if (t.hasAttribute("data-authoffline")) { $("#auth").classList.remove("on"); toast("Using VibeSync on this device only. Sign in any time from 👤 Profile (top right)"); return; }
   if (t.hasAttribute("data-signout")) { signOut(false); return; }
   if (t.hasAttribute("data-signoutclear")) { signOut(true); return; }
-  if (t.hasAttribute("data-acctsave")) { cloudSave().then(() => { toast("Saved to your account ☁️"); openAccount(); }); return; }
+  if (t.hasAttribute("data-acctsave")) { cloudSave().then(() => { toast("Saved to your account ☁️"); if ($("#xp").classList.contains("on")) closeXP && closeXP(); openProfile(); }); return; }
   if (t.hasAttribute("data-account")) { openAccount(); return; }
 });
 
