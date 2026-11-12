@@ -1032,6 +1032,10 @@ try { window.parent.addEventListener("resize", fitHeight); } catch (e) {}
 window.addEventListener("resize", fitHeight);
 
 /* ───────────── storage ───────────── */
+// Rating titles is only in the developer's own phone app (its build adds "VibeSyncDev" to the browser's name).
+// Everywhere else (website, TV app, everyone else's phone app) nothing about it shows: no "Rate it" slider,
+// no ★ badges on posters, no "Rated by you" row in Saved, nothing in Wrapped.
+const RATE_DEV = /VibeSyncDev/.test(navigator.userAgent || "");
 const store = {
   get(k, d) { try { const v = localStorage.getItem("vs." + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem("vs." + k, JSON.stringify(v)); } catch (e) {} }
@@ -5185,7 +5189,7 @@ async function checkReminders() {
 function savedHTML() {
   const ids = s => Object.entries(X.st).filter(([, v]) => v.s === s).sort((a, b) => b[1].at - a[1].at).map(([id]) => BY[id]).filter(Boolean);
   Object.values(RATE.r).forEach(v => { if (v.meta && !BY[v.meta.id]) BY[v.meta.id] = rehydrate(v.meta); });
-  const rated = Object.entries(RATE.r).sort((a, b) => b[1].r - a[1].r).map(([id]) => BY[id]).filter(Boolean);
+  const rated = !RATE_DEV ? [] : Object.entries(RATE.r).sort((a, b) => b[1].r - a[1].r).map(([id]) => BY[id]).filter(Boolean);
   const saved = [...favs].map(id => BY[id]).filter(it => it && !isWatched(it.id)), watching = ids("watching"), watched = ids("watched");
   const quick = `<div class="chips qk"><button class="chip" data-tool="plan">💳 Which plan?</button><button class="chip" data-tool="calendar">📅 OTT calendar</button>
     <button class="chip" data-tool="wrapped">🎁 Wrapped</button>${AUTH.cfg ? `<button class="chip" data-account>👤 Account</button>` : ""}<button class="chip" data-tool="sync">🔄 Sync</button></div>`;
@@ -5333,7 +5337,7 @@ function wrappedStats() {
   const eps = Object.values(tracker).reduce((s, t) => s + (t.watched || []).filter(d => d.startsWith(String(yr))).length, 0);
   const themes = Object.values(X.use).sort((a, b) => b.n - a.n);
   const swipes = Object.values(X.swiped), liked = swipes.filter(v => v === 1).length;
-  const rated = Object.entries(RATE.r).map(([id, v]) => ({title: (BY[id] || (v.meta || {})).title || "", r: v.r})).filter(x => x.title).sort((a, b) => b.r - a.r);
+  const rated = !RATE_DEV ? [] : Object.entries(RATE.r).map(([id, v]) => ({title: (BY[id] || (v.meta || {})).title || "", r: v.r})).filter(x => x.title).sort((a, b) => b.r - a.r);
   return {rated, yr, watched, saved, tags: topOf(tags, 3), plat: topOf(plats, 1)[0], lang: topOf(langs, 1)[0], mins, eps, themes, swipes: swipes.length, liked,
           movies: watched.filter(i => i.kind === "movie").length, shows: watched.filter(i => i.kind !== "movie").length};
 }
@@ -5619,12 +5623,8 @@ function parseRating(s) {
   const v = Number(t);
   return v >= 0 && v <= 10 ? Math.round(v * 100) / 100 : NaN;
 }
-const myRating = id => RATE.r[id] ? RATE.r[id].r : null;
+const myRating = id => RATE_DEV && RATE.r[id] ? RATE.r[id].r : null;
 const myRatingBadge = id => myRating(id) != null ? `<span class="myr">★ ${fmtR(myRating(id))}</span>` : "";
-// Rating a title is only in the developer's own phone app (its build adds "VibeSyncDev" to the browser's
-// name); the website, the TV app and everyone else's phone app don't show the slider. Ratings already
-// given still show everywhere else (★ badges, Saved, Wrapped).
-const RATE_DEV = /VibeSyncDev/.test(navigator.userAgent || "");
 function rateHTML(it) {
   if (!it || !RATE_DEV) return "";
   const r = myRating(it.id), v = r != null ? r : 7;
