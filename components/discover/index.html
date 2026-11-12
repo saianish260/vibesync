@@ -4331,6 +4331,7 @@ async function loadDetails(it) {
     const seen = new Set(), provs = [];
     ["flatrate", "free", "ads"].forEach(kind => (ind[kind] || []).forEach(p => {
       if (seen.has(p.provider_id)) return; seen.add(p.provider_id);
+      if (/channel/i.test(p.provider_name)) return;       // Prime Video / Apple TV "Channels": extra subscriptions, never shown
       provs.push({name: p.provider_name, logo: p.logo_path, key: provKey(p.provider_name), kind});
     }));
     if (it.tmdb.type === "tv") serialSave(it.id, serialVerdict(d));
@@ -4371,7 +4372,7 @@ function tmdbSheetHTML(it) {
     clearTimeout(T.slowT); T.slowT = setTimeout(() => { if (openId === it.id && !details[it.id]) { const c = document.querySelector("#sheet .checking");
       if (c) c.outerHTML = `<div class="note">Taking longer than usual. <button class="btn soft" data-retryd="${esc(it.id)}">Retry</button></div>`; } }, 15000); }
   else if (d.error) where = `<div class="note">Couldn't load streaming info. Try again in a moment.</div>`;
-  else if (!d.apps.length && !d.other.length) where = `<div class="note">Not streaming in India right now.</div>`;
+  else if (!d.apps.length) where = `<div class="note">Not streaming in India right now.</div>`;
   else where = `<div class="offers wicons">` + d.apps.map(p => {
       // TMDB's watch page (powered by JustWatch) links to this exact title on each app.
       // Without it, fall back to searching inside the app.
@@ -4381,9 +4382,7 @@ function tmdbSheetHTML(it) {
       const sub = direct ? "Opens this exact title" : pending ? "Finding the exact link…" : FIND[p.key] ? "Opens the app and searches this title" : "Opens the app";
       const nm = D.providers[p.key].name;
       return `<a class="wi" style="--pcol:${D.providers[p.key].color}" href="${esc(url)}" target="_blank" rel="noopener" title="${esc(nm)}" aria-label="${esc(`${nm}: ${sub}`)}"${pending ? " data-pending" : ""}>${logo(p)}</a>`;
-    }).join("") + d.other.map(p => { const direct = exactLink(d, p.name) || jwLink(it, p.name);
-      const exact = direct || (IN_APP && d.link);
-      return `<a class="wi" href="${esc(direct || (d.link ? viaApp(d.link, p.name) : it.trailer))}" target="_blank" rel="noopener" title="${esc(p.name)}" aria-label="${esc(`${p.name}: ${exact ? "Opens this exact title" : "See watch options"}`)}">${logo(p)}</a>`; }).join("") + `</div>`;
+    }).join("") + `</div>`;                                // only the apps VibeSync opens directly (no add-on channels or others)
   const body = `<div class="tags">${it.telugu ? `<span class="tag tel">Telugu</span>` : ""}${(d ? d.genres : []).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
     <p class="syn">${esc(it.synopsis || "No description yet.")}</p>
     <div class="h3">Where to watch in India</div>${where}${bookHTML(it)}${comingHTML(it)}${langsHTML(it)}
@@ -5749,8 +5748,10 @@ function langsHTML(it) {
   else if (L.error) body = `<div class="note">Couldn't reach the language data right now. Try again in a moment.</div>`;
   else if (!L.found) body = `<div class="note">No language details listed for this title in India yet.</div>`;
   else {
-    const all = L.apps.filter(a => a.types.some(t => STREAM_TYPES.includes(t))), rent = L.apps.filter(a => !all.includes(a));
-    // the same apps as "Where to watch in India" above; add-on channels and anything else go in their own fold
+    // the same apps as "Where to watch in India" above: only the apps VibeSync opens (no add-on channels like
+    // "Crunchyroll Amazon Channel", which are extra subscriptions bought inside Prime Video)
+    const apps = L.apps.filter(a => !isChannel(a.name));
+    const all = apps.filter(a => a.types.some(t => STREAM_TYPES.includes(t))), rent = apps.filter(a => !all.includes(a));
     const det = details[it.id];
     const shown = new Set((it.offers || []).map(o => o.p).concat(det ? det.apps.map(p => p.key) : []).filter(Boolean));
     const keyOf = a => isChannel(a.name) ? null : provKey(a.name);
@@ -5758,23 +5759,19 @@ function langsHTML(it) {
     const extra = all.filter(a => !main.includes(a));
     shown.forEach(k => {
       if (k === "youtube" || main.some(a => keyOf(a) === k)) return;
-      // "Prime Video" above can be an add-on channel inside Prime (e.g. Crunchyroll Amazon Channel): show it under its real name
-      const ch = extra.find(a => isChannel(a.name) && provKey(a.name) === k);
-      if (ch) { extra.splice(extra.indexOf(ch), 1); main.push(Object.assign({}, ch, {label: `${D.providers[k].name} · ${ch.name}`})); }
-      else main.push({name: D.providers[k] ? D.providers[k].name : k, types: ["FLATRATE"], audio: [], subs: []});
+      main.push({name: D.providers[k] ? D.providers[k].name : k, types: ["FLATRATE"], audio: [], subs: []});
     });
     const known = main.filter(a => a.audio.length), unknown = main.filter(a => !a.audio.length);
     const nm = a => esc(a.label || (keyOf(a) && D.providers[keyOf(a)] ? D.providers[keyOf(a)].name : a.name));
     const hasL = (a, l) => a.audio.some(x => lcode(x) === l), subL = (a, l) => a.subs.some(x => lcode(x) === l);
     let answer = "";
     if (pref) {
-      const P = LANG_FULL[pref], has = main.filter(a => hasL(a, pref)), subs = main.filter(a => !has.includes(a) && subL(a, pref)), viaAddon = extra.filter(a => hasL(a, pref));
+      const P = LANG_FULL[pref], has = main.filter(a => hasL(a, pref)), subs = main.filter(a => !has.includes(a) && subL(a, pref));
       if (has.length) answer = `<div class="lg-ans ok">✅ <span>Available in <b>${P}</b> on <b>${has.map(nm).join(", ")}</b></span></div>`;
       else if (!main.length) answer = `<div class="lg-ans no">❌ <span>Not on any streaming app in India, so not in ${P} either</span></div>`;
       else if (!known.length) answer = `<div class="lg-ans unk">❓ <span>${unknown.map(nm).join(", ")} ${unknown.length > 1 ? "haven't" : "hasn't"} listed audio languages, so VibeSync can't confirm ${P}</span></div>`;
       else answer = `<div class="lg-ans no">❌ <span>Not available in <b>${P}</b> on ${main.length > 1 ? "these apps" : nm(main[0])}${unknown.length ? ` (${unknown.map(nm).join(", ")} ${unknown.length > 1 ? "don't" : "doesn't"} list languages)` : ""}</span></div>`;
       if (!has.length && subs.length) answer += `<div class="lg-sub">${P} subtitles on ${subs.map(nm).join(", ")}</div>`;
-      if (viaAddon.length) answer += `<div class="lg-sub">Also in ${P} through ${viaAddon.map(a => esc(a.name)).join(", ")}${viaAddon.some(a => /amazon/i.test(a.name)) ? " (an add-on subscription inside Prime Video)" : ""}</div>`;
     } else answer = `<div class="lg-sub">Pick your language to check it</div>`;
     const row = a => { const k = keyOf(a) || provKey(a.name);
       return `<div class="lg-row"><span class="logo" style="--pcol:${(D.providers[k] || {}).color || "#666"}">${esc((nm(a) || "?")[0])}</span>
@@ -5782,7 +5779,6 @@ function langsHTML(it) {
       ${a.audio.length ? `<small>🔊 ${lsort(a.audio, pref).map(lname).join(", ")}</small>` : `<small>Audio languages not listed</small>`}
       ${a.subs.length ? `<small>💬 ${lsort(a.subs, pref).map(lname).join(", ")}</small>` : ""}</span></div>`; };
     body = answer + (main.length ? `<div class="lg-list">${main.map(row).join("")}</div>` : "")
-      + (extra.length ? `<details class="lg-rent"><summary>Add-on channels & other apps (${extra.length})</summary>${extra.map(row).join("")}</details>` : "")
       + (rent.length ? `<details class="lg-rent"><summary>Rent or buy (${rent.length})</summary>${rent.map(row).join("")}</details>` : "");
   }
   return `<div class="h3">Languages on each app</div><div class="langs"><div class="lg-q">Your language</div>${chips}${body}
