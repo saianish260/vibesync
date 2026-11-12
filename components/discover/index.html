@@ -6097,14 +6097,18 @@ const PSOON = {};
 function platSoonHTML(k) {
   const n = esc(D.providers[k].name);
   return `<div class="sec"><h2>Coming soon to ${n}</h2><p class="live-sub"><i></i>Movies</p></div><div class="row" id="psoon-m">${skeleton(5)}</div>
-    <div class="sec"><h2>New episodes coming on ${n}</h2><p class="live-sub"><i></i>Next 30 days</p></div><div class="row" id="psoon-t">${skeleton(5)}</div>`;
+    <div class="sec"><h2>New episodes coming on ${n}</h2><p class="live-sub"><i></i>Next 30 days</p></div><div class="row" id="psoon-t">${skeleton(5)}</div>
+    <div class="sec"><h2>Recently added to ${n}</h2><p class="live-sub"><i></i>Last 3 days</p></div><div class="row" id="padd">${skeleton(5)}</div>`;
 }
+// India's calendar date n days ago, as YYYY-MM-DD
+const dayIN = n => new Date(Date.parse(todayIN() + "T00:00:00Z") - n * dayMs).toISOString().slice(0, 10);
 const dcard = (it, label) => card(it).replace('<div class="ct">', `<div class="cdate">${esc(label)}</div><div class="ct">`);
 async function fillPlatSoon(k) {
   const seq = PSOON.seq = (PSOON.seq || 0) + 1;
   const today = new Date(new Date().toDateString()), ids = (T.provIds[k] || []).join("|");
   const put = (el, html, empty) => { const e = $(el); if (!e || PSOON.seq !== seq) return; e.className = html ? "row" : ""; e.innerHTML = html || `<div class="empty">${empty}</div>`; };
   const name = D.providers[k].name;
+  const todayS = todayIN(), later = d => String(d || "").slice(0, 10) > todayS;   // coming soon = after today (today's are already out)
   // movies
   (async () => {
     try {
@@ -6112,11 +6116,12 @@ async function fillPlatSoon(k) {
       const [dig, listed] = await Promise.all([
         Promise.all([1, 2, 3].map(p => tget("/discover/movie", {region: "IN", with_release_type: "4|6", "release_date.gte": iso(today), "release_date.lte": iso(new Date(+today + 75 * dayMs)), sort_by: "popularity.desc", page: p}).catch(() => ({})))),
         ids ? tget("/discover/movie", {with_watch_providers: ids, watch_region: "IN", "primary_release_date.gte": iso(new Date(+today + dayMs)), sort_by: "popularity.desc"}).catch(() => ({})) : {}]);
-      (listed.results || []).filter(r => r.poster_path && r.release_date && new Date(r.release_date + "T12:00:00") >= today).forEach(r => soon.push({r, date: r.release_date}));
-      const cands = dig.flatMap(j => j.results || []).filter(r => r.poster_path && !soon.some(x => x.r.id === r.id)).slice(0, 48);
+      (listed.results || []).filter(r => r.poster_path && later(r.release_date)).forEach(r => soon.push({r, date: r.release_date}));
+      const once = new Set(soon.map(x => x.r.id));
+      const cands = dig.flatMap(j => j.results || []).filter(r => r.poster_path && !once.has(r.id) && once.add(r.id)).slice(0, 48);
       for (let i = 0; i < cands.length; i += 8) {
         await Promise.all(cands.slice(i, i + 8).map(async r => {
-          try { const o = ottFrom(await tget(`/movie/${r.id}/release_dates`, {})); if (o && o.app && provKey(o.app) === k && new Date(o.date) >= today) soon.push({r, date: o.date}); } catch (e) {}
+          try { const o = ottFrom(await tget(`/movie/${r.id}/release_dates`, {})); if (o && o.app && provKey(o.app) === k && later(o.date)) soon.push({r, date: o.date}); } catch (e) {}
         }));
         if (PSOON.seq !== seq) return;
       }
@@ -6138,6 +6143,44 @@ async function fillPlatSoon(k) {
       put("#psoon-t", rows.map(({r, nx}) => { const it = fromTmdb(r, "tv"); return it ? dcard(it, `S${nx.season_number} E${nx.episode_number} · ${shortDate(nx.air_date)}`) : ""; }).join(""),
           `No new episodes announced on ${esc(name)} for the next 30 days.`);
     } catch (e) { put("#psoon-t", "", "Couldn't load upcoming episodes right now."); }
+  })();
+  // recently added: movies that came out on this app in India in the last 3 days (today included), and series
+  // that started, or began a new season, on it in the last 3 days
+  (async () => {
+    try {
+      const from = dayIN(3), inWin = d => { const x = String(d || "").slice(0, 10); return !!x && x >= from && x <= todayS; };
+      const win = {"release_date.gte": from, "release_date.lte": todayS};
+      const [dig, onApp, tv] = await Promise.all([
+        Promise.all([1, 2].map(p => tget("/discover/movie", Object.assign({region: "IN", with_release_type: "4|6", sort_by: "popularity.desc", page: p}, win)).catch(() => ({})))),
+        ids ? tget("/discover/movie", Object.assign({with_watch_providers: ids, watch_region: "IN", region: "IN", with_release_type: "4|6", sort_by: "popularity.desc"}, win)).catch(() => ({})) : {},
+        ids ? tget("/discover/tv", {with_watch_providers: ids, watch_region: "IN", "air_date.gte": from, "air_date.lte": todayS, sort_by: "popularity.desc"}).catch(() => ({})) : {}]);
+      const listed = new Set((onApp.results || []).map(r => r.id));
+      const seen = new Set(), cands = (onApp.results || []).concat(dig.flatMap(j => j.results || [])).filter(r => r.poster_path && !seen.has(r.id) && seen.add(r.id)).slice(0, 40);
+      const movies = [];
+      for (let i = 0; i < cands.length; i += 8) {
+        await Promise.all(cands.slice(i, i + 8).map(async r => {
+          try {
+            const rd = await tget(`/movie/${r.id}/release_dates`, {}), IN = ((rd || {}).results || []).find(x => x.iso_3166_1 === "IN");
+            const hit = IN && IN.release_dates.filter(x => (x.type === 4 || x.type === 6) && inWin(x.release_date))
+              .find(x => listed.has(r.id) || (x.note && provKey(x.note.trim()) === k));       // on this app (TMDB lists it, or India's release note names it)
+            if (hit) movies.push({r, type: "movie", date: hit.release_date.slice(0, 10)});
+          } catch (e) {}
+        }));
+        if (PSOON.seq !== seq) return;
+      }
+      const shows = (await Promise.all((tv.results || []).filter(r => r.poster_path).slice(0, 20).map(async r => {
+        try {
+          const d = await tget(`/tv/${r.id}`, {});
+          const s = (d.seasons || []).filter(x => x.season_number > 0 && inWin(x.air_date)).pop();      // a brand-new show or a new season
+          return s ? {r, type: "tv", date: s.air_date, label: s.season_number > 1 ? `Season ${s.season_number}` : "New series"} : null;
+        } catch (e) { return null; }
+      }))).filter(Boolean);
+      if (PSOON.seq !== seq) return;
+      const all = movies.concat(shows).sort((a, b) => b.date.localeCompare(a.date));          // newest first
+      const when = d => d === todayS ? "Today" : d === dayIN(1) ? "Yesterday" : shortDate(d);
+      put("#padd", all.map(x => { const it = fromTmdb(x.r, x.type); return it ? dcard(it, x.label ? `${when(x.date)} · ${x.label}` : when(x.date)) : ""; }).join(""),
+          `Nothing new on ${esc(name)} in the last 3 days.`);
+    } catch (e) { put("#padd", "", "Couldn't load recently added titles right now."); }
   })();
 }
 
