@@ -17,7 +17,7 @@ from array import array
 from bisect import bisect_left
 
 RATINGS_URL = "https://datasets.imdbws.com/title.ratings.tsv.gz"
-MIN_VOTES = 50          # fewer votes than this isn't a meaningful rating
+MIN_VOTES = 1           # every title IMDb shows a rating for is kept, exactly as IMDb has it
 
 
 class Ratings:
@@ -43,7 +43,9 @@ class Ratings:
 
 
 def parse_ratings(raw: bytes, min_votes: int = MIN_VOTES) -> Ratings:
-    rows = []
+    # straight into compact arrays (the whole file is ~1.6 million titles, ~15 MB this way)
+    ids, rts, vts = array("I"), array("B"), array("I")
+    ordered, last = True, -1
     with gzip.GzipFile(fileobj=io.BytesIO(raw)) as f:
         next(f, None)                                   # header: tconst, averageRating, numVotes
         for line in f:
@@ -54,11 +56,17 @@ def parse_ratings(raw: bytes, min_votes: int = MIN_VOTES) -> Ratings:
                 votes = int(parts[2])
                 if votes < min_votes:
                     continue
-                rows.append((int(parts[0][2:]), round(float(parts[1]) * 10), min(votes, 4_000_000_000)))
-            except ValueError:
+                n = int(parts[0][2:])
+                ids.append(n); rts.append(round(float(parts[1]) * 10)); vts.append(min(votes, 4_000_000_000))
+            except (ValueError, OverflowError):
                 continue
-    rows.sort()
-    return Ratings(array("L", (r[0] for r in rows)), array("B", (r[1] for r in rows)), array("L", (r[2] for r in rows)))
+            if n < last:
+                ordered = False
+            last = n
+    if not ordered:                                     # IMDb's file is sorted by id; sort only if it ever isn't
+        order = sorted(range(len(ids)), key=ids.__getitem__)
+        ids, rts, vts = array("I", (ids[i] for i in order)), array("B", (rts[i] for i in order)), array("I", (vts[i] for i in order))
+    return Ratings(ids, rts, vts)
 
 
 def fetch_ratings(timeout: float = 90.0) -> Ratings:
@@ -77,13 +85,43 @@ def imdb_id(tmdb_key: str, kind: str, tmdb_id: int, timeout: float = 8.0) -> str
 
 
 _LD = re.compile(r'<script[^>]+application/ld\+json[^>]*>(.*?)</script>', re.S)
+_GQL = "https://caching.graphql.imdb.com/"
+
+
+def _graphql(imdb: str, timeout: float) -> dict | None:
+    """IMDb's own live data for one title. {"r", "v"} when it's rated, {"none": True} when IMDb has the title but no
+    rating yet, None if IMDb couldn't be reached."""
+    body = json.dumps({"query": 'query{title(id:"%s"){id ratingsSummary{aggregateRating voteCount}}}' % imdb}).encode()
+    req = urllib.request.Request(_GQL, data=body, headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0 VibeSync",
+                                                           "x-imdb-client-name": "imdb-web-next-localized", "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        t = (json.loads(r.read().decode("utf-8")).get("data") or {}).get("title")
+    if not t:
+        return None
+    s = t.get("ratingsSummary") or {}
+    if s.get("aggregateRating"):
+        return {"r": float(s["aggregateRating"]), "v": int(s.get("voteCount") or 0)}
+    return {"none": True}
 
 
 def live_rating(imdb: str, omdb_key: str = "", table: "Ratings | None" = None, timeout: float = 10.0) -> dict:
-    """One title's latest IMDb rating: IMDb's own title page first (exact, live), then OMDb (if a key is set),
-    then IMDb's daily ratings file. Returns {"r": 7.3, "v": 152340, "src": "imdb"|"omdb"|"daily"} or {}."""
+    """One title's latest IMDb rating: IMDb's own live data first, then its title page, then OMDb (if a key is set),
+    then IMDb's daily ratings file. Returns {"r": 7.3, "v": 152340, "src": "imdb"|"omdb"|"daily"},
+    {"none": True} when IMDb itself has no rating for the title yet, or {} if none of them could be reached."""
     if not re.fullmatch(r"tt\d{5,10}", imdb or ""):
         return {}
+    unrated = False
+    for _ in range(2):                                   # one retry: a single slow answer shouldn't fail the tap
+        try:
+            g = _graphql(imdb, timeout)
+            if g and g.get("r"):
+                remember(imdb, g["r"], g["v"])
+                return {"r": g["r"], "v": g["v"], "src": "imdb"}
+            if g and g.get("none"):
+                unrated = True
+            break
+        except Exception:
+            continue
     try:
         req = urllib.request.Request(f"https://www.imdb.com/title/{imdb}/", headers={
             "User-Agent": "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36",
@@ -97,7 +135,9 @@ def live_rating(imdb: str, omdb_key: str = "", table: "Ratings | None" = None, t
                 continue
             agg = data.get("aggregateRating") if isinstance(data, dict) else None
             if agg and agg.get("ratingValue"):
-                return {"r": float(agg["ratingValue"]), "v": int(agg.get("ratingCount") or 0), "src": "imdb"}
+                r, v = float(agg["ratingValue"]), int(agg.get("ratingCount") or 0)
+                remember(imdb, r, v)
+                return {"r": r, "v": v, "src": "imdb"}
     except Exception:
         pass
     if omdb_key:
@@ -109,15 +149,20 @@ def live_rating(imdb: str, omdb_key: str = "", table: "Ratings | None" = None, t
                 return {"r": float(o["imdbRating"]), "v": int(str(o.get("imdbVotes", "0")).replace(",", "") or 0), "src": "omdb"}
         except Exception:
             pass
-    got = table.get(imdb) if table is not None else None
-    return {"r": got[0], "v": got[1], "src": "daily"} if got else {}
+    got = rating(table, imdb)
+    if got:
+        return {"r": got[0], "v": got[1], "src": "daily"}
+    return {"none": True} if unrated else {}
 
 
 # ───────────── kept in memory on the server, refreshed once a day ─────────────
 import threading as _threading
 import time as _time
 
-_STATE = {"table": None, "day": "", "busy": False, "failed_at": 0.0, "cur": {}, "cur_day": "", "cur_busy": False}
+_STATE = {"table": None, "day": "", "busy": False, "failed_at": 0.0, "cur": {}, "cur_day": "", "cur_busy": False,
+          "stamp": "", "checked": 0.0, "ticker": False}
+_FRESH: dict[str, tuple[float, int, float]] = {}   # IMDb id -> (rating, votes, when): ratings fetched live, newer than the file
+CHECK_EVERY = 2 * 3600                              # how often the server asks IMDb whether a newer ratings file is out
 _IDS: dict[str, str] = {}               # library title -> IMDb id (found once, kept)
 _LOCK = _threading.Lock()
 
@@ -126,19 +171,66 @@ def _today() -> str:
     return _time.strftime("%Y-%m-%d", _time.gmtime(_time.time() + 5.5 * 3600))   # India's date
 
 
+def remember(imdb: str, r: float, v: int) -> None:
+    """A rating just fetched live from IMDb: every device asking about this title gets it from now on."""
+    _FRESH[imdb] = (float(r), int(v), _time.time())
+    if len(_FRESH) > 5000:
+        _FRESH.pop(next(iter(_FRESH)))
+
+
+def rating(table: "Ratings | None", imdb: str) -> "tuple[float, int] | None":
+    """A title's current IMDb rating: a live one fetched since the ratings file was downloaded, else the file's."""
+    f = _FRESH.get(imdb or "")
+    if f and f[2] >= _STATE.get("loaded_at", 0):
+        return f[0], f[1]
+    return table.get(imdb) if table is not None else None
+
+
+def _file_stamp(timeout: float = 15.0) -> str:
+    """When IMDb last published its ratings file (asked without downloading it)."""
+    req = urllib.request.Request(RATINGS_URL, method="HEAD", headers={"User-Agent": "VibeSync"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.headers.get("Last-Modified") or r.headers.get("ETag") or ""
+
+
+def _ticker() -> None:
+    """While the server is running, check every 2 hours for IMDb's newer file and download it right away."""
+    while True:
+        _time.sleep(CHECK_EVERY)
+        try:
+            ratings_table()
+        except Exception:
+            pass
+
+
 def ratings_table(block: bool = False) -> "Ratings | None":
-    """IMDb's ratings file, downloaded again each day. The download runs in the background (yesterday's table
-    keeps serving meanwhile); with block=True and nothing loaded yet, it waits for the first one."""
-    today = _today()
+    """IMDb's ratings file. Downloaded when the server starts, again on every new day (India), and whenever IMDb
+    publishes a newer one (checked every 2 hours). The download runs in the background (the previous table keeps
+    serving meanwhile); with block=True and nothing loaded yet, it waits for the first one."""
+    today, now = _today(), _time.time()
     with _LOCK:
-        start = (_STATE["day"] != today and not _STATE["busy"] and _time.time() - _STATE["failed_at"] > 1800)
+        if not _STATE["ticker"]:
+            _STATE["ticker"] = True
+            _threading.Thread(target=_ticker, daemon=True).start()
+        due = _STATE["day"] != today or now - _STATE["checked"] > CHECK_EVERY
+        start = due and not _STATE["busy"] and now - _STATE["failed_at"] > 600
         if start:
             _STATE["busy"] = True
 
     def work():
         try:
-            _STATE["table"] = fetch_ratings()
+            stamp = ""
+            try:
+                stamp = _file_stamp()
+            except Exception:
+                pass
+            if _STATE["table"] is None or not stamp or stamp != _STATE["stamp"] or _STATE["day"] != today:
+                _STATE["table"] = fetch_ratings()
+                _STATE["loaded_at"] = _time.time()
+                _STATE["stamp"] = stamp
+                _STATE["cur_day"] = ""                   # the library's ratings are worked out again from the new file
             _STATE["day"] = today
+            _STATE["checked"] = _time.time()
         except Exception:
             _STATE["failed_at"] = _time.time()
         finally:
@@ -205,7 +297,7 @@ def library_ratings(items: list, tmdb_key: str) -> dict:
                             _IDS[iid] = find_imdb_id(tmdb_key, title, year, movie)
                         except Exception:
                             return iid, None
-                    got = table.get(_IDS.get(iid, ""))
+                    got = rating(table, _IDS.get(iid, ""))
                     return iid, (got[0] if got else None)
 
                 with ThreadPoolExecutor(max_workers=8) as pool:
@@ -216,4 +308,9 @@ def library_ratings(items: list, tmdb_key: str) -> dict:
                 _STATE["cur_busy"] = False
 
         _threading.Thread(target=work, daemon=True).start()
-    return dict(_STATE["cur"])
+    out = dict(_STATE["cur"])
+    for iid, tt in list(_IDS.items()):                  # ratings fetched live since then win
+        f = _FRESH.get(tt or "")
+        if f and f[2] >= _STATE.get("loaded_at", 0):
+            out[iid] = f[0]
+    return out

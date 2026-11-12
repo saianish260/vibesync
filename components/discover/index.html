@@ -6264,20 +6264,29 @@ setInterval(() => {
    Asks the website's server for this one title's latest rating: IMDb's own page (exact, with the vote count),
    else OMDb, else IMDb's daily ratings file. Remembered on this device; that title's cards use it too. */
 const IMBUSY = {};
-function imdbRefresh(id) {
+const IMLIVEDAY = {};                 // titles already looked up live today without a tap
+function imdbRefresh(id, quiet) {
   const it = BY[id], x = XD[id];
   if (!it || !x || !x.imdbId || IMBUSY[id]) return;
-  IMBUSY[id] = true; buzz(); imdbChipSwap(it);
+  IMBUSY[id] = true;
+  if (!quiet) { buzz(); imdbChipSwap(it); }
   const k = "i1" + Date.now() + Math.random().toString(36).slice(2, 6);
   const finish = v => {
     delete IMBUSY[id];
-    if (v && +v.r) {
+    if (v && +v.r && quiet) {               // filled in by itself: just show it, no message
+      IMFRESH[id] = {r: +v.r, v: +v.v || 0, at: Date.now(), src: v.src || ""};
+      try { localStorage.setItem("vs.imdbfix", JSON.stringify(IMFRESH)); } catch (e) {}
+      it.imdb = +v.r;
+      if (!notOutYet(it)) document.querySelectorAll(`[data-open="${CSS.escape(id)}"] .sc`).forEach(e => { e.textContent = `★ ${(+v.r).toFixed(1)}`; });
+    } else if (quiet) {
+    } else if (v && +v.r) {
       IMFRESH[id] = {r: +v.r, v: +v.v || 0, at: Date.now(), src: v.src || ""};
       try { const ks = Object.keys(IMFRESH); if (ks.length > 300) delete IMFRESH[ks[0]]; localStorage.setItem("vs.imdbfix", JSON.stringify(IMFRESH)); } catch (e) {}
       it.imdb = +v.r;
       if (!notOutYet(it)) document.querySelectorAll(`[data-open="${CSS.escape(id)}"] .sc`).forEach(e => { e.textContent = `★ ${(+v.r).toFixed(1)}`; });   // cards on screen
       toast(`IMDb ${(+v.r).toFixed(1)} · ${(+v.v || 0).toLocaleString("en-IN")} votes${v.src === "daily" ? " (today's IMDb data)" : ""}`);
-    } else toast("Couldn't reach IMDb right now. Try again in a bit.");
+    } else if (v && v.none) toast("IMDb hasn't rated this title yet");
+    else toast("Couldn't reach IMDb right now. Try again in a bit.");
     imdbChipSwap(it);
   };
   IMDBQ.wait[k] = finish;
@@ -6291,19 +6300,25 @@ const imdbDayKey = () => new Date().toLocaleDateString("en-CA", {timeZone: "Asia
 var IMDAY = (() => { try { return JSON.parse(localStorage.getItem("vs.imdbday") || "{}") || {}; } catch (e) { return {}; } })();
 const IMDAYWAIT = {};
 function imdbDaily(it, x) {
+  // asked again every hour, so a rating updated anywhere (the daily file, or a tap on another device) shows here too
   const tt = x.imdbId, day = imdbDayKey();
-  if (!tt || !EMBED || IMDAYWAIT[tt] || (IMDAY[tt] && IMDAY[tt].d === day)) return;
+  if (!tt || !EMBED || IMDAYWAIT[tt] || (IMDAY[tt] && IMDAY[tt].d === day && Date.now() - (IMDAY[tt].at || 0) < 3600e3)) return;
   IMDAYWAIT[tt] = true;
   const k = "id" + Date.now() + Math.random().toString(36).slice(2, 6);
   IMDBQ.wait[k] = map => {
     delete IMDAYWAIT[tt];
     const v = map && !map.error ? map[tt] : null;
-    IMDAY[tt] = {r: v ? +v[0] : 0, v: v ? +v[1] : 0, d: day};
+    if (map && map.error) { imdbChipSwap(it); return; }   // the server couldn't load IMDb's file: ask again next time
+    IMDAY[tt] = {r: v ? +v[0] : 0, v: v ? +v[1] : 0, d: day, at: Date.now()};
     try { const ks = Object.keys(IMDAY); if (ks.length > 400) delete IMDAY[ks[0]]; localStorage.setItem("vs.imdbday", JSON.stringify(IMDAY)); } catch (e) {}
-    if (v && !IMFRESH[it.id]) {
+    const fx = IMFRESH[it.id];
+    if (v && (!fx || +v[1] >= fx.v)) {                   // more votes = newer: the server's number is the latest
+      if (fx) { delete IMFRESH[it.id]; try { localStorage.setItem("vs.imdbfix", JSON.stringify(IMFRESH)); } catch (e) {} }
       it.imdb = +v[0];
       if (!notOutYet(it)) document.querySelectorAll(`[data-open="${CSS.escape(it.id)}"] .sc`).forEach(e => { e.textContent = `★ ${(+v[0]).toFixed(1)}`; });
     }
+    // not in IMDb's file (brand-new or just rated): look it up live once a day, by itself
+    if (!v && !fx && IMLIVEDAY[tt] !== day) { IMLIVEDAY[tt] = day; imdbRefresh(it.id, true); }
     imdbChipSwap(it);                                     // in the background: only the chip changes, no page redraw
   };
   serverAsk("imdb", {key: k, daily: [tt]});
@@ -6313,8 +6328,8 @@ function imdbHeadHTML(it) {
   if (!it || it.kind === "sports" || notOutYet(it)) return "";            // not released yet: no rating
   const x = XD[it.id] || {}, fx = IMFRESH[it.id];
   const dy = x.imdbId && IMDAY[x.imdbId] && IMDAY[x.imdbId].d === imdbDayKey() && IMDAY[x.imdbId].r ? IMDAY[x.imdbId] : null;
-  if (x.imdbId && !fx) imdbDaily(it, x);
-  const imv = fx ? fx.r.toFixed(1) : dy ? dy.r.toFixed(1) : x.omdb && x.omdb.imdb ? x.omdb.imdb : it.imdb ? it.imdb.toFixed(1) : "";
+  if (x.imdbId) imdbDaily(it, x);
+  const imv = fx && (!dy || fx.v > dy.v) ? fx.r.toFixed(1) : dy ? dy.r.toFixed(1) : fx ? fx.r.toFixed(1) : x.omdb && x.omdb.imdb ? x.omdb.imdb : it.imdb ? it.imdb.toFixed(1) : "";
   // clean chip: "IMDb ★ 8.9" only. A tap still fetches the latest rating; the votes and how fresh it is show in the
   // little message that pops up then, not on the chip
   if (x.imdbId && EMBED) return `<button class="imh rtfx${IMBUSY[it.id] ? " busy" : ""}" data-imdbfresh="${esc(it.id)}" aria-label="IMDb rating ${imv || "unknown"}. Tap for the latest">

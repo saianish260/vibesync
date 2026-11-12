@@ -236,12 +236,12 @@ class ImdbTest(unittest.TestCase):
         raw = gzip.compress(b"tconst\taverageRating\tnumVotes\n"
                             b"tt12735488\t7.1\t152340\n"      # kept
                             b"tt0000001\t5.7\t2100\n"         # kept
-                            b"tt9999999\t9.9\t12\n")          # too few votes: left out
+                            b"tt9999999\t9.9\t12\n")          # few votes: still kept, exactly as IMDb has it
         t = parse_ratings(raw)
-        self.assertEqual(len(t), 2)
+        self.assertEqual(len(t), 3)
         self.assertEqual(t.get("tt12735488"), (7.1, 152340))
         self.assertEqual(t.get("tt0000001"), (5.7, 2100))
-        self.assertIsNone(t.get("tt9999999"))
+        self.assertEqual(t.get("tt9999999"), (9.9, 12))
         self.assertIsNone(t.get("nonsense"))
         self.assertEqual(live_rating("not-an-id"), {})
 

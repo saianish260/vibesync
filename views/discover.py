@@ -15,7 +15,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from core.data import catalog_payload
-from core.imdb import imdb_id, library_ratings, live_rating, ratings_table
+from core.imdb import imdb_id, library_ratings, live_rating, rating as _imdb_rating, ratings_table
 from core.langs import fetch_langs
 from core.news import fetch_news
 from core import book as _book
@@ -126,9 +126,22 @@ def _imdb_ratings():
     return ratings_table(block=True)
 
 
-@st.cache_data(ttl=60, max_entries=200, show_spinner=False)     # "refresh IMDb rating" on one title
+_LIVE_SEEN: dict = {}
+
+
 def _imdb_live(imdb: str) -> dict:
-    return live_rating(imdb, omdb_key(), _imdb_ratings())
+    """A tap on the IMDb chip: this title's latest rating. A found rating is reused for a minute; a miss is
+    never kept, so the next tap asks IMDb again."""
+    import time as _t
+    hit = _LIVE_SEEN.get(imdb)
+    if hit and _t.time() - hit[0] < 60:
+        return hit[1]
+    got = live_rating(imdb, omdb_key(), _imdb_ratings())
+    if got.get("r"):
+        _LIVE_SEEN[imdb] = (_t.time(), got)
+        while len(_LIVE_SEEN) > 300:
+            _LIVE_SEEN.pop(next(iter(_LIVE_SEEN)))
+    return got
 
 
 @st.cache_data(ttl=30 * 24 * 3600, max_entries=50000, show_spinner=False)
@@ -154,7 +167,7 @@ def _imdb_for(refs: list) -> dict:
         ids = list(pool.map(lambda p: _imdb_id(*p), pairs))
     out = {}
     for (kind, tid), iid in zip(pairs, ids):
-        got = table.get(iid)
+        got = _imdb_rating(table, iid)
         if got:
             out[f"{kind}:{tid}"] = [got[0], got[1]]
     return out
@@ -225,7 +238,7 @@ def render(theme: str) -> dict | None:
         daily = iq.get("daily")
         if k and isinstance(daily, list) and k not in imdb:      # a title page: today's IMDb rating by IMDb id
             table = _imdb_ratings()
-            imdb[k] = {"error": True} if table is None else {i: list(table.get(i)) for i in map(str, daily[:40]) if table.get(i)}
+            imdb[k] = {"error": True} if table is None else {i: list(_imdb_rating(table, i)) for i in map(str, daily[:40]) if _imdb_rating(table, i)}
             while len(imdb) > 12:
                 imdb.pop(next(iter(imdb)))
             st.rerun()
