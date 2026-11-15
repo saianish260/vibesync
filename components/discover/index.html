@@ -3268,7 +3268,7 @@ function stopWorld() {
   cancelAnimationFrame(W.raf); W.raf = 0;
   ["#wfx", "#ffx"].forEach(s => { const cv = $(s); if (cv) cv.getContext("2d").clearRect(0, 0, cv.width, cv.height); });
 }
-function overlayOpen() { return ["#search", "#mixer", "#themer", "#xp", "#trv", "#bk"].some(s => { const e = $(s); return e && e.classList.contains("on"); }); }
+function overlayOpen() { if (typeof LOUNGE !== "undefined" && LOUNGE) return true; return ["#search", "#mixer", "#themer", "#xp", "#trv", "#bk"].some(s => { const e = $(s); return e && e.classList.contains("on"); }); }
 function startWorld(pack, pal) {
   stopWorld();
   const cv = $("#wfx"), fv = $("#ffx"); if (!cv || !fv) return;
@@ -6799,7 +6799,19 @@ document.addEventListener("click", e => {
 /* ───────────── Android Back (the app asks the page: window.vsBack()) ─────────────
    Back always closes the thing on top, one layer at a time, exactly like its ✕ or ← button would. From another tab
    it returns to For you. Only on For you with nothing open does it answer false, and the app closes. */
+/* The Lounge is a separate screen laid over this one. This page stays loaded underneath (quiet: no sound, no
+   scenery), so coming back from the Lounge shows it exactly as it was, with no reload. */
+var LOUNGE = false;
+function setLounge(on) {
+  if (on === LOUNGE) return;
+  LOUNGE = on;
+  try { if (AU.rt) { if (on) { AU.rt.ctx.suspend(); ytPause(); } else if (AU.on && AU.style) { AU.rt.ctx.resume(); ytResume(); } } } catch (e) {}
+}
 window.vsBack = () => {
+  if (LOUNGE) {                                              // Back inside the Lounge: return to this page
+    send("streamlit:setComponentValue", {value: {theme: document.documentElement.dataset.theme, page: "discover", n: Date.now()}, dataType: "json"});
+    return true;
+  }
   const on = s => { const e = $(s); return !!e && e.classList.contains("on"); };
   const off = s => { $(s).classList.remove("on"); return true; };
   try {
@@ -7012,6 +7024,7 @@ window.addEventListener("message", e => {
   const m = e.data;
   if (!m || m.type !== "streamlit:render") return;
   args = m.args || {};
+  setLounge(!!args.lounge);
   if (args.ytKey) YTS.key = String(args.ytKey).trim();
   if (args.omdbKey) OMDB.key = String(args.omdbKey).trim();
   if (args.firebase && D && !AUTH.cfg) { setAuthConfig(args.firebase); authBoot(); }

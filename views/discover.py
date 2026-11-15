@@ -185,7 +185,7 @@ def _watch_links(url: str) -> dict[str, str]:
         return {}
 
 
-def render(theme: str) -> dict | None:
+def render(theme: str, lounge: bool = False) -> dict | None:
     payload = catalog_payload()
     # the hand-picked library's IMDb ratings: today's numbers from IMDb's daily file (worked out in the background)
     today = library_ratings(payload["items"], tmdb_key())
@@ -199,7 +199,7 @@ def render(theme: str) -> dict | None:
     imdb = st.session_state.setdefault("vs_imdb", {})
     book = st.session_state.setdefault("vs_book", {})
     value = _component(catalog=payload, theme=theme, tmdbKey=tmdb_key(), ytKey=youtube_key(), omdbKey=omdb_key(), firebase=firebase_config(), resolved=resolved, langs=langs, news=news,
-                       imdb=imdb, book=book, key="discover", default=None)
+                       imdb=imdb, book=book, lounge=lounge, key="discover", default=None)
     # When a live title's sheet opens, the screen asks for that title's exact per-app links.
     req = value.get("resolve") if isinstance(value, dict) else None
     if req and value.get("n") != st.session_state.get("_resolve_n"):

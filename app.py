@@ -54,46 +54,38 @@ def _to_discover() -> None:
 
 styles.inject(st.session_state.theme, st.session_state.page, st.session_state.get("title_palette"))
 
-if st.session_state.page == "lounge":
+# The Discover screen is always on the page, so it stays loaded while the Lounge is open (hidden underneath) and
+# coming back shows it exactly as it was, with no reload. It reports {theme, page, n}; n is a nonce so each tap is
+# handled exactly once (a component keeps returning its last value on every rerun).
+in_lounge = st.session_state.page == "lounge"
+value = discover.render(st.session_state.theme, lounge=in_lounge)
+if isinstance(value, dict):
+    nonce = value.get("n")
+    if nonce is None or nonce != st.session_state.get("_discover_nonce"):
+        st.session_state._discover_nonce = nonce
+        changed = False
+        picked = value.get("theme")
+        if picked in styles.THEMES and picked != st.session_state.theme:
+            st.session_state.theme = picked     # keep page chrome + Lounge in the same look
+            changed = True
+        if "palette" in value:                 # a title theme (or None = default look) for the Lounge too
+            pal = styles.custom_palette(value.get("palette"))
+            if pal != st.session_state.get("title_palette"):
+                st.session_state.title_palette = pal
+        if nonce is not None and value.get("page") in ("lounge", "discover") and value.get("page") != st.session_state.page:
+            st.session_state.page = value.get("page")   # "discover": Android Back pressed inside the Lounge
+            changed = True
+        if changed:
+            st.rerun()
+
+if in_lounge:
+    # the Discover screen stays loaded but out of sight
+    st.markdown('<style>[data-testid="stElementContainer"]:has(iframe[data-testid="stCustomComponentV1"]),'
+                '[data-testid="stElementContainer"]:has(iframe[title*="vibesync_discover"]),iframe[title*="vibesync_discover"],'
+                '.st-key-discover,iframe[data-testid="stCustomComponentV1"]{display:none!important}</style>', unsafe_allow_html=True)
     top_l, top_r = st.columns([1, 1], vertical_alignment="center")
     with top_l:
         st.markdown('<div class="vs-mark">Vibe<i>Sync</i></div>', unsafe_allow_html=True)
     with top_r:
         st.button("← Discover", key="back_discover", on_click=_to_discover)
     lounge.render()
-    # Android Back inside the Lounge: the app asks the page's window.vsBack() before it closes. This tiny hidden
-    # frame answers for the Lounge by pressing "← Discover", so Back returns to the home screen instead of leaving.
-    import streamlit.components.v1 as _components
-    _components.html("""<div id="app"></div><div id="bnav"></div><script>
-window.vsBack = function () {
-  try {
-    var d = window.parent.document;
-    var b = d.querySelector('.st-key-back_discover button');
-    if (!b) b = Array.prototype.filter.call(d.querySelectorAll('button'), function (x) { return /Discover/.test(x.textContent || '') && /\u2190/.test(x.textContent || ''); })[0];
-    if (b) { b.click(); return true; }
-  } catch (e) {}
-  return false;
-};
-</script>""", height=0)
-else:
-    # The Discover screen reports {theme, page, n}; n is a nonce so each tap is handled exactly once
-    # (a component keeps returning its last value on every rerun).
-    value = discover.render(st.session_state.theme)
-    if isinstance(value, dict):
-        nonce = value.get("n")
-        if nonce is None or nonce != st.session_state.get("_discover_nonce"):
-            st.session_state._discover_nonce = nonce
-            changed = False
-            picked = value.get("theme")
-            if picked in styles.THEMES and picked != st.session_state.theme:
-                st.session_state.theme = picked     # keep page chrome + Lounge in the same look
-                changed = True
-            if "palette" in value:                 # a title theme (or None = default look) for the Lounge too
-                pal = styles.custom_palette(value.get("palette"))
-                if pal != st.session_state.get("title_palette"):
-                    st.session_state.title_palette = pal
-            if nonce is not None and value.get("page") == "lounge":
-                st.session_state.page = "lounge"
-                changed = True
-            if changed:
-                st.rerun()
