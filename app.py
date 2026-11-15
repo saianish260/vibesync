@@ -61,6 +61,20 @@ if st.session_state.page == "lounge":
     with top_r:
         st.button("← Discover", key="back_discover", on_click=_to_discover)
     lounge.render()
+    # Android Back inside the Lounge: the app asks the page's window.vsBack() before it closes. This tiny hidden
+    # frame answers for the Lounge by pressing "← Discover", so Back returns to the home screen instead of leaving.
+    import streamlit.components.v1 as _components
+    _components.html("""<div id="app"></div><div id="bnav"></div><script>
+window.vsBack = function () {
+  try {
+    var d = window.parent.document;
+    var b = d.querySelector('.st-key-back_discover button');
+    if (!b) b = Array.prototype.filter.call(d.querySelectorAll('button'), function (x) { return /Discover/.test(x.textContent || '') && /\u2190/.test(x.textContent || ''); })[0];
+    if (b) { b.click(); return true; }
+  } catch (e) {}
+  return false;
+};
+</script>""", height=0)
 else:
     # The Discover screen reports {theme, page, n}; n is a nonce so each tap is handled exactly once
     # (a component keeps returning its last value on every rerun).

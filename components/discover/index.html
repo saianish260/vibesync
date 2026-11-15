@@ -1061,6 +1061,17 @@ html.sheeting #app *, html.sheeting #bnav, html.sheeting .bnav{backdrop-filter:n
 @media (prefers-reduced-motion:reduce){#slides{animation:none}}
 #slides .slide{will-change:auto}
 .slides{will-change:transform,opacity}
+
+/* ── Phones and tablets: scrolling like a native app ──
+   Rows glide freely (no snapping back to a poster), posters and sections aren't re-animated on every scrolled
+   pixel, and the bars the page slides under are solid instead of re-blurring what's behind them each frame. */
+@media (pointer:coarse){
+  html:not(.tv) #app{touch-action:pan-x pan-y}
+  html:not(.tv) :is(.row,.top10,.tiles){scroll-snap-type:none;overscroll-behavior-x:contain;touch-action:pan-x pan-y}
+  html:not(.tv) :is(.row>.card:not(.sk)>.pw,.top10>.t10>.pw,.tiles>.tile .e){animation:none}
+  html:not(.tv) :is(#panel .sec,#panel .row,#panel .top10,#panel .grid,#panel .chips,#panel .empty,.wrap>.sec,.tiles,.surprise,.trkw,.foot,#sres .grid):not(.fresh){animation:none}
+  html:not(.tv) :is(.top.solid,.tabs.glass,.bnav,.mx-bar){backdrop-filter:none;-webkit-backdrop-filter:none;background:color-mix(in srgb,var(--bg) 94%,transparent)}
+}
 </style>
 </head>
 <body>
@@ -1127,6 +1138,31 @@ html.sheeting #app *, html.sheeting #bnav, html.sheeting .bnav{backdrop-filter:n
 <div class="toast" id="toast" role="status"></div>
 
 <script>
+/* ───────────── native-feeling scrolling ─────────────
+   SCROLLING is true while any list is moving (and for a moment after): the page does no extra work then.
+   A touch listener that can block scrolling makes the browser wait for the page before every scroll starts,
+   so those are kept on the spotlight only (the one place that needs it: press and hold, then slide). */
+var SCROLLING = false;
+(() => {
+  let t = 0;
+  document.addEventListener("scroll", () => {
+    SCROLLING = true; clearTimeout(t);
+    t = setTimeout(() => { SCROLLING = false; try { SURF.dirty = true; } catch (e) {} }, 150);
+  }, {capture: true, passive: true});
+  const HT = window.__heroTouch = {fns: [], el: null};
+  window.__heroTouchBind = () => {
+    const h = document.getElementById("hero"); if (!h || h === HT.el) return;
+    HT.el = h; HT.fns.forEach(fn => h.addEventListener("touchmove", fn, {passive: false}));
+  };
+  const add = window.addEventListener;
+  window.addEventListener = function (type, fn, opts) {
+    if (type === "touchmove" && opts && opts.passive === false && typeof fn === "function") {
+      HT.fns.push(fn); if (HT.el) HT.el.addEventListener("touchmove", fn, {passive: false}); return;
+    }
+    return add.call(this, type, fn, opts);
+  };
+})();
+
 (() => {
 "use strict";
 /* ───────────── Streamlit bridge (no build step needed) ───────────── */
@@ -1941,6 +1977,7 @@ function render() {
   $("#panel").innerHTML = panelHTML(state.tab);
   if (yc) $("#ytslot").appendChild(yc);
   $("#bnav").innerHTML = navHTML(); navState();
+  window.__heroTouchBind();
   if (window.__vsRowBuild) window.__vsRowBuild();      // website poster row: part of the first frame, never added late
   themeBtn();
   requestAnimationFrame(() => { movePill(); showSlide(0); startHero(); onScroll(); preloadHero(); watchTabs(); });
@@ -3215,7 +3252,7 @@ function wetTexture() {                                       // beaded water on
 }
 
 const SURF = {list: [], dirty: true, frame: 0};
-document.addEventListener("scroll", () => { SURF.dirty = true; }, true);
+// (what's on screen is measured again once scrolling stops, never while it moves: see SCROLLING)
 function surfaces() {                                         // the tops of real things on screen that weather can hit
   const out = [], H = innerHeight;
   $$("#panel .row>.card .pw, #panel .grid>.card .pw, #panel .t10 .pw, .wrap>.sec h2, #panel .sec h2, .slide.on .hp .pw, .slide.on .ht, .tiles .tile, .surprise, .mixcard, .trkw, .slide.on .btn.tint, .tabrow")
@@ -3303,6 +3340,7 @@ function startWorld(pack, pal) {
     const ft = now - lastT; lastT = now;
     const dt = Math.min(2.5, ft / 16.7);
     if (document.hidden || overlayOpen()) return;              // nothing to see: save the battery
+    if (SCROLLING && (W.half = !W.half)) return;               // while you scroll, the scenery takes every other frame
     // quality governor: look at real frame times and adapt density
     QL.win.push(ft);
     if (QL.win.length >= 90) {
@@ -3315,7 +3353,7 @@ function startWorld(pack, pal) {
     if (far) far.style.transform = `translate3d(${px.toFixed(1)}px,${(py + sy).toFixed(1)}px,0) scale(1.1)`;
     if (near) near.style.transform = `translate3d(${(-px * 2.2).toFixed(1)}px,${(-py * 2.2 + sy * 2.4).toFixed(1)}px,0) scale(1.04,${flipNear ? -1.04 : 1.04})`;
     if (REDUCED) return;
-    if (SURF.dirty || ++SURF.frame % 12 === 0) { SURF.list = surfaces(); SURF.dirty = false; }
+    if (!SCROLLING && (SURF.dirty || ++SURF.frame % 12 === 0)) { SURF.list = surfaces(); SURF.dirty = false; }
     const w = cv.width, h = cv.height, ox = W.tx * 26 * dpr, oy = W.ty * 20 * dpr;
     frames++; wind = .14 + Math.sin(frames * .004) * .07 + Math.sin(frames * .021) * .025;
     back.clearRect(0, 0, w, h); front.clearRect(0, 0, w, h);
@@ -4646,8 +4684,12 @@ const tvParams = () => Object.assign({}, STREAM);
 const XP = {stack: []};
 function openXP(html, cls, keep) {
   const x = $("#xp");
-  if (keep && x.classList.contains("on")) XP.stack.push({html: x.innerHTML, cls: x.dataset.cls || "", y: (x.querySelector(".mx-in") || {}).scrollTop || 0});
-  else XP.stack = [];
+  // a screen opened from inside another one (Profile → Sync, a cast page → another person…) goes on top of it:
+  // ✕ and Back then return to the screen you came from, one step at a time. The same screen redrawn replaces itself.
+  if (x.classList.contains("on") && (keep || (x.dataset.cls || "") !== (cls || "")))
+    XP.stack.push({html: x.innerHTML, cls: x.dataset.cls || "", from: x.dataset.from || "", y: (x.querySelector(".mx-in") || {}).scrollTop || 0});
+  else if (!x.classList.contains("on")) XP.stack = [];
+  x.dataset.from = "";
   closeSearch(); closeMixer();
   x.dataset.cls = cls || "";
   x.className = "xp on " + (cls || "");
@@ -4656,10 +4698,11 @@ function openXP(html, cls, keep) {
   buzz();
 }
 function closeXP() {
-  const x = $("#xp"), prev = XP.stack.pop();
-  if (prev) { x.className = "xp on " + prev.cls; x.dataset.cls = prev.cls; x.innerHTML = prev.html; x.querySelector(".mx-in").scrollTop = prev.y; return; }
-  x.classList.remove("on");
-  if (DECK.on) DECK.on = false;
+  const x = $("#xp"), prev = XP.stack.pop(), from = x.dataset.from || "";
+  x.dataset.from = "";
+  if (prev) { x.className = "xp on " + prev.cls; x.dataset.cls = prev.cls; x.dataset.from = prev.from || ""; x.innerHTML = prev.html; x.querySelector(".mx-in").scrollTop = prev.y; }
+  else { x.classList.remove("on"); if (DECK.on) DECK.on = false; }
+  if (from && BY[from] && !openId) openSheet(from);          // opened from a title's page (its cast): back to that title
 }
 const xpTop = (title, sub, back) => `<div class="mx-top"><div><h2 class="mx-h">${title}</h2>${sub ? `<p class="mx-p">${sub}</p>` : ""}</div>
   <button class="icon" data-xpclose aria-label="${back ? "Back" : "Close"}">${back ? "←" : ICON.close}</button></div>`;
@@ -5457,8 +5500,10 @@ function closeTrailer() {
 /* cast & crew pages */
 async function openPerson(pid) {
   if (!T.key || T.failed) return toast("Cast pages need the live TMDB library");
+  const fromTitle = openId;
   if (openId) closeSheet();
   openXP(`<div id="pp"><div class="empty">Loading…</div></div>`, "person", true);
+  $("#xp").dataset.from = fromTitle || "";
   try {
     const p = await tget(`/person/${pid}`, {append_to_response: "combined_credits"});
     const cc = p.combined_credits || {}, seen = new Set();
@@ -6750,6 +6795,29 @@ document.addEventListener("click", e => {
   if (t.hasAttribute("data-acctsave")) { cloudSave().then(() => { toast("Saved to your account ☁️"); if ($("#xp").classList.contains("on")) closeXP && closeXP(); openProfile(); }); return; }
   if (t.hasAttribute("data-account")) { openAccount(); return; }
 });
+
+/* ───────────── Android Back (the app asks the page: window.vsBack()) ─────────────
+   Back always closes the thing on top, one layer at a time, exactly like its ✕ or ← button would. From another tab
+   it returns to For you. Only on For you with nothing open does it answer false, and the app closes. */
+window.vsBack = () => {
+  const on = s => { const e = $(s); return !!e && e.classList.contains("on"); };
+  const off = s => { $(s).classList.remove("on"); return true; };
+  try {
+    if (on("#ratepop")) return off("#ratepop");
+    if (on("#trv")) { closeTrailer(); return true; }
+    if (on("#bk")) { const b = $("#bk [data-bkclose]"); if (b) b.click(); else off("#bk"); return true; }
+    if (on("#sndp")) return off("#sndp");
+    if (on("#themes")) return off("#themes");
+    if (openId || on("#sheet")) { closeSheet(); return true; }
+    if (on("#xp")) { closeXP(); return true; }                  // tools, Profile, cast pages (steps back through them)
+    if (on("#themer")) { closeThemer(); return true; }
+    if (on("#mixer")) { closeMixer(); return true; }
+    if (on("#search")) { closeSearch(); return true; }
+    const first = $("#tabs .tab[data-tab]"), sel = $('#tabs .tab[aria-selected="true"]');
+    if (first && sel && sel !== first) { first.click(); return true; }
+  } catch (e) { console.error("VibeSync back:", e); }
+  return false;
+};
 /* ───────────── Home spotlight on the website: the same Netflix-style poster row as the phone app ─────────────
    (a copy of the phone app's assets/phone.js row: up to 50 posters, native glide, press-and-hold "Slide to browse").
    On a computer, arrows on the row move it too. */
