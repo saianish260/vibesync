@@ -1072,6 +1072,10 @@ html.sheeting #app *, html.sheeting #bnav, html.sheeting .bnav{backdrop-filter:n
   html:not(.tv) :is(#panel .sec,#panel .row,#panel .top10,#panel .grid,#panel .chips,#panel .empty,.wrap>.sec,.tiles,.surprise,.trkw,.foot,#sres .grid):not(.fresh){animation:none}
   html:not(.tv) :is(.top.solid,.tabs.glass,.bnav,.mx-bar){backdrop-filter:none;-webkit-backdrop-filter:none;background:color-mix(in srgb,var(--bg) 94%,transparent)}
 }
+
+/* Every row is laid out and painted ahead of time, not built at the moment it scrolls into view: a fast scroll
+   shows the rows themselves, not an empty page that fills in afterwards. */
+.row,#panel>.grid,#panel .row{content-visibility:visible;contain-intrinsic-size:none}
 </style>
 </head>
 <body>
@@ -6832,6 +6836,19 @@ window.vsBack = () => {
   } catch (e) { console.error("VibeSync back:", e); }
   return false;
 };
+
+/* ───────────── posters ready before you reach them ─────────────
+   Posters start out loading only near the screen, so the app opens fast. Once the first screen is up, the rest are
+   fetched quietly in small batches (never while you're scrolling), so rows you swipe to already have their posters
+   instead of showing placeholders that fill in under your finger. */
+(() => {
+  const sweep = () => {
+    if (SCROLLING || document.hidden) return;
+    const imgs = document.querySelectorAll('img[loading="lazy"]');
+    for (let i = 0; i < imgs.length && i < 24; i++) imgs[i].loading = "eager";
+  };
+  setTimeout(() => setInterval(sweep, 350), 2500);
+})();
 /* ───────────── Home spotlight on the website: the same Netflix-style poster row as the phone app ─────────────
    (a copy of the phone app's assets/phone.js row: up to 50 posters, native glide, press-and-hold "Slide to browse").
    On a computer, arrows on the row move it too. */
