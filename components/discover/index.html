@@ -3337,12 +3337,14 @@ function startWorld(pack, pal) {
   let wind = .14, frames = 0, lastT = performance.now(), dripT = 0, rivT = 0;
   const step = now => {
     W.raf = requestAnimationFrame(step);
+    // While you scroll, nothing is paused or slowed: the scenery is drawn on every other frame and each drawn frame
+    // moves twice as far, so rain, snow and creatures keep their real speed while the scroll gets the spare time.
+    if (SCROLLING && (W.half = !W.half)) return;
     const ft = now - lastT; lastT = now;
     const dt = Math.min(2.5, ft / 16.7);
     if (document.hidden || overlayOpen()) return;              // nothing to see: save the battery
-    if (SCROLLING && (W.half = !W.half)) return;               // while you scroll, the scenery takes every other frame
     // quality governor: look at real frame times and adapt density
-    QL.win.push(ft);
+    if (!SCROLLING) QL.win.push(ft);                           // (frames drawn while scrolling don't count against quality)
     if (QL.win.length >= 90) {
       const avg = QL.win.reduce((a, b) => a + b, 0) / QL.win.length; QL.win = [];
       if (avg > 23 && QL.level > 0) { QL.level--; QL.good = 0; store.set("ql", QL.level); return startWorld(pack, pal); }
