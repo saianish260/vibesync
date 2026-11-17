@@ -1036,6 +1036,57 @@ html.sheeting #app *, html.sheeting #bnav, html.sheeting .bnav{backdrop-filter:n
 .stv-t .chip b:empty{display:none}
 .stv-sub{margin:4px 0 14px;color:var(--muted);font-size:13px}
 
+/* ── Daily Poster Puzzle ── */
+.pz-wrap{display:grid;grid-template-columns:minmax(0,300px) 1fr;gap:22px;align-items:start}
+@media (max-width:640px){.pz-wrap{grid-template-columns:1fr}.pz-pic{max-width:260px;margin:0 auto}}
+.pz-pic canvas{width:100%;height:auto;aspect-ratio:2/3;border-radius:18px;background:var(--s2);display:block;box-shadow:0 18px 40px rgba(0,0,0,.45)}
+.pz-tries{display:flex;gap:6px;margin-bottom:12px}
+.pz-t{flex:1;height:8px;border-radius:4px;background:var(--s2)}
+.pz-t.no{background:#e5484d}.pz-t.ok{background:#30a46c}
+.pz-g{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.pz-g span{font-size:13px;padding:5px 10px;border-radius:999px;background:var(--s2)}
+.pz-g .ok{background:#30a46c;color:#fff}.pz-g .no{text-decoration:line-through;opacity:.75}
+.pz-in .sfield{margin-bottom:8px}
+.pz-sug{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.pz-s{display:flex;align-items:center;gap:12px;padding:8px;border-radius:14px;background:var(--s2);color:var(--text);text-align:left}
+.pz-s:disabled{opacity:.4}
+.pz-s img,.pz-np{width:34px;height:51px;border-radius:6px;object-fit:cover;flex:0 0 auto;display:grid;place-items:center;background:var(--s1)}
+.pz-s small{display:block;color:var(--muted);font-size:12px}
+.pz-none{padding:8px 4px;color:var(--muted);font-size:14px}
+.pz-skip{width:100%;margin-bottom:14px}
+.pz-clues{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.pz-c{padding:10px 12px;border-radius:14px;background:var(--s2);opacity:.55}
+.pz-c.on{opacity:1;background:color-mix(in srgb,var(--tint) 18%,var(--s2))}
+.pz-c small{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pz-c b{display:block;margin-top:3px;font-size:15px}
+.pz-end{margin-bottom:16px}.pz-end h3{margin:0 0 6px;font-size:24px}.pz-end p{margin:0 0 12px}
+.pz-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:16px 0 8px}
+.pz-n{text-align:center;padding:10px 4px;border-radius:14px;background:var(--s2)}.pz-n b{display:block;font-size:22px}.pz-n small{color:var(--muted);font-size:12px}
+.pz-dist{grid-column:1/-1;display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.pz-dist div{display:flex;align-items:center;gap:8px;font-size:13px}
+.pz-dist i{font-style:normal;background:var(--tint);color:#111;border-radius:6px;padding:2px 8px;text-align:right;font-weight:700}
+.pz-next{color:var(--muted);font-size:14px}
+/* ── Cinema Passport ── */
+.pv-top{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.pv-top div{padding:14px;border-radius:18px;background:var(--s2);text-align:center}.pv-top b{display:block;font-size:28px;font-weight:900}.pv-top small{color:var(--muted)}
+.pv-p{color:var(--muted);font-size:14px;margin:6px 0 10px}
+.pv-map{width:100%;height:auto;display:block;margin:6px 0 4px;border-radius:16px;background:color-mix(in srgb,var(--s2) 60%,transparent)}
+.pv-load{aspect-ratio:1000/470;display:grid;place-items:center;color:var(--muted)}
+.pv-map path{fill:var(--s2);stroke:var(--bg);stroke-width:.6;cursor:pointer;transition:fill .2s}
+.pv-map path.on{fill:var(--tint)}
+.pv-map path.sel{fill:#fff}
+.pv-h{margin:22px 0 10px;font-size:18px}
+.pv-sel{margin:10px 0}.pv-sel h3{margin:0 0 2px;font-size:20px}
+#pv .chips .chip b{margin-left:6px;opacity:.65}
+.pv-stamps{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.pv-st{padding:12px;border-radius:16px;border:2px dashed color-mix(in srgb,var(--tint) 60%,transparent);text-align:center;transform:rotate(-2deg)}
+.pv-st:nth-child(even){transform:rotate(2deg)}
+.pv-st b{display:block}.pv-st small{color:var(--muted);font-size:12px}
+.pv-badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding-bottom:20px}
+.pv-b{padding:12px;border-radius:16px;background:var(--s2);opacity:.5}
+.pv-b.on{opacity:1;background:color-mix(in srgb,var(--tint) 20%,var(--s2))}
+.pv-b span{font-size:26px;display:block}.pv-b b{display:block;margin-top:4px}.pv-b small{color:var(--muted);font-size:12px}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -1305,7 +1356,7 @@ const ICON = {
   info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v5M12 8h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
   home: '<svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19z"/></svg>',
   saved: '<svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.4-9.3-9A5 5 0 0 1 12 6.6a5 5 0 0 1 9.3 4.9c-1.8 4.6-9.3 9-9.3 9Z"/></svg>',
-  lounge: '<svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z"/><path d="M8.5 9.5h7M8.5 12.5h4"/></svg>',
+  puzzle: '<svg viewBox="0 0 24 24"><path d="M9.5 3.5a2 2 0 0 1 4 0V5H17a2 2 0 0 1 2 2v3.5h-1.5a2 2 0 0 0 0 4H19V18a2 2 0 0 1-2 2h-3.5v-1.5a2 2 0 0 0-4 0V20H6a2 2 0 0 1-2-2v-3.5h1.5a2 2 0 0 0 0-4H4V7a2 2 0 0 1 2-2h3.5z"/></svg>',
   arrow: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 };
 
@@ -1950,17 +2001,13 @@ function navHTML() {
     <button data-theme-btn aria-label="Themes">${ICON.palette}<span>Themes</span></button>
     <button class="bdice" data-surprise aria-label="Surprise me"><span aria-hidden="true">🎲</span></button>
     <button data-nav="saved">${ICON.saved}<span>Saved</span></button>
-    <button data-nav="lounge">${ICON.lounge}<span>Lounge</span></button>`;
+    ${/VibeSyncTV/.test(navigator.userAgent || "") ? "" : `<button data-nav="puzzle">${ICON.puzzle}<span>Puzzle</span></button>`}`;
 }
 function navState() {
   $$("#bnav [data-nav]").forEach(b => {
     const on = b.dataset.nav === "saved" ? state.tab === "saved" : b.dataset.nav === "home" ? state.tab !== "saved" : false;
     on ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current");
   });
-}
-function goLounge() {
-  if (EMBED) { send("streamlit:setComponentValue", {value: {theme: document.documentElement.dataset.theme, page: "lounge", n: Date.now()}, dataType: "json"}); toast("Opening the Lounge…"); }
-  else toast("The Lounge opens inside the VibeSync app");
 }
 
 /* ───────────── page ───────────── */
@@ -2047,7 +2094,7 @@ document.addEventListener("click", e => {
     buzz();
     if (t.dataset.nav === "home") { if (state.tab === "saved") setTab("foryou"); scroller().scrollTo({top: 0, behavior: REDUCED ? "auto" : "smooth"}); }
     else if (t.dataset.nav === "saved") setTab("saved", true);
-    else goLounge();
+    else if (t.dataset.nav === "puzzle") openPuzzle();
     return;
   }
   if (t.hasAttribute("data-mixer")) { closeSearch(); openMixer(); buzz(); return; }
@@ -3390,7 +3437,7 @@ function stopWorld() {
   cancelAnimationFrame(W.raf); W.raf = 0;
   ["#wfx", "#ffx"].forEach(s => { const cv = $(s); if (cv) cv.getContext("2d").clearRect(0, 0, cv.width, cv.height); });
 }
-function overlayOpen() { if (typeof LOUNGE !== "undefined" && LOUNGE) return true; return ["#search", "#mixer", "#themer", "#xp", "#trv", "#bk"].some(s => { const e = $(s); return e && e.classList.contains("on"); }); }
+function overlayOpen() { return ["#search", "#mixer", "#themer", "#xp", "#trv", "#bk"].some(s => { const e = $(s); return e && e.classList.contains("on"); }); }
 function startWorld(pack, pal) {
   stopWorld();
   const cv = $("#wfx"), fv = $("#ffx"); if (!cv || !fv) return;
@@ -5206,24 +5253,17 @@ function tasteRowsHTML() {
 }
 /* Suggestions built from your Saved list: for the titles you saved most recently, TMDB's "people who liked this also
    liked" titles, mixed together so every saved title gets a turn. Library titles are matched to TMDB once and remembered. */
-const TREF = store.get("tmdbref", {});
-async function tmdbRef(it) {
+const TREF = store.get("tmdbref2", {});
+async function cachedRef(it) {                // the strict title match (tmdbRef), remembered once found
   if (it.tmdb) return it.tmdb;
-  if (it.id in TREF) return TREF[it.id];
-  let ref = null;
-  try {
-    const j = await tget("/search/multi", {query: it.title});
-    const y = String(it.year || "").slice(0, 4);
-    const ok = (j.results || []).filter(r => r.media_type === "movie" || r.media_type === "tv");
-    const r = ok.find(r => y && String(r.release_date || r.first_air_date || "").startsWith(y)) || ok[0];
-    if (r) ref = {type: r.media_type, id: r.id};
-  } catch (e) { return null; }                       // couldn't ask: try again next time
-  TREF[it.id] = ref; store.set("tmdbref", TREF);
+  if (TREF[it.id]) return TREF[it.id];
+  const ref = await tmdbRef(it);
+  if (ref) { TREF[it.id] = ref; store.set("tmdbref2", TREF); }
   return ref;
 }
 async function savedSeeds(type) {
   const ids = [...favs].reverse().filter(id => BY[id]).slice(0, 24);   // newest saves first
-  const refs = await Promise.all(ids.map(id => tmdbRef(BY[id]).catch(() => null)));
+  const refs = await Promise.all(ids.map(id => cachedRef(BY[id]).catch(() => null)));
   return refs.filter(r => r && r.type === type).slice(0, 8);
 }
 async function loadSavedTaste(key, st) {
@@ -6939,6 +6979,7 @@ function openProfile() {
   const rows = [
     canUpd ? row("data-pfupd", "⬆️", "Check for updates", ver ? `You have v${esc(ver)}` : "See if a newer VibeSync is out") : "",
     row(`data-tool="sync"`, "🔄", "Sync", "Move your data to another device"),
+    tv ? "" : row("data-passport", "🛂", "Cinema Passport", "Your countries and languages, stamped"),
     row(`data-tool="wrapped"`, "🎁", "Wrapped", "Your year on VibeSync")].join("");
   openXP(xpTop("Profile", "") + acct + `<div class="pf-list">${rows}</div>`, "acct");
 }
@@ -6969,19 +7010,7 @@ document.addEventListener("click", e => {
 /* ───────────── Android Back (the app asks the page: window.vsBack()) ─────────────
    Back always closes the thing on top, one layer at a time, exactly like its ✕ or ← button would. From another tab
    it returns to For you. Only on For you with nothing open does it answer false, and the app closes. */
-/* The Lounge is a separate screen laid over this one. This page stays loaded underneath (quiet: no sound, no
-   scenery), so coming back from the Lounge shows it exactly as it was, with no reload. */
-var LOUNGE = false;
-function setLounge(on) {
-  if (on === LOUNGE) return;
-  LOUNGE = on;
-  try { if (AU.rt) { if (on) { AU.rt.ctx.suspend(); ytPause(); } else if (AU.on && AU.style) { AU.rt.ctx.resume(); ytResume(); } } } catch (e) {}
-}
 window.vsBack = () => {
-  if (LOUNGE) {                                              // Back inside the Lounge: return to this page
-    send("streamlit:setComponentValue", {value: {theme: document.documentElement.dataset.theme, page: "discover", n: Date.now()}, dataType: "json"});
-    return true;
-  }
   const on = s => { const e = $(s); return !!e && e.classList.contains("on"); };
   const off = s => { $(s).classList.remove("on"); return true; };
   try {
@@ -7014,6 +7043,294 @@ window.vsBack = () => {
   };
   setTimeout(() => setInterval(sweep, 350), 2500);
 })();
+
+/* ═════════════ Daily Poster Puzzle ═════════════
+   One mystery movie a day, the same for everyone (picked from the day's number, India's date). The poster starts as
+   a few big pixels; every wrong guess or skip sharpens it and opens a clue. Six tries. Streaks live on this device. */
+const PZ_START = Date.UTC(2026, 10, 18);                     // puzzle #1 = 18 Nov 2026
+const PZ_TRIES = 6, PZ_PIX = [7, 10, 15, 22, 34, 52];
+// languages take turns through the week, so it isn't always Hollywood
+const PZ_POOLS = ["te", "en", "hi", "ta", "en", "ml", "te"];
+const PZ_CLUES = ["Year", "Language", "Genre", "Lead actor", "Director"];
+const PZ = {data: store.get("puzzle", {days: {}, played: 0, won: 0, streak: 0, best: 0, last: 0, dist: [0, 0, 0, 0, 0, 0]}), t: 0, seq: 0, ans: null};
+const pzDay = () => Math.floor((Date.parse(todayIN() + "T00:00:00Z") - PZ_START) / 864e5) + 1;
+const pzHash = n => { let x = (n * 2654435761) >>> 0; x ^= x >>> 15; x = Math.imul(x, 2246822519) >>> 0; x ^= x >>> 13; return x >>> 0; };
+const pzSave = () => store.set("puzzle", PZ.data);
+const pzToday = () => PZ.data.days[pzDay()] || (PZ.data.days[pzDay()] = {g: [], done: false, won: false});
+const langName = c => { try { return new Intl.DisplayNames(["en"], {type: "language"}).of(c); } catch (e) { return c; } };
+
+async function pzAnswer() {
+  const d = pzDay(), cached = store.get("puzzleAns", null);
+  if (cached && cached.d === d) return cached;
+  const h = pzHash(d), lang = PZ_POOLS[d % PZ_POOLS.length];
+  // the most-voted films in that language: an order that barely moves, so everyone gets the same film today
+  const j = await tget("/discover/movie", {with_original_language: lang, sort_by: "vote_count.desc", "vote_count.gte": lang === "en" ? 3000 : 60,
+    include_adult: "false", page: 1 + (h % (lang === "en" ? 10 : 4))});
+  let list = (j.results || []).filter(r => r.poster_path);
+  if (!list.length) list = ((await tget("/discover/movie", {with_original_language: lang, sort_by: "vote_count.desc", include_adult: "false", page: 1})).results || []).filter(r => r.poster_path);
+  if (!list.length) throw new Error("no film");
+  const r = list[(h >>> 8) % list.length];
+  const [det, cr] = await Promise.all([tget(`/movie/${r.id}`, {}), tget(`/movie/${r.id}/credits`, {}).catch(() => ({}))]);
+  const ans = {d, id: r.id, title: det.title || r.title, orig: det.original_title || "", year: String(det.release_date || r.release_date || "").slice(0, 4),
+    lang: det.original_language || lang, genres: (det.genres || []).map(g => g.name).slice(0, 2).join(", "),
+    actor: ((cr.cast || [])[0] || {}).name || "", director: ((cr.crew || []).find(c => c.job === "Director") || {}).name || "",
+    poster: det.poster_path || r.poster_path, raw: r};
+  store.set("puzzleAns", ans);
+  return ans;
+}
+function pzClue(ans, i) {
+  return [ans.year, langName(ans.lang), ans.genres, ans.actor, ans.director][i] || "—";
+}
+
+async function openPuzzle() {
+  const seq = ++PZ.seq;
+  openXP(xpTop("Poster Puzzle", `#${pzDay()} · Guess today's movie from its poster`) + `<div id="pz"><div class="empty">Loading today's puzzle…</div></div>`, "puzzle");
+  try { PZ.ans = await pzAnswer(); } catch (e) {
+    if (seq === PZ.seq && $("#pz")) $("#pz").innerHTML = `<div class="empty">Couldn't load today's puzzle. Check your connection and try again.</div>`;
+    return;
+  }
+  if (seq !== PZ.seq || !$("#pz")) return;
+  pzRender();
+}
+function pzRender() {
+  const box = $("#pz"); if (!box || !PZ.ans) return;
+  const a = PZ.ans, t = pzToday(), wrong = t.g.filter(g => !g.ok).length;
+  const clues = PZ_CLUES.map((c, i) => i < wrong || t.done
+    ? `<div class="pz-c on"><small>${c}</small><b>${esc(pzClue(a, i))}</b></div>`
+    : `<div class="pz-c"><small>${c}</small><b>${i === wrong ? "Unlocks on a wrong try" : "🔒"}</b></div>`).join("");
+  const tries = Array.from({length: PZ_TRIES}, (_, i) => { const g = t.g[i];
+    return `<span class="pz-t ${g ? g.ok ? "ok" : "no" : ""}" title="${g ? esc(g.t) : ""}"></span>`; }).join("");
+  const done = t.done ? `<div class="pz-end">
+      <h3>${t.won ? `🎉 Got it in ${t.g.length}!` : "😅 Not this time"}</h3>
+      <p>It was <b>${esc(a.title)}</b> (${esc(a.year)})</p>
+      <div class="acts"><button class="btn tint" data-pzopen>Open the movie</button><button class="btn soft" data-pzshare>Share result</button></div>
+      <div class="pz-stats">${pzStats()}</div>
+      <p class="pz-next" id="pznext"></p></div>`
+    : `<div class="pz-in"><div class="sfield">${ICON.search}<input id="pzq" type="search" placeholder="Type a movie name…" autocomplete="off" enterkeyhint="search" aria-label="Your guess"></div>
+       <div id="pzsug" class="pz-sug" role="listbox"></div>
+       <button class="btn soft pz-skip" data-pzskip>Skip · show me a clue</button></div>`;
+  const past = t.g.length ? `<div class="pz-g">${t.g.map(g => `<span class="${g.ok ? "ok" : "no"}">${g.ok ? "✓" : "✕"} ${esc(g.t)}</span>`).join("")}</div>` : "";
+  box.innerHTML = `<div class="pz-wrap"><div class="pz-pic"><canvas id="pzc" width="342" height="513" aria-label="Today's mystery poster"></canvas></div>
+    <div class="pz-side"><div class="pz-tries" aria-label="${t.g.length} of ${PZ_TRIES} tries used">${tries}</div>${past}${done}<div class="pz-clues">${clues}</div></div></div>`;
+  pzDraw(t.done ? 0 : PZ_PIX[Math.min(wrong, PZ_PIX.length - 1)]);
+  if (t.done) pzTick(); else setTimeout(() => { const q = $("#pzq"); if (q && !("ontouchstart" in window)) q.focus(); }, 60);
+}
+function pzDraw(px) {
+  const c = $("#pzc"); if (!c || !PZ.ans) return;
+  const img = new Image();
+  img.onload = () => {
+    const x = c.getContext("2d");
+    if (!px) { x.imageSmoothingEnabled = true; x.drawImage(img, 0, 0, c.width, c.height); return; }
+    const w = px, h = Math.round(px * 1.5), s = document.createElement("canvas"); s.width = w; s.height = h;
+    s.getContext("2d").drawImage(img, 0, 0, w, h);
+    x.imageSmoothingEnabled = false; x.drawImage(s, 0, 0, c.width, c.height);
+  };
+  img.src = `https://image.tmdb.org/t/p/w342${PZ.ans.poster}`;
+}
+function pzStats() {
+  const s = PZ.data, max = Math.max(1, ...s.dist);
+  return `<div class="pz-n"><b>${s.played}</b><small>Played</small></div><div class="pz-n"><b>${s.played ? Math.round(s.won / s.played * 100) : 0}%</b><small>Won</small></div>
+    <div class="pz-n"><b>${s.streak}</b><small>Streak</small></div><div class="pz-n"><b>${s.best}</b><small>Best</small></div>
+    <div class="pz-dist">${s.dist.map((n, i) => `<div><span>${i + 1}</span><i style="width:${Math.max(8, n / max * 100)}%">${n}</i></div>`).join("")}</div>`;
+}
+function pzTick() {
+  clearInterval(PZ.t);
+  const f = () => { const el = $("#pznext"); if (!el) return clearInterval(PZ.t);
+    const ms = Date.parse(todayIN() + "T00:00:00Z") + 864e5 - (Date.now() + 5.5 * 36e5);
+    const h = Math.floor(ms / 36e5), m = Math.floor(ms % 36e5 / 6e4);
+    el.textContent = ms > 0 ? `Next puzzle in ${h}h ${m}m` : "A new puzzle is ready"; };
+  f(); PZ.t = setInterval(f, 30000);
+}
+function pzGuess(g) {
+  const t = pzToday(); if (t.done || !PZ.ans) return;
+  const a = PZ.ans;
+  const ok = !!g && (g.id === a.id || (norm(g.t) === norm(a.title) && String(g.y || "") === a.year));
+  t.g.push({t: g ? g.t : "Skipped", ok});
+  if (ok || t.g.length >= PZ_TRIES) {
+    t.done = true; t.won = ok;
+    const s = PZ.data, d = pzDay();
+    s.played++;
+    if (ok) { s.won++; s.dist[t.g.length - 1]++; s.streak = s.last === d - 1 ? s.streak + 1 : 1; s.best = Math.max(s.best, s.streak); s.last = d; }
+    else s.streak = 0;
+    buzz(); toast(ok ? "🎉 You got it!" : `It was ${a.title}`);
+  } else toast(g ? "Not this one — here's a clue" : "Here's a clue");
+  // keep only the last 60 days of history
+  Object.keys(PZ.data.days).map(Number).sort((x, y) => x - y).slice(0, -60).forEach(k => delete PZ.data.days[k]);
+  pzSave(); pzRender();
+}
+let pzT = null, pzSeq = 0;
+function pzSuggest(q) {
+  clearTimeout(pzT);
+  const box = $("#pzsug"); if (!box) return;
+  if (q.trim().length < 2) { box.innerHTML = ""; return; }
+  const seq = ++pzSeq;
+  pzT = setTimeout(async () => {
+    let r = [];
+    try { r = ((await tget("/search/movie", {query: q.trim(), include_adult: "false"})).results || []).slice(0, 7); } catch (e) {}
+    if (seq !== pzSeq || !$("#pzsug")) return;
+    const used = new Set(pzToday().g.map(g => g.t));
+    $("#pzsug").innerHTML = r.length ? r.map(m => { const y = String(m.release_date || "").slice(0, 4);
+      return `<button class="pz-s" data-pzg="${m.id}" data-pzt="${esc(m.title)}" data-pzy="${y}" ${used.has(m.title) ? "disabled" : ""}>
+        ${m.poster_path ? `<img src="https://image.tmdb.org/t/p/w92${m.poster_path}" alt="" loading="lazy">` : `<span class="pz-np">🎬</span>`}
+        <span><b>${esc(m.title)}</b><small>${y || "—"}${m.original_title && m.original_title !== m.title ? ` · ${esc(m.original_title)}` : ""}</small></span></button>`; }).join("")
+      : `<div class="pz-none">No movie found for “${esc(q.trim())}”</div>`;
+  }, 220);
+}
+function pzShare() {
+  const t = pzToday(), squares = t.g.map(g => g.ok ? "🟩" : "🟥").join("");
+  const text = `VibeSync Poster Puzzle #${pzDay()} ${squares} ${t.won ? t.g.length : "X"}/${PZ_TRIES}\nhttps://vibesync-saianish.streamlit.app/`;
+  if (navigator.share) { navigator.share({text}).catch(() => {}); return; }
+  const done = () => toast("Result copied — paste it anywhere");
+  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(done).catch(() => {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) { toast("Couldn't copy"); } ta.remove();
+  });
+}
+document.addEventListener("input", e => { if (e.target.id === "pzq") pzSuggest(e.target.value); });
+document.addEventListener("click", e => {
+  const t = e.target.closest && e.target.closest("[data-pzg],[data-pzskip],[data-pzshare],[data-pzopen],[data-passport],[data-pvc],[data-pvsug]"); if (!t) return;
+  if (t.dataset.pzg) pzGuess({id: +t.dataset.pzg, t: t.dataset.pzt, y: t.dataset.pzy});
+  else if (t.hasAttribute("data-pzskip")) pzGuess(null);
+  else if (t.hasAttribute("data-pzshare")) pzShare();
+  else if (t.hasAttribute("data-pzopen")) { const it = fromTmdb(Object.assign({media_type: "movie"}, PZ.ans.raw), "movie"); if (it) { BY[it.id] = BY[it.id] || it; openSheet(it.id); } }
+  else if (t.hasAttribute("data-passport")) openPassport();
+  else if (t.dataset.pvc) pvPick(t.dataset.pvc);
+  else if (t.dataset.pvsug) { const it = BY[t.dataset.pvsug]; if (it) openSheet(it.id); }
+});
+
+/* ═════════════ Cinema Passport ═════════════
+   Every title you've marked Watched stamps its country (on a world map) and its language. Countries come from
+   TMDB (looked up once per title and remembered). Tap a country you haven't been to for its best film streaming
+   in India. */
+const PV = {info: store.get("passport", {}), map: null, sel: "", seq: 0};
+const PV_MAP_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json";
+// world-atlas country names that differ from the usual English names
+const PV_NAMES = {US: "United States of America", CD: "Dem. Rep. Congo", CG: "Congo", BA: "Bosnia and Herz.", CF: "Central African Rep.",
+  DO: "Dominican Rep.", SZ: "eSwatini", SS: "S. Sudan", MK: "Macedonia", GQ: "Eq. Guinea", MM: "Myanmar", PS: "Palestine", CZ: "Czechia",
+  FK: "Falkland Is.", EH: "W. Sahara", SB: "Solomon Is.", TL: "Timor-Leste", KR: "South Korea", KP: "North Korea", CI: "Côte d'Ivoire",
+  RU: "Russia", IR: "Iran", SY: "Syria", LA: "Laos", VN: "Vietnam", BO: "Bolivia", VE: "Venezuela", TZ: "Tanzania", MD: "Moldova", TW: "Taiwan"};
+const countryName = c => { try { return new Intl.DisplayNames(["en"], {type: "region"}).of(c); } catch (e) { return c; } };
+const PV_BADGES = [
+  ["🛫", "First stamp", "Watch a title and get your first country", s => s.c.size >= 1],
+  ["🌏", "Across the seas", "A title from outside India", s => [...s.c].some(c => c !== "IN")],
+  ["🧭", "Globetrotter", "Titles from 5 countries", s => s.c.size >= 5],
+  ["🌍", "World cinema", "Titles from 10 countries", s => s.c.size >= 10],
+  ["🗺️", "Explorer", "Titles from 20 countries", s => s.c.size >= 20],
+  ["🌴", "South Indian set", "Telugu, Tamil, Malayalam and Kannada", s => ["te", "ta", "ml", "kn"].every(l => s.l[l])],
+  ["🇮🇳", "Bharat tour", "5 Indian languages", s => ["te", "ta", "ml", "kn", "hi", "bn", "mr", "gu", "pa", "or", "as"].filter(l => s.l[l]).length >= 5],
+  ["🗣️", "Polyglot", "Titles in 8 languages", s => Object.keys(s.l).length >= 8],
+  ["🏯", "Anime pilgrim", "A Japanese title", s => !!s.l.ja],
+  ["🎎", "K-wave", "A Korean title", s => !!s.l.ko],
+  ["📼", "Time traveller", "Titles from 5 decades", s => s.dec.size >= 5],
+  ["🎞️", "Old soul", "A title from before 1980", s => [...s.dec].some(d => d < 1980)],
+];
+function pvWatched() {
+  return Object.entries(X.st || {}).filter(([, v]) => v && v.s === "watched").map(([id, v]) => {
+    if (!BY[id] && v.meta) BY[id] = rehydrate(v.meta);
+    return BY[id];
+  }).filter(Boolean);
+}
+async function pvLookup(it) {
+  if (PV.info[it.id]) return PV.info[it.id];
+  const ref = it.tmdb || await cachedRef(it);
+  if (!ref) return null;
+  const d = await tget(`/${ref.type}/${ref.id}`, {});
+  const c = (d.origin_country && d.origin_country.length ? d.origin_country : (d.production_countries || []).map(p => p.iso_3166_1)).slice(0, 3);
+  const info = {c, l: d.original_language || "", y: +String(d.release_date || d.first_air_date || "").slice(0, 4) || 0};
+  PV.info[it.id] = info; store.set("passport", PV.info);
+  return info;
+}
+function pvSummary() {
+  const s = {c: new Map(), l: {}, dec: new Set(), n: 0};
+  pvWatched().forEach(it => { const i = PV.info[it.id]; if (!i) return; s.n++;
+    i.c.forEach(c => s.c.set(c, (s.c.get(c) || 0) + 1));
+    if (i.l) s.l[i.l] = (s.l[i.l] || 0) + 1;
+    if (i.y) s.dec.add(Math.floor(i.y / 10) * 10); });
+  return s;
+}
+// the world map: TopoJSON decoded here (no extra library), drawn as one SVG path per country
+function pvTopo(topo) {
+  const t = topo.transform, arcs = topo.arcs.map(a => { let x = 0, y = 0;
+    return a.map(p => { x += p[0]; y += p[1]; return [x * t.scale[0] + t.translate[0], y * t.scale[1] + t.translate[1]]; }); });
+  const arc = i => i < 0 ? arcs[~i].slice().reverse() : arcs[i];
+  const ring = r => r.flatMap((i, k) => { const a = arc(i); return k ? a.slice(1) : a; });
+  const W = 1000, H = 470, px = ([lon, lat]) => `${((lon + 180) / 360 * W).toFixed(1)},${((84 - lat) / 142 * H).toFixed(1)}`;
+  return {W, H, list: topo.objects.countries.geometries.map(g => {
+    const polys = g.type === "Polygon" ? [g.arcs] : g.type === "MultiPolygon" ? g.arcs : [];
+    const d = polys.map(p => p.map(r => "M" + ring(r).filter(([, lat]) => lat > -58).map(px).join("L") + "Z").join("")).join("");
+    return {name: (g.properties || {}).name || "", d};
+  }).filter(c => c.d && c.name !== "Antarctica")};
+}
+async function pvMap() {
+  if (PV.map) return PV.map;
+  const r = await fetch(PV_MAP_URL); PV.map = pvTopo(await r.json());
+  return PV.map;
+}
+async function openPassport() {
+  const seq = ++PV.seq;
+  openXP(xpTop("Cinema Passport", "Every title you mark Watched stamps its country and language") + `<div id="pv"><div class="empty">Opening your passport…</div></div>`, "passport");
+  const list = pvWatched();
+  pvRender();
+  pvMap().then(() => { if (seq === PV.seq) pvRender(); }).catch(() => {});
+  // look up countries for titles not stamped yet, a few at a time, updating as they arrive
+  const todo = list.filter(it => !PV.info[it.id]);
+  for (let i = 0; i < todo.length; i += 4) {
+    await Promise.all(todo.slice(i, i + 4).map(it => pvLookup(it).catch(() => null)));
+    if (seq !== PV.seq || !$("#pv")) return;
+    pvRender();
+  }
+}
+function pvRender() {
+  const box = $("#pv"); if (!box) return;
+  const s = pvSummary(), all = pvWatched().length;
+  if (!all) { box.innerHTML = `<div class="empty">Your passport is empty. Mark titles as <b>Watched</b> (on a title, or by swiping) and each one stamps its country and language here.</div>`; return; }
+  const m = PV.map, names = m ? new Map(m.list.map(c => [norm(c.name), c])) : null;
+  const onMap = new Map();
+  if (m) s.c.forEach((n, code) => { const c = names.get(norm(PV_NAMES[code] || "")) || names.get(norm(countryName(code))); if (c) onMap.set(c.name, code); });
+  const codeOf = name => onMap.get(name) || "";
+  const svg = m ? `<svg class="pv-map" viewBox="0 0 ${m.W} ${m.H}" role="img" aria-label="World map of the countries you've watched">${m.list.map(c => {
+      const code = codeOf(c.name); return `<path d="${c.d}" class="${code ? "on" : ""}${PV.sel && (PV.sel === code || PV.sel === "n:" + c.name) ? " sel" : ""}" data-pvc="${code || "n:" + esc(c.name)}"><title>${esc(c.name)}</title></path>`; }).join("")}</svg>`
+    : `<div class="pv-map pv-load">Loading the map…</div>`;
+  const countries = [...s.c.entries()].sort((a, b) => b[1] - a[1]);
+  const langs = Object.entries(s.l).sort((a, b) => b[1] - a[1]);
+  const badges = PV_BADGES.map(([e, t, d, f]) => { const ok = f(s);
+    return `<div class="pv-b ${ok ? "on" : ""}"><span>${ok ? e : "🔒"}</span><b>${t}</b><small>${d}</small></div>`; }).join("");
+  const pending = all - s.n;
+  box.innerHTML = `<div class="pv-top"><div><b>${s.c.size}</b><small>${s.c.size === 1 ? "country" : "countries"}</small></div>
+      <div><b>${langs.length}</b><small>${langs.length === 1 ? "language" : "languages"}</small></div><div><b>${s.n}</b><small>titles stamped</small></div></div>
+    ${pending ? `<p class="pv-p">Stamping ${pending} more title${pending === 1 ? "" : "s"}…</p>` : ""}
+    ${svg}<div id="pvsel">${PV.sel ? "" : `<p class="pv-p">Tap a dark country to find its best film streaming in India.</p>`}</div>
+    <h3 class="pv-h">Countries</h3><div class="chips">${countries.map(([c, n]) => `<button class="chip" data-pvc="${c}">${esc(countryName(c))} <b>${n}</b></button>`).join("")}</div>
+    <h3 class="pv-h">Language stamps</h3><div class="pv-stamps">${langs.map(([l, n]) => `<div class="pv-st"><b>${esc(langName(l))}</b><small>${n} title${n === 1 ? "" : "s"}</small></div>`).join("")}</div>
+    <h3 class="pv-h">Badges</h3><div class="pv-badges">${badges}</div>`;
+  if (PV.sel) pvPick(PV.sel, true);
+}
+async function pvPick(code, again) {
+  if (!again && PV.sel === code) { PV.sel = ""; pvRender(); return; }
+  PV.sel = code;
+  if (!again) { $$("#pv .pv-map path.sel").forEach(p => p.classList.remove("sel")); $$(`#pv .pv-map path[data-pvc="${CSS.escape(code)}"]`).forEach(p => p.classList.add("sel")); }
+  const out = $("#pvsel"); if (!out) return;
+  if (!code.startsWith("n:")) {
+    const titles = pvWatched().filter(it => (PV.info[it.id] || {c: []}).c.includes(code));
+    out.innerHTML = `<div class="pv-sel"><h3>${esc(countryName(code))}</h3><p class="pv-p">${titles.length} watched</p>${grid(titles.slice(0, 12))}</div>`;
+    return;
+  }
+  // a country you haven't been to: we only know its map name, so find its code from that name
+  const name = code.slice(2), seq = PV.pseq = (PV.pseq || 0) + 1;
+  out.innerHTML = `<div class="pv-sel"><h3>${esc(name)}</h3><div class="checking"><i></i>Finding its best film on Indian streaming…</div></div>`;
+  let iso = Object.keys(PV_NAMES).find(k => PV_NAMES[k] === name) || "";
+  if (!iso) for (let a = 65; a <= 90 && !iso; a++) for (let b = 65; b <= 90; b++) { const c = String.fromCharCode(a, b); if (norm(countryName(c)) === norm(name)) { iso = c; break; } }
+  let picks = [];
+  if (iso) try {
+    const j = await tget("/discover/movie", Object.assign({}, STREAM, {with_origin_country: iso, sort_by: "vote_average.desc", "vote_count.gte": 150}));
+    picks = (j.results || []).map(r => fromTmdb(r, "movie")).filter(Boolean).slice(0, 6);
+  } catch (e) {}
+  if (seq !== PV.pseq || PV.sel !== code || !$("#pvsel")) return;
+  picks.forEach(it => { BY[it.id] = BY[it.id] || it; });
+  $("#pvsel").innerHTML = `<div class="pv-sel"><h3>${esc(name)}</h3>${picks.length
+    ? `<p class="pv-p">Not stamped yet. Its best-rated films streaming in India:</p>${grid(picks)}`
+    : `<p class="pv-p">Not stamped yet. No films from ${esc(name)} are streaming in India right now.</p>`}</div>`;
+}
 /* ───────────── Home spotlight on the website: the same Netflix-style poster row as the phone app ─────────────
    (a copy of the phone app's assets/phone.js row: up to 50 posters, native glide, press-and-hold "Slide to browse").
    On a computer, arrows on the row move it too. */
@@ -7208,7 +7525,6 @@ window.addEventListener("message", e => {
   const m = e.data;
   if (!m || m.type !== "streamlit:render") return;
   args = m.args || {};
-  setLounge(!!args.lounge);
   if (args.ytKey) YTS.key = String(args.ytKey).trim();
   if (args.omdbKey) OMDB.key = String(args.omdbKey).trim();
   if (args.firebase && D && !AUTH.cfg) { setAuthConfig(args.firebase); authBoot(); }

@@ -590,7 +590,7 @@ MOODS: dict[str, dict] = {
     "low":       {"label": "Low-key sad", "emoji": "😢", "tags": ["comfort", "fun"],
                   "line": "A soft landing. These always help."},
     "squad":     {"label": "Squad mode",  "emoji": "🎉", "tags": ["social", "drama"],
-                  "line": "Group-watch picks. Open the Lounge and pull your friends in."},
+                  "line": "Group-watch picks for the whole gang."},
     "brainy":    {"label": "Big-brain",   "emoji": "🧠", "tags": ["mind"],
                   "line": "Plot twists and slow burns."},
 }

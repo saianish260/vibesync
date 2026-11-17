@@ -16,7 +16,7 @@ st.set_page_config(page_title="VibeSync", page_icon="🎬", layout="wide", initi
 # modules in memory, which breaks imports of anything new. Reload any module whose file
 # changed since it was loaded (dependency order matters).
 _OWN_MODULES = ["core.config", "core.emoji", "core.data", "core.store", "core.cards", "core.styles",
-                "core.state", "core.watchlinks", "core.langs", "core.news", "core.imdb", "core.book", "views.discover", "views.lounge"]
+                "core.watchlinks", "core.langs", "core.news", "core.imdb", "core.book", "views.discover"]
 
 
 def _file_mtime(mod) -> float | None:
@@ -35,7 +35,7 @@ for _name in _OWN_MODULES:
             pass
 
 from core import styles             # noqa: E402  (page config must come first)
-from views import discover, lounge  # noqa: E402
+from views import discover  # noqa: E402
 
 for _name in _OWN_MODULES:          # remember which version of each file is loaded
     if _name in sys.modules:
@@ -43,49 +43,20 @@ for _name in _OWN_MODULES:          # remember which version of each file is loa
 
 if "theme" not in st.session_state:
     st.session_state.theme = "cinema"
-# Invite links (?room=CODE) open straight into the Lounge
-if "page" not in st.session_state:
-    st.session_state.page = "lounge" if st.query_params.get("room") else "discover"
+styles.inject(st.session_state.theme, "discover", st.session_state.get("title_palette"))
 
-
-def _to_discover() -> None:
-    st.session_state.page = "discover"
-
-
-styles.inject(st.session_state.theme, st.session_state.page, st.session_state.get("title_palette"))
-
-# The Discover screen is always on the page, so it stays loaded while the Lounge is open (hidden underneath) and
-# coming back shows it exactly as it was, with no reload. It reports {theme, page, n}; n is a nonce so each tap is
-# handled exactly once (a component keeps returning its last value on every rerun).
-in_lounge = st.session_state.page == "lounge"
-value = discover.render(st.session_state.theme, lounge=in_lounge)
+# Discover reports {theme, palette, n}; n is a nonce so each change is handled exactly once (a component keeps
+# returning its last value on every rerun).
+value = discover.render(st.session_state.theme)
 if isinstance(value, dict):
     nonce = value.get("n")
     if nonce is None or nonce != st.session_state.get("_discover_nonce"):
         st.session_state._discover_nonce = nonce
-        changed = False
-        picked = value.get("theme")
-        if picked in styles.THEMES and picked != st.session_state.theme:
-            st.session_state.theme = picked     # keep page chrome + Lounge in the same look
-            changed = True
-        if "palette" in value:                 # a title theme (or None = default look) for the Lounge too
+        if "palette" in value:                 # a title theme (or None = default look)
             pal = styles.custom_palette(value.get("palette"))
             if pal != st.session_state.get("title_palette"):
                 st.session_state.title_palette = pal
-        if nonce is not None and value.get("page") in ("lounge", "discover") and value.get("page") != st.session_state.page:
-            st.session_state.page = value.get("page")   # "discover": Android Back pressed inside the Lounge
-            changed = True
-        if changed:
+        picked = value.get("theme")
+        if picked in styles.THEMES and picked != st.session_state.theme:
+            st.session_state.theme = picked     # keep the page around it in the same look
             st.rerun()
-
-if in_lounge:
-    # the Discover screen stays loaded but out of sight
-    st.markdown('<style>[data-testid="stElementContainer"]:has(iframe[data-testid="stCustomComponentV1"]),'
-                '[data-testid="stElementContainer"]:has(iframe[title*="vibesync_discover"]),iframe[title*="vibesync_discover"],'
-                '.st-key-discover,iframe[data-testid="stCustomComponentV1"]{display:none!important}</style>', unsafe_allow_html=True)
-    top_l, top_r = st.columns([1, 1], vertical_alignment="center")
-    with top_l:
-        st.markdown('<div class="vs-mark">Vibe<i>Sync</i></div>', unsafe_allow_html=True)
-    with top_r:
-        st.button("← Discover", key="back_discover", on_click=_to_discover)
-    lounge.render()
