@@ -7437,7 +7437,8 @@ function openDegrees() {
   ++SD.seq;
   openXP(xpTop("Six Degrees", "Connect any two stars through the films they've made") + `<div id="sd">
     <div class="sd-pick">${sdSlot("a")}<span class="sd-and" aria-hidden="true">✦</span>${sdSlot("b")}</div>
-    <div class="acts"><button class="btn tint" data-sdgo ${SD.a && SD.b ? "" : "disabled"}>Connect them</button><button class="btn soft" data-sdday>🎯 Today's challenge</button></div>
+    <div class="acts"><button class="btn tint" data-sdgo ${SD.a && SD.b ? "" : "disabled"}>Connect them</button><button class="btn soft" data-sdday>🎯 Today's challenge</button>
+      <button class="btn soft" data-sdreset ${SD.a || SD.b ? "" : "disabled"}>↺ Reset</button></div>
     <div id="sdout"></div></div>`, "degrees");
 }
 function sdSlot(k) {
@@ -7450,6 +7451,7 @@ const sdFace = p => p.profile_path ? `<img class="sd-face" src="https://image.tm
 function sdRefresh() {
   ["a", "b"].forEach(k => { const el = $(`[data-sdslot="${k}"]`); if (el) el.outerHTML = sdSlot(k); });
   const go = $("[data-sdgo]"); if (go) go.disabled = !(SD.a && SD.b);
+  const rs = $("[data-sdreset]"); if (rs) rs.disabled = !(SD.a || SD.b);
 }
 let sdT = null, sdQs = 0;
 function sdSuggest(k, q) {
@@ -7512,12 +7514,15 @@ function sdDraw(chain) {
 }
 document.addEventListener("input", e => { const k = e.target.dataset && e.target.dataset.sdq; if (k) sdSuggest(k, e.target.value); });
 document.addEventListener("click", e => {
-  const t = e.target.closest && e.target.closest("[data-sdp],[data-sdclear],[data-sdgo],[data-sdday],[data-sdswap]"); if (!t) return;
+  const t = e.target.closest && e.target.closest("[data-sdp],[data-sdclear],[data-sdgo],[data-sdday],[data-sdswap],[data-sdreset]"); if (!t) return;
   if (t.dataset.sdp) { SD[t.dataset.sdp] = {id: +t.dataset.id, name: t.dataset.name, profile_path: t.dataset.img || null}; sdRefresh();
     const other = $(`[data-sdq="${t.dataset.sdp === "a" ? "b" : "a"}"]`); if (other) other.focus(); else sdGo(); }
   else if (t.dataset.sdclear) { SD[t.dataset.sdclear] = null; sdRefresh(); const q = $(`[data-sdq="${t.dataset.sdclear}"]`); if (q) q.focus(); }
   else if (t.hasAttribute("data-sdgo")) sdGo();
   else if (t.hasAttribute("data-sdday")) sdDaily();
+  else if (t.hasAttribute("data-sdreset")) {             // both stars and the result gone, any search stopped
+    SD.a = SD.b = null; SD.seq++; sdRefresh(); const o = $("#sdout"); if (o) o.innerHTML = "";
+    const q = $('[data-sdq="a"]'); if (q) q.focus(); }
   else if (t.hasAttribute("data-sdswap")) { [SD.a, SD.b] = [SD.b, SD.a]; sdRefresh(); sdGo(); }
 });
 /* ───────────── Home spotlight on the website: the same Netflix-style poster row as the phone app ─────────────
