@@ -1416,9 +1416,7 @@ const scoreOf = it => notOutYet(it) ? null : (IMFRESH[it.id] && IMFRESH[it.id].r
 
 /* ───────────── cards ───────────── */
 function provBadges(it) {
-  if (it.offers.length && it.kind !== "sports")
-    return `<span class="provs">${it.offers.slice(0, 3).map(o => { const p = D.providers[o.p];
-      return `<i class="pc" style="--pcol:${p.color}" title="${esc(p.name)}">${esc(p.name[0])}</i>`; }).join("")}</span>`;
+  // no streaming-app letters on posters: where to watch is shown inside each title
   if (!it.offers.length && !it.tmdb) return `<span class="ns">Not streaming in India</span>`;
   return "";
 }
@@ -1757,6 +1755,7 @@ function toggleFav(id) {
   });
   const it = BY[id];
   if (it && it.tmdb) { const m = store.get("favMeta", {}); if (favs.has(id)) m[id] = slim(it); else delete m[id]; store.set("favMeta", m); }
+  try { delete liveState["taste|movie"]; delete liveState["taste|tv"]; } catch (e) {}   // suggestions follow Saved next time
   if (state.tab === "saved") setTab("saved");
   buzz();
 }
@@ -4455,7 +4454,7 @@ async function loadLive(key) {
     const def = liveDef(key);
     let pg = st.page + 1;
     if (rnd) pg = st.order ? st.order.shift() : 1 + Math.floor(Math.random() * 5);
-    let j = await tget(def.path, Object.assign({page: pg}, def.params));
+    let j = (key.startsWith("taste|") && await loadSavedTaste(key, st)) || await tget(def.path, Object.assign({page: pg}, def.params));
     if (rnd && !st.order) {
       if (!(j.results || []).length && pg > 1) { pg = 1; j = await tget(def.path, Object.assign({page: 1}, def.params)); }
       const max = Math.min(j.total_pages || 1, 15);
@@ -4464,7 +4463,7 @@ async function loadLive(key) {
     if (rnd) { st.page += 1; st.total = 99; } else { st.page = j.page || st.page + 1; st.total = j.total_pages || 1; }
     if (rnd && j.results) j = Object.assign({}, j, {results: shuffle(j.results.slice())});
     const seen = new Set(st.ids);
-    const fresh = (j.results || []).map(r => fromTmdb(r, def.type)).filter(it => it && !isWatched(it.id) && !seen.has(it.id) && (seen.add(it.id), true));
+    const fresh = (j.results || []).map(r => fromTmdb(r, def.type)).filter(it => it && !favs.has(it.id) && !isWatched(it.id) && !seen.has(it.id) && (seen.add(it.id), true));
     // rows filtered to "streaming in India" vouch for their titles; trending lists also carry upcoming films
     if (def.params && def.params.with_watch_monetization_types) fresh.forEach(it => { if (it.tmdb) it.streams = true; });
     fresh.forEach(it => st.ids.push(it.id));
@@ -5069,8 +5068,42 @@ function deckDecide(v, el, speed) {
 
 /* "Picked for your taste": live rows at the top of For you once VibeSync has learned something */
 function tasteRowsHTML() {
-  if (!T.key || T.failed || X.taste.n < 3 || !topOf(X.taste.t, 1).length) return "";
+  if (!T.key || T.failed) return "";
+  const fromSaved = [...favs].some(id => BY[id]);
+  if (!fromSaved && (X.taste.n < 3 || !topOf(X.taste.t, 1).length)) return "";
   return liveRowHTML("taste|movie") + liveRowHTML("taste|tv");
+}
+/* Suggestions built from your Saved list: for the titles you saved most recently, TMDB's "people who liked this also
+   liked" titles, mixed together so every saved title gets a turn. Library titles are matched to TMDB once and remembered. */
+const TREF = store.get("tmdbref", {});
+async function tmdbRef(it) {
+  if (it.tmdb) return it.tmdb;
+  if (it.id in TREF) return TREF[it.id];
+  let ref = null;
+  try {
+    const j = await tget("/search/multi", {query: it.title});
+    const y = String(it.year || "").slice(0, 4);
+    const ok = (j.results || []).filter(r => r.media_type === "movie" || r.media_type === "tv");
+    const r = ok.find(r => y && String(r.release_date || r.first_air_date || "").startsWith(y)) || ok[0];
+    if (r) ref = {type: r.media_type, id: r.id};
+  } catch (e) { return null; }                       // couldn't ask: try again next time
+  TREF[it.id] = ref; store.set("tmdbref", TREF);
+  return ref;
+}
+async function savedSeeds(type) {
+  const ids = [...favs].reverse().filter(id => BY[id]).slice(0, 24);   // newest saves first
+  const refs = await Promise.all(ids.map(id => tmdbRef(BY[id]).catch(() => null)));
+  return refs.filter(r => r && r.type === type).slice(0, 8);
+}
+async function loadSavedTaste(key, st) {
+  const type = key.split("|")[1];
+  if (!st.seeds) st.seeds = await savedSeeds(type);
+  if (!st.seeds.length) return null;                 // nothing of this kind saved: use the learned-taste row instead
+  const page = st.page + 1;
+  const lists = await Promise.all(st.seeds.map(s => tget(`/${s.type}/${s.id}/recommendations`, {page}).then(j => j.results || []).catch(() => [])));
+  const savedTmdb = new Set(st.seeds.map(s => s.id)), out = [];
+  for (let i = 0; i < 20; i++) lists.forEach(l => { if (l[i]) out.push(l[i]); });     // take turns between saved titles
+  return {page, total_pages: 3, results: out.filter(r => !savedTmdb.has(r.id))};
 }
 function tasteDef(type) {
   const tags = topOf(X.taste.t, 2), l = topOf(X.taste.l, 1)[0];
