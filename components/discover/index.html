@@ -2172,35 +2172,37 @@ window.addEventListener("resize", () => requestAnimationFrame(movePill));
 /* ───────────── Famous studios (on the search page) ─────────────
    Tap a studio: everything it made, Movies and Series apart, oldest first up to the newest release. Studios are
    looked up on TMDB by their exact company names once and remembered (a studio can be several TMDB companies). */
+// q: what to search TMDB's companies for; m: every company name that belongs to the studio, including old names
+// (Spider-Man 2002 was "Marvel Enterprises", The Lion King "Walt Disney Feature Animation"...)
 const STUDIOS = [
-  {k: "marvel", n: "Marvel", q: ["Marvel Studios", "Marvel Entertainment", "Marvel Television", "Marvel Animation"]},
-  {k: "dc", n: "DC", q: ["DC Studios", "DC Films", "DC Entertainment", "DC Comics"]},
-  {k: "disney", n: "Disney", q: ["Walt Disney Pictures", "Walt Disney Animation Studios", "Walt Disney Productions", "Disney Television Animation"], long: 1},
-  {k: "pixar", n: "Pixar", q: ["Pixar"], long: 1},
-  {k: "lucas", n: "Star Wars · Lucasfilm", q: ["Lucasfilm Ltd."]},
-  {k: "wb", n: "Warner Bros.", q: ["Warner Bros. Pictures", "Warner Bros. Television"], long: 1},
-  {k: "universal", n: "Universal", q: ["Universal Pictures", "Universal Television"], long: 1},
-  {k: "sony", n: "Sony Pictures", q: ["Columbia Pictures", "Sony Pictures Animation", "Sony Pictures Television"], long: 1},
-  {k: "paramount", n: "Paramount", q: ["Paramount Pictures", "Paramount Television Studios"], long: 1},
-  {k: "fox", n: "20th Century", q: ["20th Century Studios", "20th Century Fox"], long: 1},
-  {k: "dreamworks", n: "DreamWorks", q: ["DreamWorks Animation"], long: 1},
-  {k: "legendary", n: "Legendary", q: ["Legendary Pictures"]},
-  {k: "ghibli", n: "Studio Ghibli", q: ["Studio Ghibli"], long: 1},
-  {k: "hombale", n: "Hombale Films", q: ["Hombale Films"]},
-  {k: "mythri", n: "Mythri Movie Makers", q: ["Mythri Movie Makers"]},
-  {k: "arka", n: "Arka Media Works", q: ["Arka Media Works"]},
-  {k: "geetha", n: "Geetha Arts", q: ["Geetha Arts"]},
-  {k: "sithara", n: "Sithara Entertainments", q: ["Sithara Entertainments"]},
-  {k: "haarika", n: "Haarika & Hassine", q: ["Haarika & Hassine Creations"]},
-  {k: "uv", n: "UV Creations", q: ["UV Creations"]},
-  {k: "dvv", n: "DVV Entertainment", q: ["DVV Entertainment"]},
-  {k: "yrf", n: "Yash Raj Films", q: ["Yash Raj Films"]},
-  {k: "dharma", n: "Dharma Productions", q: ["Dharma Productions"]},
-  {k: "redchillies", n: "Red Chillies", q: ["Red Chillies Entertainment"]},
-  {k: "excel", n: "Excel Entertainment", q: ["Excel Entertainment"]},
-  {k: "lyca", n: "Lyca Productions", q: ["Lyca Productions"]},
-  {k: "sunpictures", n: "Sun Pictures", q: ["Sun Pictures"]},
-  {k: "tseries", n: "T-Series", q: ["T-Series"]},
+  {k: "marvel", n: "Marvel", q: ["Marvel"], m: /^marvel (studios|enterprises|entertainment( group)?|television|animation|knights|productions|comics( group)?)$/i},
+  {k: "dc", n: "DC", q: ["DC Comics", "DC Entertainment", "DC Films", "DC Studios"], m: /^dc (comics|entertainment|films|studios)$/i},
+  {k: "disney", n: "Disney", q: ["Walt Disney", "Disney"], m: /^(walt disney (pictures|productions|animation studios|feature animation|television animation)|disney television animation|disneytoon studios)$/i, long: 1},
+  {k: "pixar", n: "Pixar", q: ["Pixar"], m: /^pixar( animation studios)?$/i, long: 1},
+  {k: "lucas", n: "Star Wars · Lucasfilm", q: ["Lucasfilm"], m: /^lucasfilm( ltd\.?| animation)?$/i},
+  {k: "wb", n: "Warner Bros.", q: ["Warner Bros."], m: /^warner bros\.? (pictures|television|animation|pictures animation)$/i, long: 1},
+  {k: "universal", n: "Universal", q: ["Universal Pictures", "Universal Television"], m: /^universal (pictures|television)$/i, long: 1},
+  {k: "sony", n: "Sony Pictures", q: ["Columbia Pictures", "Sony Pictures"], m: /^(columbia pictures( corporation)?|sony pictures (animation|television))$/i, long: 1},
+  {k: "paramount", n: "Paramount", q: ["Paramount"], m: /^paramount (pictures|television( studios)?|animation)$/i, long: 1},
+  {k: "fox", n: "20th Century", q: ["20th Century", "Twentieth Century Fox"], m: /^(20th century (fox|studios|fox television|fox animation)|twentieth century fox( film corporation)?|20th television)$/i, long: 1},
+  {k: "dreamworks", n: "DreamWorks", q: ["DreamWorks"], m: /^dreamworks (animation|pictures|skg)$/i, long: 1},
+  {k: "legendary", n: "Legendary", q: ["Legendary"], m: /^legendary (pictures|entertainment|television)$/i},
+  {k: "ghibli", n: "Studio Ghibli", q: ["Studio Ghibli"], m: /^studio ghibli$/i, long: 1},
+  {k: "hombale", n: "Hombale Films", q: ["Hombale Films"], m: /^hombale films/i},
+  {k: "mythri", n: "Mythri Movie Makers", q: ["Mythri Movie Makers"], m: /^mythri movie makers/i},
+  {k: "arka", n: "Arka Media Works", q: ["Arka Media Works"], m: /^arka media works/i},
+  {k: "geetha", n: "Geetha Arts", q: ["Geetha Arts"], m: /^geetha arts/i},
+  {k: "sithara", n: "Sithara Entertainments", q: ["Sithara Entertainments"], m: /^sithara entertainments?/i},
+  {k: "haarika", n: "Haarika & Hassine", q: ["Haarika"], m: /^haarika (&|and) hassine/i},
+  {k: "uv", n: "UV Creations", q: ["UV Creations"], m: /^uv creations/i},
+  {k: "dvv", n: "DVV Entertainment", q: ["DVV Entertainment"], m: /^dvv entertainments?/i},
+  {k: "yrf", n: "Yash Raj Films", q: ["Yash Raj Films"], m: /^yash raj films/i},
+  {k: "dharma", n: "Dharma Productions", q: ["Dharma Productions"], m: /^dharma productions/i},
+  {k: "redchillies", n: "Red Chillies", q: ["Red Chillies"], m: /^red chillies (entertainments?|vfx)?$/i},
+  {k: "excel", n: "Excel Entertainment", q: ["Excel Entertainment"], m: /^excel entertainment/i},
+  {k: "lyca", n: "Lyca Productions", q: ["Lyca Productions"], m: /^lyca productions/i},
+  {k: "sunpictures", n: "Sun Pictures", q: ["Sun Pictures"], m: /^sun pictures$/i},
+  {k: "tseries", n: "T-Series", q: ["T-Series"], m: /^t-series( films)?$/i},
 ];
 var STV = {seq: 0, on: false};
 function studiosHTML() {
@@ -2208,17 +2210,22 @@ function studiosHTML() {
   return section("Famous studios", "") + `<div class="quick studios">${STUDIOS.map(s =>
     `<button class="chip" data-studio="${s.k}">${esc(s.n)}</button>`).join("")}</div>`;
 }
-const SREF = store.get("studioIds2", {});
+const SREF = store.get("studioIds3", {});
 async function studioIds(s) {
   if ((SREF[s.k] || []).length) return SREF[s.k];
-  const ids = (await Promise.all(s.q.map(async name => {
-    try {
-      const r = (await tget("/search/company", {query: name})).results || [], nn = norm(name);
-      const hit = r.find(c => norm(c.name) === nn) || r.find(c => norm(c.name).startsWith(nn)) || r.find(c => nn.startsWith(norm(c.name)) && norm(c.name).length >= 4);
-      return hit ? hit.id : null;
-    } catch (e) { return null; }
-  }))).filter(Boolean);
-  if (ids.length) { SREF[s.k] = [...new Set(ids)]; store.set("studioIds2", SREF); }
+  const ids = new Set();
+  let reached = false;
+  await Promise.all(s.q.map(async query => {
+    for (let page = 1; page <= 3; page++) {                // every company under that name, not just the first
+      let j;
+      try { j = await tget("/search/company", {query, page}); } catch (e) { return; }
+      reached = true;
+      (j.results || []).forEach(c => { if (s.m.test(String(c.name || "").trim())) ids.add(c.id); });
+      if (page >= (j.total_pages || 1)) return;
+    }
+  }));
+  if (ids.size) { SREF[s.k] = [...ids]; store.set("studioIds3", SREF); }
+  else if (!reached) return [];
   return SREF[s.k] || [];
 }
 function studioQuery(type) {
