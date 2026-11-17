@@ -1027,6 +1027,15 @@ button.imh:active{transform:scale(.95)}
 html.sheeting #app *, html.sheeting #bnav, html.sheeting .bnav{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .sheet{backface-visibility:hidden}
 
+/* Famous studios on the search page */
+.quick.studios .chip{font-weight:700}
+.stv-h{display:flex;align-items:center;gap:12px;margin:6px 0 10px}
+.stv-h h2{margin:0;font-size:clamp(22px,5vw,30px)}
+.stv-t{margin:4px 0 6px}
+.stv-t .chip b{font-weight:600;opacity:.65;margin-left:4px}
+.stv-t .chip b:empty{display:none}
+.stv-sub{margin:4px 0 14px;color:var(--muted);font-size:13px}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -1817,10 +1826,11 @@ function suggestions(q, exclude) {
 }
 const WORDS = () => [...new Set([...Object.values(D.providers).map(p => p.name), ...D.items.flatMap(i => i.genres), "Anime", "Telugu", "Reality", "Doraemon"])];
 function renderSearch(q) {
+  STV.seq = (STV.seq || 0) + 1; STV.on = false;          // leaving a studio's page
   q = q.trim().toLowerCase();
   const hay = i => (i.title + " " + i.genres.join(" ") + " " + i.offers.map(o => D.providers[o.p].name).join(" ") + " " + kindLabel(i) + (i.telugu ? " telugu" : "")).toLowerCase();
   const tq = twinKey(q);
-  const items = !q ? D.items.filter(i => i.offers.length && hasPoster(i)).sort(() => Math.random() - .5).slice(0, 12)
+  const items = !q ? []                                 // nothing until you type: just the shortcuts and studios
     : D.items.filter(i => hay(i).includes(q) || (tq.length > 2 && twinKey(i.title).includes(tq)));
   const quick = !q ? `<div class="quick"><button class="chip mxchip" data-mixer>🎛️ Genre mixer</button>${QUICK.map(w => `<button class="chip" data-q="${esc(w)}">${esc(w)}</button>`).join("")}</div>` : "";
   // "Did you mean…?" when the typed text finds little, or isn't literally in the best match's title
@@ -1846,8 +1856,8 @@ function renderSearch(q) {
   }
   const shown = items.length ? items : close;
   $("#sres").innerHTML = dym + (q ? section(items.length ? `${items.length} result${items.length === 1 ? "" : "s"}` : close.length ? "Closest matches" : "No results")
-      : section("Try") + quick + section("You might like")) +
-    (shown.length ? grid(shown) : (T.key && q ? "" : `<div class="empty">No match for “${esc(q)}”.<br>Try a genre like “anime” or a platform like “Netflix”.</div>`)) +
+      : section("Try") + quick + studiosHTML()) +
+    (shown.length ? grid(shown) : !q ? "" : (T.key ? "" : `<div class="empty">No match for “${esc(q)}”.<br>Try a genre like “anime” or a platform like “Netflix”.</div>`)) +
     (T.key && q.length > 1 ? `<div id="tsearch">${section("More titles", "")}<div class="checking"><i></i>Searching TMDB…</div></div>` : "");
   if (!items.length && close.length) $$("#sres .card").forEach((c, i) => { c.classList.add("fresh"); c.style.setProperty("--i", i); });
   // TMDB search can't fix typos, so when we've corrected one, search for the correction too
@@ -2158,6 +2168,125 @@ document.addEventListener("keydown", e => {
 })();
 document.addEventListener("visibilitychange", () => pauseHero(document.hidden || heroOff || !!openId));
 window.addEventListener("resize", () => requestAnimationFrame(movePill));
+
+/* ───────────── Famous studios (on the search page) ─────────────
+   Tap a studio: everything it made, Movies and Series apart, oldest first up to the newest release. Studios are
+   looked up on TMDB by their exact company names once and remembered (a studio can be several TMDB companies). */
+const STUDIOS = [
+  {k: "marvel", n: "Marvel", q: ["Marvel Studios", "Marvel Entertainment", "Marvel Television", "Marvel Animation"]},
+  {k: "dc", n: "DC", q: ["DC Studios", "DC Films", "DC Entertainment", "DC Comics"]},
+  {k: "disney", n: "Disney", q: ["Walt Disney Pictures", "Walt Disney Animation Studios", "Walt Disney Productions", "Disney Television Animation"], long: 1},
+  {k: "pixar", n: "Pixar", q: ["Pixar"], long: 1},
+  {k: "lucas", n: "Star Wars · Lucasfilm", q: ["Lucasfilm Ltd."]},
+  {k: "wb", n: "Warner Bros.", q: ["Warner Bros. Pictures", "Warner Bros. Television"], long: 1},
+  {k: "universal", n: "Universal", q: ["Universal Pictures", "Universal Television"], long: 1},
+  {k: "sony", n: "Sony Pictures", q: ["Columbia Pictures", "Sony Pictures Animation", "Sony Pictures Television"], long: 1},
+  {k: "paramount", n: "Paramount", q: ["Paramount Pictures", "Paramount Television Studios"], long: 1},
+  {k: "fox", n: "20th Century", q: ["20th Century Studios", "20th Century Fox"], long: 1},
+  {k: "dreamworks", n: "DreamWorks", q: ["DreamWorks Animation"], long: 1},
+  {k: "legendary", n: "Legendary", q: ["Legendary Pictures"]},
+  {k: "ghibli", n: "Studio Ghibli", q: ["Studio Ghibli"], long: 1},
+  {k: "hombale", n: "Hombale Films", q: ["Hombale Films"]},
+  {k: "mythri", n: "Mythri Movie Makers", q: ["Mythri Movie Makers"]},
+  {k: "arka", n: "Arka Media Works", q: ["Arka Media Works"]},
+  {k: "geetha", n: "Geetha Arts", q: ["Geetha Arts"]},
+  {k: "sithara", n: "Sithara Entertainments", q: ["Sithara Entertainments"]},
+  {k: "haarika", n: "Haarika & Hassine", q: ["Haarika & Hassine Creations"]},
+  {k: "uv", n: "UV Creations", q: ["UV Creations"]},
+  {k: "dvv", n: "DVV Entertainment", q: ["DVV Entertainment"]},
+  {k: "yrf", n: "Yash Raj Films", q: ["Yash Raj Films"]},
+  {k: "dharma", n: "Dharma Productions", q: ["Dharma Productions"]},
+  {k: "redchillies", n: "Red Chillies", q: ["Red Chillies Entertainment"]},
+  {k: "excel", n: "Excel Entertainment", q: ["Excel Entertainment"]},
+  {k: "lyca", n: "Lyca Productions", q: ["Lyca Productions"]},
+  {k: "sunpictures", n: "Sun Pictures", q: ["Sun Pictures"]},
+  {k: "tseries", n: "T-Series", q: ["T-Series"]},
+];
+var STV = {seq: 0, on: false};
+function studiosHTML() {
+  if (!T.key || T.failed) return "";
+  return section("Famous studios", "") + `<div class="quick studios">${STUDIOS.map(s =>
+    `<button class="chip" data-studio="${s.k}">${esc(s.n)}</button>`).join("")}</div>`;
+}
+const SREF = store.get("studioIds2", {});
+async function studioIds(s) {
+  if ((SREF[s.k] || []).length) return SREF[s.k];
+  const ids = (await Promise.all(s.q.map(async name => {
+    try {
+      const r = (await tget("/search/company", {query: name})).results || [], nn = norm(name);
+      const hit = r.find(c => norm(c.name) === nn) || r.find(c => norm(c.name).startsWith(nn)) || r.find(c => nn.startsWith(norm(c.name)) && norm(c.name).length >= 4);
+      return hit ? hit.id : null;
+    } catch (e) { return null; }
+  }))).filter(Boolean);
+  if (ids.length) { SREF[s.k] = [...new Set(ids)]; store.set("studioIds2", SREF); }
+  return SREF[s.k] || [];
+}
+function studioQuery(type) {
+  const today = todayIN(), p = {with_companies: STV.ids.join("|"), include_adult: "false"};
+  if (type === "movie") {
+    Object.assign(p, {sort_by: "primary_release_date.asc", "primary_release_date.lte": today});
+    if (STV.s.long) p["with_runtime.gte"] = 40;          // feature films only, not the shorts these studios also made
+  } else Object.assign(p, {sort_by: "first_air_date.asc", "first_air_date.lte": today});
+  return p;
+}
+const stvSkel = () => `<div class="grid">${Array.from({length: 9}, () => `<div class="card sk" aria-hidden="true"><div class="pw"></div><div class="sk-t"></div></div>`).join("")}</div>`;
+async function openStudio(k) {
+  const s = STUDIOS.find(x => x.k === k); if (!s) return;
+  const seq = ++STV.seq;
+  Object.assign(STV, {s, on: true, type: "movie", page: 0, total: 1, busy: false, seen: new Set(), ids: []});
+  $("#sres").innerHTML = `<div class="stv"><div class="stv-h"><button class="chip" data-studioback aria-label="Back to search">← Back</button><h2>${esc(s.n)}</h2></div>
+    <div class="chips stv-t" role="group" aria-label="Movies or series">
+      <button class="chip" data-stype="movie" aria-pressed="true">Movies <b data-scount="movie"></b></button>
+      <button class="chip" data-stype="tv" aria-pressed="false">Series <b data-scount="tv"></b></button></div>
+    <p class="stv-sub">Oldest first, up to the newest release</p><div id="stvgrid">${stvSkel()}</div></div>`;
+  const sc = $("#search .sres"); if (sc) sc.scrollTop = 0;
+  STV.ids = await studioIds(s);
+  if (STV.seq !== seq) return;
+  if (!STV.ids.length) { $("#stvgrid").innerHTML = `<div class="empty">Couldn't find ${esc(s.n)} right now. Try again in a bit.</div>`; return; }
+  // how many of each, and start on Series if the studio made no movies
+  const n = await Promise.all(["movie", "tv"].map(t => tget(`/discover/${t}`, Object.assign({page: 1}, studioQuery(t))).then(j => j.total_results || 0).catch(() => -1)));
+  if (STV.seq !== seq) return;
+  ["movie", "tv"].forEach((t, i) => { const b = $(`[data-scount="${t}"]`); if (b && n[i] > 0) b.textContent = n[i].toLocaleString("en-IN"); });
+  if (n[0] === 0 && n[1] > 0) setStudioType("tv"); else loadStudio();
+}
+function setStudioType(type) {
+  if (!STV.on) return;
+  STV.seq++; Object.assign(STV, {type, page: 0, total: 1, busy: false, seen: new Set()});
+  $$("[data-stype]").forEach(b => b.setAttribute("aria-pressed", b.dataset.stype === type));
+  $("#stvgrid").innerHTML = stvSkel();
+  if (STV.ids.length) loadStudio();
+}
+async function loadStudio() {
+  if (!STV.on || STV.busy || STV.page >= STV.total) return;
+  STV.busy = true;
+  const seq = STV.seq, type = STV.type;
+  let more = false;
+  try {
+    const j = await tget(`/discover/${type}`, Object.assign({page: STV.page + 1}, studioQuery(type)));
+    if (seq !== STV.seq) return;
+    STV.page = j.page || STV.page + 1; STV.total = Math.min(j.total_pages || 1, 500);
+    const fresh = (j.results || []).map(r => fromTmdb(r, type)).filter(it => it && hasPoster(it) && !STV.seen.has(it.id) && STV.seen.add(it.id));
+    const g = $("#stvgrid"); if (!g) return;
+    if (STV.page === 1) g.innerHTML = fresh.length ? grid(fresh) : `<div class="empty">No ${type === "movie" ? "movies" : "series"} from ${esc(STV.s.n)}.</div>`;
+    else { const gg = g.querySelector(".grid"); if (gg) gg.insertAdjacentHTML("beforeend", fresh.map(card).join("")); }
+    const sc = $("#search .sres");
+    more = STV.page < STV.total && (!fresh.length || (sc && sc.scrollHeight <= sc.clientHeight + 800));   // fill the screen
+  } catch (e) {
+    if (seq === STV.seq && !STV.page) $("#stvgrid").innerHTML = `<div class="empty">Couldn't load ${esc(STV.s.n)} right now.</div>`;
+  } finally { if (seq === STV.seq) STV.busy = false; }
+  if (more && seq === STV.seq) loadStudio();
+}
+document.addEventListener("scroll", e => {           // endless: the next page as you near the end
+  if (!STV.on || !e.target.classList || !e.target.classList.contains("sres")) return;
+  const sc = e.target; if (sc.scrollTop + sc.clientHeight > sc.scrollHeight - 900) loadStudio();
+}, {capture: true, passive: true});
+document.addEventListener("click", e => {
+  const t = e.target.closest && e.target.closest("[data-studio],[data-stype],[data-studioback]"); if (!t) return;
+  buzz();
+  if (t.dataset.studio) openStudio(t.dataset.studio);
+  else if (t.dataset.stype) { if (t.dataset.stype !== STV.type) setStudioType(t.dataset.stype); }
+  else { const q = $("#q"); if (q) q.value = ""; renderSearch(""); const sc = $("#search .sres"); if (sc) sc.scrollTop = 0; }
+});
 
 /* ───────────── Genre mixer ─────────────
    Every TMDB genre for movies and for series. ＋ adds a genre, − rules it out. Two or more added genres
@@ -4583,20 +4712,32 @@ function tmdbSheetHTML(it) {
 }
 
 /* search */
-let searchT = null;
+let searchT = null, searchSeq = 0;
 function searchTmdb(q, have, forQ = q) {
   clearTimeout(searchT);
+  const seq = ++searchSeq;
   searchT = setTimeout(async () => {
     let items = [];
     try {
-      const j = await tget("/search/multi", {query: q, include_adult: "false"});
-      const skip = new Set(have);
-      items = (j.results || []).map(r => fromTmdb(r)).filter(it => it && !skip.has(it.id)).slice(0, 24);
+      const j = await tget("/search/multi", {query: q, include_adult: "false", region: "IN"});
+      if (seq !== searchSeq) return;                     // you've typed more since: this answer is stale
+      const skip = new Set(have), nq = norm(q), seen = new Set();
+      const res = j.results || [];
+      const titles = res.filter(r => r.media_type === "movie" || r.media_type === "tv");
+      // titles whose name is what you typed come first, then names starting with it, then the rest by popularity
+      const rank = r => { const t = norm(r.title || r.name), o = norm(r.original_title || r.original_name);
+        return (t === nq || o === nq ? 3 : t.startsWith(nq) || o.startsWith(nq) ? 2 : t.includes(nq) ? 1 : 0) * 1e6 + Math.min(r.popularity || 0, 9e5); };
+      titles.sort((a, b) => rank(b) - rank(a));
+      // typed a person (an actor or director)? their best-known titles too
+      const people = res.filter(r => r.media_type === "person" && nq.length >= 3 && norm(r.name).includes(nq))
+        .flatMap(p => (p.known_for || []).filter(k => k.media_type === "movie" || k.media_type === "tv"));
+      items = titles.concat(people).map(r => fromTmdb(r)).filter(it => it && !skip.has(it.id) && !seen.has(it.id) && seen.add(it.id)).slice(0, 30);
     } catch (e) { /* offline or bad key: local results only */ }
     const box = $("#tsearch"), input = $("#q");
     if (!box || !input || input.value.trim().toLowerCase() !== forQ) return;
-    box.innerHTML = items.length ? section("More titles", "Live from TMDB") + grid(items) : "";
-  }, 350);
+    box.innerHTML = items.length ? section("More titles", "Live from TMDB") + grid(items)
+      : $("#sres .card") ? "" : `<div class="empty">No match for “${esc(input.value.trim())}”.</div>`;
+  }, 250);
 }
 
 /* ───────────── Explore & track: shared state ─────────────
@@ -6863,6 +7004,7 @@ window.vsBack = () => {
     if (on("#xp")) { closeXP(); return true; }                  // tools, Profile, cast pages (steps back through them)
     if (on("#themer")) { closeThemer(); return true; }
     if (on("#mixer")) { closeMixer(); return true; }
+    if (on("#search") && STV.on) { const q = $("#q"); if (q) q.value = ""; renderSearch(""); return true; }   // a studio: back to search
     if (on("#search")) { closeSearch(); return true; }
     const first = $("#tabs .tab[data-tab]"), sel = $('#tabs .tab[aria-selected="true"]');
     if (first && sel && sel !== first) { first.click(); return true; }
