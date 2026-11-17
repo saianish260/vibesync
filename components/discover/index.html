@@ -1087,6 +1087,36 @@ html.sheeting #app *, html.sheeting #bnav, html.sheeting .bnav{backdrop-filter:n
 .pv-b.on{opacity:1;background:color-mix(in srgb,var(--tint) 20%,var(--s2))}
 .pv-b span{font-size:26px;display:block}.pv-b b{display:block;margin-top:4px}.pv-b small{color:var(--muted);font-size:12px}
 
+/* ── Six Degrees ── */
+.sd-pick{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:start;margin-bottom:14px}
+@media (max-width:640px){.sd-pick{grid-template-columns:1fr}.sd-and{justify-self:center}}
+.sd-and{font-size:22px;color:var(--tint);padding-top:12px}
+.sd-sug{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.sd-s,.sd-chosen{display:flex;align-items:center;gap:12px;width:100%;padding:8px 10px;border-radius:16px;background:var(--s2);color:var(--text);text-align:left}
+.sd-chosen{padding:12px;box-shadow:0 0 0 2px color-mix(in srgb,var(--tint) 70%,transparent)}
+.sd-s small,.sd-chosen small{display:block;color:var(--muted);font-size:12px}
+.sd-face{width:46px;height:46px;border-radius:50%;object-fit:cover;flex:0 0 auto;display:grid;place-items:center;background:var(--s1);font-weight:800}
+.sd-wait{text-align:center;padding:30px 0;color:var(--muted)}
+.sd-orbit{position:relative;width:70px;height:70px;margin:0 auto 14px}
+.sd-orbit i{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;border-top-color:var(--tint);animation:vsspin 1.2s linear infinite}
+.sd-orbit i:nth-child(2){inset:10px;animation-duration:1.8s;animation-direction:reverse}
+.sd-orbit i:nth-child(3){inset:22px;animation-duration:.9s}
+.sd-res h3{margin:10px 0 2px;font-size:clamp(22px,5vw,30px)}
+.sd-sky{position:relative;width:100%;margin:14px 0 18px;border-radius:22px;
+  background:radial-gradient(ellipse at 50% 40%,color-mix(in srgb,var(--tint) 14%,transparent),transparent 70%),radial-gradient(1px 1px at 20% 30%,#fff8,transparent),radial-gradient(1px 1px at 70% 60%,#fff6,transparent),radial-gradient(1.5px 1.5px at 85% 20%,#fff9,transparent),radial-gradient(1px 1px at 40% 80%,#fff5,transparent)}
+.sd-sky.tall{max-width:420px;margin-left:auto;margin-right:auto}
+.sd-sky svg{position:absolute;inset:0;width:100%;height:100%}
+.sd-sky line{stroke:var(--tint);stroke-width:3;stroke-linecap:round;filter:drop-shadow(0 0 6px var(--tint));stroke-dasharray:1200;stroke-dashoffset:1200;animation:sdline .9s ease-out forwards;animation-delay:var(--d)}
+@keyframes sdline{to{stroke-dashoffset:0}}
+.sd-n{position:absolute;transform:translate(-50%,-50%) scale(.6);opacity:0;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;width:120px;animation:sdpop .6s cubic-bezier(.3,1.6,.5,1) forwards;animation-delay:var(--d);color:var(--text)}
+@keyframes sdpop{to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.sd-n b{font-size:13px;line-height:1.15;text-shadow:0 2px 8px #000}
+.sd-n small{font-size:11px;color:var(--muted)}
+.sd-star .sd-face{width:64px;height:64px;box-shadow:0 0 0 3px var(--tint),0 0 22px var(--tint)}
+.sd-star.end .sd-face{width:78px;height:78px}
+.sd-film img,.sd-film>span{width:58px;height:87px;border-radius:10px;object-fit:cover;box-shadow:0 8px 22px rgba(0,0,0,.6);display:grid;place-items:center;background:var(--s2)}
+.sd-list{margin:0 0 16px;padding-left:20px;line-height:1.6;color:var(--muted)}.sd-list b{color:var(--text)}
+
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
    Everything animated is transform / opacity / clip-path, so it stays on the GPU at 60–120 fps. */
@@ -4896,7 +4926,8 @@ const gridOf = items => items.length ? `<div class="grid">${items.map(card).join
 /* ───────────── Explore hub on Home ───────────── */
 const TOOLS = [["swipe", "🃏", "Swipe mode", "Right to save, left to skip"], ["describe", "✨", "Describe it", "\"A thriller like Vikram but funnier\""],
                ["discover", "🧭", "Discover", "By length, language, genre…"],
-               ["calendar", "📅", "OTT calendar", "What's new this week"], ["plan", "💳", "Which plan?", "Best subscription for your list"]];
+               ["calendar", "📅", "OTT calendar", "What's new this week"], ["plan", "💳", "Which plan?", "Best subscription for your list"],
+               ["degrees", "✨", "Six Degrees", "Connect any two stars through films"]];
 // Wrapped, Sync, your Google account and Check for updates live in 👤 Profile (top right)
 const APK_URL = "https://github.com/saianish260/vibesync-android/raw/apk/VibeSync.apk";   // the latest build, published by the APK repo's CI
 function exploreHTML() {
@@ -4913,6 +4944,7 @@ function openTool(k) {
   if (k === "discover" || k === "time" || k === "lang" || k === "kids") return openFind();   // one Discover (it replaced Short on time / Languages / Kids-safe)
   if (k === "calendar") return openCalendar();
   if (k === "plan") return openPlan();
+  if (k === "degrees") return openDegrees();
   if (k === "wrapped") return openWrapped();
   if (k === "sync") return openSync();
 }
@@ -7331,6 +7363,163 @@ async function pvPick(code, again) {
     ? `<p class="pv-p">Not stamped yet. Its best-rated films streaming in India:</p>${grid(picks)}`
     : `<p class="pv-p">Not stamped yet. No films from ${esc(name)} are streaming in India right now.</p>`}</div>`;
 }
+
+/* ═════════════ Six Degrees of Cinema ═════════════
+   Pick two stars: VibeSync finds the shortest chain of films joining them (star → film → co-star → film → … → star)
+   and draws it as a constellation that lights up link by link. It searches outward from both stars at once through
+   TMDB's cast lists, up to 3 films apart, favouring well-known films and well-known co-stars as bridges. */
+const SD = {a: null, b: null, seq: 0, pc: new Map(), mc: new Map(), calls: 0};
+// the daily challenge: two stars from different film worlds, the same pair for everyone that day
+const SD_STARS = ["Prabhas", "Mahesh Babu", "Allu Arjun", "N.T. Rama Rao Jr.", "Ram Charan", "Chiranjeevi", "Nani", "Vijay Deverakonda",
+  "Samantha Ruth Prabhu", "Rashmika Mandanna", "Shah Rukh Khan", "Amitabh Bachchan", "Aamir Khan", "Priyanka Chopra Jonas", "Deepika Padukone",
+  "Rajinikanth", "Kamal Haasan", "Vijay", "Mohanlal", "Fahadh Faasil", "Dulquer Salmaan", "Tom Cruise", "Robert Downey Jr.", "Scarlett Johansson",
+  "Leonardo DiCaprio", "Keanu Reeves", "Zendaya", "Dwayne Johnson", "Christian Bale", "Margot Robbie", "Brad Pitt", "Hugh Jackman"];
+const SELF = /^(him|her|them)sel(f|ves)\b|^self\b|uncredited|\(voice\)$/i;
+
+async function sdFilms(pid) {                         // a star's films: real roles, released, known
+  if (SD.pc.has(pid)) return SD.pc.get(pid);
+  SD.calls++;
+  const j = await tget(`/person/${pid}/movie_credits`, {});
+  const list = (j.cast || []).filter(m => m.release_date && (m.vote_count || 0) >= 15 && !SELF.test(m.character || "")
+    && !(m.genre_ids || []).some(g => g === 99 || g === 10770)).sort((x, y) => (y.vote_count || 0) - (x.vote_count || 0));
+  const seen = new Set(), out = list.filter(m => !seen.has(m.id) && seen.add(m.id));
+  SD.pc.set(pid, out); return out;
+}
+async function sdCast(mid) {                          // a film's top-billed cast
+  if (SD.mc.has(mid)) return SD.mc.get(mid);
+  SD.calls++;
+  const j = await tget(`/movie/${mid}/credits`, {});
+  const out = (j.cast || []).filter(c => !SELF.test(c.character || "")).slice(0, 25).map(c => ({id: c.id, name: c.name, profile_path: c.profile_path, pop: c.popularity || 0}));
+  SD.mc.set(mid, out); return out;
+}
+async function sdPool(items, fn, n, prog) {           // run fn over items, n at a time
+  let i = 0, done = 0;
+  await Promise.all(Array.from({length: n}, async () => { while (i < items.length) { const it = items[i++]; try { await fn(it); } catch (e) {} done++; prog && prog(done, items.length); } }));
+}
+async function sdConnect(A, B, seq, say) {
+  const votes = m => m.vote_count || 0;
+  const [MA, MB] = await Promise.all([sdFilms(A.id), sdFilms(B.id)]);
+  // 1 film: they acted together
+  const inB = new Map(MB.map(m => [m.id, m]));
+  const direct = MA.filter(m => inB.has(m.id));
+  if (direct.length) return [A, direct[0], B];
+  // 2 films: a co-star who worked with both
+  const topA = MA.slice(0, 40), topB = MB.slice(0, 40);
+  const sideA = new Map(), sideB = new Map();         // co-star id -> {p, m (the film with the star)}
+  say("Checking their co-stars…");
+  await sdPool(topA.concat(topB), async m => {
+    if (seq !== SD.seq) return;
+    const cast = await sdCast(m.id), side = topA.includes(m) ? sideA : sideB;
+    cast.forEach(p => { if (p.id === A.id || p.id === B.id) return; const old = side.get(p.id); if (!old || votes(m) > votes(old.m)) side.set(p.id, {p, m}); });
+  }, 8, (d, n) => say(`Checking co-stars in ${d} of ${n} films…`));
+  if (seq !== SD.seq) return null;
+  let best = null;
+  sideA.forEach((a, id) => { const b = sideB.get(id); if (!b) return;
+    const sc = votes(a.m) + votes(b.m) + a.p.pop * 50; if (!best || sc > best.sc) best = {sc, chain: [A, a.m, a.p, b.m, B]}; });
+  if (best) return best.chain;
+  // 3 films: a co-star of one has worked with a co-star of the other. Well-known co-stars make the best bridges.
+  const bridges = side => [...side.values()].sort((x, y) => y.p.pop - x.p.pop).slice(0, 28);
+  const BA = bridges(sideA), BB = bridges(sideB);
+  say("Looking for a bridge between their worlds…");
+  await sdPool(BA.concat(BB), x => seq === SD.seq ? sdFilms(x.p.id) : null, 8, (d, n) => say(`Following ${d} of ${n} co-stars…`));
+  if (seq !== SD.seq) return null;
+  const byFilm = new Map();                           // film id -> co-stars of B who were in it
+  BB.forEach(y => (SD.pc.get(y.p.id) || []).forEach(m => { const l = byFilm.get(m.id) || []; l.push(y); byFilm.set(m.id, l); }));
+  BA.forEach(x => (SD.pc.get(x.p.id) || []).forEach(m => (byFilm.get(m.id) || []).forEach(y => {
+    if (x.p.id === y.p.id) return;
+    const sc = votes(x.m) + votes(m) + votes(y.m) + (x.p.pop + y.p.pop) * 50;
+    if (!best || sc > best.sc) best = {sc, chain: [A, x.m, x.p, m, y.p, y.m, B]};
+  })));
+  return best ? best.chain : null;
+}
+
+function openDegrees() {
+  ++SD.seq;
+  openXP(xpTop("Six Degrees", "Connect any two stars through the films they've made") + `<div id="sd">
+    <div class="sd-pick">${sdSlot("a")}<span class="sd-and" aria-hidden="true">✦</span>${sdSlot("b")}</div>
+    <div class="acts"><button class="btn tint" data-sdgo ${SD.a && SD.b ? "" : "disabled"}>Connect them</button><button class="btn soft" data-sdday>🎯 Today's challenge</button></div>
+    <div id="sdout"></div></div>`, "degrees");
+}
+function sdSlot(k) {
+  const p = SD[k];
+  return `<div class="sd-slot" data-sdslot="${k}">${p
+    ? `<button class="sd-chosen" data-sdclear="${k}" aria-label="Change ${esc(p.name)}">${sdFace(p)}<b>${esc(p.name)}</b><small>Tap to change</small></button>`
+    : `<div class="sfield">${ICON.search}<input data-sdq="${k}" type="search" placeholder="${k === "a" ? "First star…" : "Second star…"}" autocomplete="off" aria-label="${k === "a" ? "First" : "Second"} star"></div><div class="sd-sug" id="sdsug-${k}"></div>`}</div>`;
+}
+const sdFace = p => p.profile_path ? `<img class="sd-face" src="https://image.tmdb.org/t/p/w185${p.profile_path}" alt="">` : `<span class="sd-face sd-ini">${esc((p.name || "?")[0])}</span>`;
+function sdRefresh() {
+  ["a", "b"].forEach(k => { const el = $(`[data-sdslot="${k}"]`); if (el) el.outerHTML = sdSlot(k); });
+  const go = $("[data-sdgo]"); if (go) go.disabled = !(SD.a && SD.b);
+}
+let sdT = null, sdQs = 0;
+function sdSuggest(k, q) {
+  clearTimeout(sdT);
+  const box = $(`#sdsug-${k}`); if (!box) return;
+  if (q.trim().length < 2) { box.innerHTML = ""; return; }
+  const seq = ++sdQs;
+  sdT = setTimeout(async () => {
+    let r = [];
+    try { r = ((await tget("/search/person", {query: q.trim(), include_adult: "false"})).results || []).filter(p => p.known_for_department === "Acting").slice(0, 6); } catch (e) {}
+    if (seq !== sdQs || !$(`#sdsug-${k}`)) return;
+    $(`#sdsug-${k}`).innerHTML = r.length ? r.map(p => `<button class="sd-s" data-sdp="${k}" data-id="${p.id}" data-name="${esc(p.name)}" data-img="${esc(p.profile_path || "")}">
+        ${sdFace(p)}<span><b>${esc(p.name)}</b><small>${esc((p.known_for || []).map(m => m.title || m.name).filter(Boolean).slice(0, 2).join(", "))}</small></span></button>`).join("")
+      : `<div class="pz-none">No actor found for “${esc(q.trim())}”</div>`;
+  }, 220);
+}
+async function sdDaily() {
+  const d = pzDay(), h = pzHash(d + 7919), n = SD_STARS.length;
+  const i = h % n; let j = (h >>> 10) % n; if (j === i) j = (j + 1) % n;
+  const find = async name => { const r = (await tget("/search/person", {query: name})).results || []; const p = r.find(x => x.known_for_department === "Acting") || r[0];
+    return p ? {id: p.id, name: p.name, profile_path: p.profile_path} : null; };
+  try { const [a, b] = await Promise.all([find(SD_STARS[i]), find(SD_STARS[j])]); if (a && b) { SD.a = a; SD.b = b; sdRefresh(); sdGo(); } }
+  catch (e) { toast("Couldn't load today's challenge"); }
+}
+async function sdGo() {
+  if (!SD.a || !SD.b) return;
+  const seq = ++SD.seq, out = $("#sdout"); if (!out) return;
+  if (SD.a.id === SD.b.id) { out.innerHTML = `<div class="empty">That's the same star twice. Pick two different people.</div>`; return; }
+  const say = t => { const el = $("#sdmsg"); if (el && seq === SD.seq) el.textContent = t; };
+  out.innerHTML = `<div class="sd-wait"><div class="sd-orbit" aria-hidden="true"><i></i><i></i><i></i></div><p id="sdmsg">Mapping ${esc(SD.a.name)}'s films…</p></div>`;
+  let chain = null;
+  try { chain = await sdConnect(SD.a, SD.b, seq, say); } catch (e) {
+    if (seq === SD.seq && $("#sdout")) $("#sdout").innerHTML = `<div class="empty">Couldn't reach TMDB right now. Try again in a bit.</div>`; return;
+  }
+  if (seq !== SD.seq || !$("#sdout")) return;
+  if (!chain) { $("#sdout").innerHTML = `<div class="empty">${esc(SD.a.name)} and ${esc(SD.b.name)} are more than 3 films apart, through the films VibeSync checks. Try two other stars.</div>`; return; }
+  sdDraw(chain);
+}
+function sdDraw(chain) {
+  const films = chain.filter((_, i) => i % 2 === 1).length;
+  chain.filter((_, i) => i % 2 === 1).forEach(m => { const it = fromTmdb(Object.assign({media_type: "movie"}, m), "movie"); if (it) { BY[it.id] = BY[it.id] || it; m._id = it.id; } });
+  // the constellation: stars along a gentle wave, films between them; lines light up one after another
+  // wide screens: left to right along a wave; phones: top to bottom, zig-zagging
+  const n = chain.length, tall = innerWidth < 700, W = tall ? 360 : 1000, H = tall ? 70 + (n - 1) * 150 : 320;
+  const pts = chain.map((_, i) => tall ? [W / 2 + (i % 2 ? 80 : -80) * (i === 0 || i === n - 1 ? 0 : 1), 50 + i * (H - 100) / (n - 1)]
+                                       : [70 + i * (W - 140) / (n - 1), H / 2 + (i % 2 ? -1 : 1) * (i === 0 || i === n - 1 ? 0 : 70)]);
+  const lines = pts.slice(1).map((p, i) => `<line x1="${pts[i][0]}" y1="${pts[i][1]}" x2="${p[0]}" y2="${p[1]}" style="--d:${i * .45}s"/>`).join("");
+  const nodes = chain.map((x, i) => { const [cx, cy] = pts[i], film = i % 2 === 1, l = (cx / W * 100).toFixed(2), t = (cy / H * 100).toFixed(2);
+    return film
+      ? `<button class="sd-n sd-film" style="left:${l}%;top:${t}%;--d:${i * .45}s" ${x._id ? `data-open="${esc(x._id)}"` : ""} aria-label="${esc(x.title)}">
+          ${x.poster_path ? `<img src="https://image.tmdb.org/t/p/w154${x.poster_path}" alt="" onerror="this.outerHTML='<span>🎬</span>'">` : `<span>🎬</span>`}<b>${esc(x.title)}</b><small>${String(x.release_date || "").slice(0, 4)}</small></button>`
+      : `<div class="sd-n sd-star ${i === 0 || i === n - 1 ? "end" : ""}" style="left:${l}%;top:${t}%;--d:${i * .45}s">${sdFace(x)}<b>${esc(x.name)}</b></div>`; }).join("");
+  $("#sdout").innerHTML = `<div class="sd-res"><h3>${films === 1 ? "Together on screen!" : `Connected in ${films} films`}</h3>
+      <p class="pv-p">${esc(SD.a.name)} → ${esc(SD.b.name)} · tap a film to see where it streams</p>
+      <div class="sd-sky${tall ? " tall" : ""}" style="aspect-ratio:${W}/${H}"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>${nodes}</div>
+      <ol class="sd-list">${chain.map((x, i) => i % 2 ? "" : i === n - 1 ? "" :
+        `<li><b>${esc(x.name)}</b> was in <b>${esc(chain[i + 1].title)}</b> (${String(chain[i + 1].release_date || "").slice(0, 4)}) with <b>${esc(chain[i + 2].name)}</b></li>`).join("")}</ol>
+      <div class="acts"><button class="btn soft" data-sdswap>Swap and try again</button></div></div>`;
+  buzz();
+}
+document.addEventListener("input", e => { const k = e.target.dataset && e.target.dataset.sdq; if (k) sdSuggest(k, e.target.value); });
+document.addEventListener("click", e => {
+  const t = e.target.closest && e.target.closest("[data-sdp],[data-sdclear],[data-sdgo],[data-sdday],[data-sdswap]"); if (!t) return;
+  if (t.dataset.sdp) { SD[t.dataset.sdp] = {id: +t.dataset.id, name: t.dataset.name, profile_path: t.dataset.img || null}; sdRefresh();
+    const other = $(`[data-sdq="${t.dataset.sdp === "a" ? "b" : "a"}"]`); if (other) other.focus(); else sdGo(); }
+  else if (t.dataset.sdclear) { SD[t.dataset.sdclear] = null; sdRefresh(); const q = $(`[data-sdq="${t.dataset.sdclear}"]`); if (q) q.focus(); }
+  else if (t.hasAttribute("data-sdgo")) sdGo();
+  else if (t.hasAttribute("data-sdday")) sdDaily();
+  else if (t.hasAttribute("data-sdswap")) { [SD.a, SD.b] = [SD.b, SD.a]; sdRefresh(); sdGo(); }
+});
 /* ───────────── Home spotlight on the website: the same Netflix-style poster row as the phone app ─────────────
    (a copy of the phone app's assets/phone.js row: up to 50 posters, native glide, press-and-hold "Slide to browse").
    On a computer, arrows on the row move it too. */
