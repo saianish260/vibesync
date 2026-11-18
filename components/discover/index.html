@@ -1116,6 +1116,7 @@ html.sheeting #app *, html.sheeting #bnav, html.sheeting .bnav{backdrop-filter:n
 .sd-star.end .sd-face{width:78px;height:78px}
 .sd-film img,.sd-film>span{width:58px;height:87px;border-radius:10px;object-fit:cover;box-shadow:0 8px 22px rgba(0,0,0,.6);display:grid;place-items:center;background:var(--s2)}
 .sd-list{margin:0 0 16px;padding-left:20px;line-height:1.6;color:var(--muted)}.sd-list b{color:var(--text)}
+.pz-reset{display:block;margin:0 auto 14px;padding:6px 10px;background:none;color:var(--muted);font-size:14px;text-decoration:underline;text-underline-offset:3px}
 
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
@@ -7088,13 +7089,18 @@ const PZ = {data: store.get("puzzle", {days: {}, played: 0, won: 0, streak: 0, b
 const pzDay = () => Math.floor((Date.parse(todayIN() + "T00:00:00Z") - PZ_START) / 864e5) + 1;
 const pzHash = n => { let x = (n * 2654435761) >>> 0; x ^= x >>> 15; x = Math.imul(x, 2246822519) >>> 0; x ^= x >>> 13; return x >>> 0; };
 const pzSave = () => store.set("puzzle", PZ.data);
-const pzToday = () => PZ.data.days[pzDay()] || (PZ.data.days[pzDay()] = {g: [], done: false, won: false});
+// round 0 is today's daily puzzle (the same movie for everyone); Reset starts round 1, 2… with a new random movie
+const pzRound = () => { const r = store.get("puzzleRound", {d: 0, n: 0}); return r.d === pzDay() ? r.n : 0; };
+const pzKey = () => pzRound() ? `${pzDay()}.${pzRound()}` : pzDay();
+const pzToday = () => PZ.data.days[pzKey()] || (PZ.data.days[pzKey()] = {g: [], done: false, won: false});
 const langName = c => { try { return new Intl.DisplayNames(["en"], {type: "language"}).of(c); } catch (e) { return c; } };
 
 async function pzAnswer() {
-  const d = pzDay(), cached = store.get("puzzleAns", null);
-  if (cached && cached.d === d) return cached;
-  const h = pzHash(d), lang = PZ_POOLS[d % PZ_POOLS.length];
+  const d = pzDay(), n = pzRound(), cached = store.get("puzzleAns", null);
+  if (cached && cached.d === d && (cached.n || 0) === n) return cached;
+  // the daily one is fixed by the date; a reset round mixes in the time, so each Reset brings a different movie
+  const h = n ? pzHash(d * 7919 + n * 104729 + (Date.now() % 100000)) : pzHash(d);
+  const lang = n ? PZ_POOLS[(h >>> 4) % PZ_POOLS.length] : PZ_POOLS[d % PZ_POOLS.length];
   // the most-voted films in that language: an order that barely moves, so everyone gets the same film today
   const j = await tget("/discover/movie", {with_original_language: lang, sort_by: "vote_count.desc", "vote_count.gte": lang === "en" ? 3000 : 60,
     include_adult: "false", page: 1 + (h % (lang === "en" ? 10 : 4))});
@@ -7103,7 +7109,7 @@ async function pzAnswer() {
   if (!list.length) throw new Error("no film");
   const r = list[(h >>> 8) % list.length];
   const [det, cr] = await Promise.all([tget(`/movie/${r.id}`, {}), tget(`/movie/${r.id}/credits`, {}).catch(() => ({}))]);
-  const ans = {d, id: r.id, title: det.title || r.title, orig: det.original_title || "", year: String(det.release_date || r.release_date || "").slice(0, 4),
+  const ans = {d, n, id: r.id, title: det.title || r.title, orig: det.original_title || "", year: String(det.release_date || r.release_date || "").slice(0, 4),
     lang: det.original_language || lang, genres: (det.genres || []).map(g => g.name).slice(0, 2).join(", "),
     actor: ((cr.cast || [])[0] || {}).name || "", director: ((cr.crew || []).find(c => c.job === "Director") || {}).name || "",
     poster: det.poster_path || r.poster_path, raw: r};
@@ -7116,7 +7122,8 @@ function pzClue(ans, i) {
 
 async function openPuzzle() {
   const seq = ++PZ.seq;
-  openXP(xpTop("Poster Puzzle", `#${pzDay()} · Guess today's movie from its poster`) + `<div id="pz"><div class="empty">Loading today's puzzle…</div></div>`, "puzzle");
+  const n = pzRound();
+  openXP(xpTop("Poster Puzzle", n ? `#${pzDay()} · Bonus round ${n}` : `#${pzDay()} · Guess today's movie from its poster`) + `<div id="pz"><div class="empty">Loading today's puzzle…</div></div>`, "puzzle");
   try { PZ.ans = await pzAnswer(); } catch (e) {
     if (seq === PZ.seq && $("#pz")) $("#pz").innerHTML = `<div class="empty">Couldn't load today's puzzle. Check your connection and try again.</div>`;
     return;
@@ -7135,12 +7142,14 @@ function pzRender() {
   const done = t.done ? `<div class="pz-end">
       <h3>${t.won ? `🎉 Got it in ${t.g.length}!` : "😅 Not this time"}</h3>
       <p>It was <b>${esc(a.title)}</b> (${esc(a.year)})</p>
-      <div class="acts"><button class="btn tint" data-pzopen>Open the movie</button><button class="btn soft" data-pzshare>Share result</button></div>
+      <div class="acts"><button class="btn tint" data-pzopen>Open the movie</button><button class="btn soft" data-pzshare>Share result</button>
+        <button class="btn soft" data-pzreset>↺ New movie</button></div>
       <div class="pz-stats">${pzStats()}</div>
       <p class="pz-next" id="pznext"></p></div>`
     : `<div class="pz-in"><div class="sfield">${ICON.search}<input id="pzq" type="search" placeholder="Type a movie name…" autocomplete="off" enterkeyhint="search" aria-label="Your guess"></div>
        <div id="pzsug" class="pz-sug" role="listbox"></div>
-       <button class="btn soft pz-skip" data-pzskip>Skip · show me a clue</button></div>`;
+       <button class="btn soft pz-skip" data-pzskip>Skip · show me a clue</button>
+       <button class="pz-reset" data-pzreset>↺ Reset · play a different movie</button></div>`;
   const past = t.g.length ? `<div class="pz-g">${t.g.map(g => `<span class="${g.ok ? "ok" : "no"}">${g.ok ? "✓" : "✕"} ${esc(g.t)}</span>`).join("")}</div>` : "";
   box.innerHTML = `<div class="pz-wrap"><div class="pz-pic"><canvas id="pzc" width="342" height="513" aria-label="Today's mystery poster"></canvas></div>
     <div class="pz-side"><div class="pz-tries" aria-label="${t.g.length} of ${PZ_TRIES} tries used">${tries}</div>${past}${done}<div class="pz-clues">${clues}</div></div></div>`;
@@ -7182,8 +7191,11 @@ function pzGuess(g) {
     t.done = true; t.won = ok;
     const s = PZ.data, d = pzDay();
     s.played++;
-    if (ok) { s.won++; s.dist[t.g.length - 1]++; s.streak = s.last === d - 1 ? s.streak + 1 : 1; s.best = Math.max(s.best, s.streak); s.last = d; }
-    else s.streak = 0;
+    if (ok) s.won++, s.dist[t.g.length - 1]++;
+    if (!pzRound()) {                                  // the streak follows the daily puzzle, not bonus rounds
+      if (ok) { s.streak = s.last === d - 1 || s.last === d ? (s.last === d ? s.streak : s.streak + 1) : 1; s.best = Math.max(s.best, s.streak); s.last = d; }
+      else s.streak = 0;
+    }
     buzz(); toast(ok ? "🎉 You got it!" : `It was ${a.title}`);
   } else toast(g ? "Not this one — here's a clue" : "Here's a clue");
   // keep only the last 60 days of history
@@ -7208,9 +7220,16 @@ function pzSuggest(q) {
       : `<div class="pz-none">No movie found for “${esc(q.trim())}”</div>`;
   }, 220);
 }
+function pzReset() {
+  // a fresh round with a new movie: today's progress so far is kept in your stats, the board starts clean
+  const t = pzToday(); if (t.g.length && !t.done) { const s = PZ.data; s.played++; if (!pzRound()) s.streak = 0; t.done = true; pzSave(); }
+  store.set("puzzleRound", {d: pzDay(), n: pzRound() + 1});
+  store.set("puzzleAns", null);
+  toast("New movie loading…"); openPuzzle();
+}
 function pzShare() {
   const t = pzToday(), squares = t.g.map(g => g.ok ? "🟩" : "🟥").join("");
-  const text = `VibeSync Poster Puzzle #${pzDay()} ${squares} ${t.won ? t.g.length : "X"}/${PZ_TRIES}\nhttps://vibesync-saianish.streamlit.app/`;
+  const text = `VibeSync Poster Puzzle #${pzDay()}${pzRound() ? ` (bonus ${pzRound()})` : ""} ${squares} ${t.won ? t.g.length : "X"}/${PZ_TRIES}\nhttps://vibesync-saianish.streamlit.app/`;
   if (navigator.share) { navigator.share({text}).catch(() => {}); return; }
   const done = () => toast("Result copied — paste it anywhere");
   (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(done).catch(() => {
@@ -7220,10 +7239,11 @@ function pzShare() {
 }
 document.addEventListener("input", e => { if (e.target.id === "pzq") pzSuggest(e.target.value); });
 document.addEventListener("click", e => {
-  const t = e.target.closest && e.target.closest("[data-pzg],[data-pzskip],[data-pzshare],[data-pzopen],[data-passport],[data-pvc],[data-pvsug]"); if (!t) return;
+  const t = e.target.closest && e.target.closest("[data-pzg],[data-pzskip],[data-pzshare],[data-pzopen],[data-pzreset],[data-passport],[data-pvc],[data-pvsug]"); if (!t) return;
   if (t.dataset.pzg) pzGuess({id: +t.dataset.pzg, t: t.dataset.pzt, y: t.dataset.pzy});
   else if (t.hasAttribute("data-pzskip")) pzGuess(null);
   else if (t.hasAttribute("data-pzshare")) pzShare();
+  else if (t.hasAttribute("data-pzreset")) pzReset();
   else if (t.hasAttribute("data-pzopen")) { const it = fromTmdb(Object.assign({media_type: "movie"}, PZ.ans.raw), "movie"); if (it) { BY[it.id] = BY[it.id] || it; openSheet(it.id); } }
   else if (t.hasAttribute("data-passport")) openPassport();
   else if (t.dataset.pvc) pvPick(t.dataset.pvc);
