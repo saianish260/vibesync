@@ -2293,7 +2293,7 @@ function studiosHTML() {
   return section("Famous studios", "") + `<div class="quick studios">${STUDIOS.map(s =>
     `<button class="chip" data-studio="${s.k}">${esc(s.n)}</button>`).join("")}</div>`;
 }
-const SREF = store.get("studioIds3", {});
+const SREF = store.get("studioIds4", {});
 async function studioIds(s) {
   if ((SREF[s.k] || []).length) return SREF[s.k];
   const ids = new Set();
@@ -2307,15 +2307,15 @@ async function studioIds(s) {
       if (page >= (j.total_pages || 1)) return;
     }
   }));
-  if (ids.size) { SREF[s.k] = [...ids]; store.set("studioIds3", SREF); }
+  if (ids.size) { SREF[s.k] = [...ids]; store.set("studioIds4", SREF); }
   else if (!reached) return [];
   return SREF[s.k] || [];
 }
-// from / to: your year filter; jump: where the fast-scroll rail dropped you (a start year inside that range)
-function studioQuery(type, noJump) {
+// from / to: your year filter
+function studioQuery(type) {
   const today = todayIN(), p = {with_companies: STV.ids.join("|"), include_adult: "false"};
   const key = type === "movie" ? "primary_release_date" : "first_air_date";
-  const lo = Math.max(STV.from || 0, noJump ? 0 : STV.jump || 0), hi = STV.to ? `${STV.to}-12-31` : today;
+  const lo = STV.from || 0, hi = STV.to ? `${STV.to}-12-31` : today;
   p.sort_by = key + ".asc"; p[key + ".lte"] = hi < today ? hi : today;
   if (lo) p[key + ".gte"] = `${lo}-01-01`;
   if (type === "movie" && STV.s.long) p["with_runtime.gte"] = 40;   // feature films only, not the shorts these studios also made
@@ -2323,26 +2323,38 @@ function studioQuery(type, noJump) {
 }
 const yearOf = r => +String(r.release_date || r.first_air_date || "").slice(0, 4) || 0;
 async function studioCounts(seq) {
-  const n = await Promise.all(["movie", "tv"].map(t => tget(`/discover/${t}`, Object.assign({page: 1}, studioQuery(t, true))).then(j => j.total_results || 0).catch(() => -1)));
+  const n = await Promise.all(["movie", "tv"].map(t => tget(`/discover/${t}`, Object.assign({page: 1}, studioQuery(t))).then(j => j.total_results || 0).catch(() => -1)));
   if (STV.seq === seq) ["movie", "tv"].forEach((t, i) => { const b = $(`[data-scount="${t}"]`); if (b) b.textContent = n[i] >= 0 ? n[i].toLocaleString("en-IN") : ""; });
   return n;
 }
-// the oldest and newest year in the list (for the rail): the first result, and the last result of the last page
+// The rail stands for the list itself: top = its first title, bottom = its last. To show the year at any point,
+// a dozen pages spread through the list are read once (index → year), and years in between are interpolated.
 async function studioSpan(seq, type) {
   try {
-    const q = studioQuery(type, true), first = await tget(`/discover/${type}`, Object.assign({page: 1}, q));
-    const pages = Math.min(first.total_pages || 1, 500), last = pages > 1 ? await tget(`/discover/${type}`, Object.assign({page: pages}, q)) : first;
-    const lo = yearOf((first.results || [])[0] || {}), hi = yearOf((last.results || []).slice(-1)[0] || {});
-    if (STV.seq !== seq || !lo || !hi) return;
-    STV.span = [lo, hi]; railDraw();
-    const f = $("[data-yfrom]"), t = $("[data-yto]"); if (f) f.placeholder = lo; if (t) t.placeholder = hi;
+    const q = studioQuery(type), first = await tget(`/discover/${type}`, Object.assign({page: 1}, q));
+    const pages = Math.min(first.total_pages || 1, 500), n = Math.min(first.total_results || 0, pages * 20);
+    const want = [...new Set(Array.from({length: Math.min(pages, 20)}, (_, i) => 1 + Math.round(i * (pages - 1) / Math.max(1, Math.min(pages, 20) - 1))))];
+    const got = await Promise.all(want.map(p => p === 1 ? first : tget(`/discover/${type}`, Object.assign({page: p}, q)).catch(() => null)));
+    if (STV.seq !== seq) return;
+    const pts = [];
+    got.forEach((j, i) => { const r = (j && j.results) || [], base = (want[i] - 1) * 20;
+      r.forEach((x, k) => { if (k === 0 || k === r.length - 1) { const y = yearOf(x); if (y) pts.push([base + k, y]); } }); });
+    pts.sort((a, b) => a[0] - b[0]);
+    if (pts.length < 2 || n < 40) { STV.span = null; railDraw(); return; }
+    STV.span = {n, pts}; railDraw();
+    const f = $("[data-yfrom]"), t = $("[data-yto]"); if (f) f.placeholder = pts[0][1]; if (t) t.placeholder = pts[pts.length - 1][1];
   } catch (e) {}
+}
+function yearAt(i) {                                   // the year of title number i, from the samples
+  const p = STV.span.pts; if (i <= p[0][0]) return p[0][1];
+  for (let k = 1; k < p.length; k++) if (i <= p[k][0]) { const [a, ya] = p[k - 1], [b, yb] = p[k]; return Math.round(ya + (yb - ya) * (i - a) / Math.max(1, b - a)); }
+  return p[p.length - 1][1];
 }
 const stvSkel = () => `<div class="grid">${Array.from({length: 9}, () => `<div class="card sk" aria-hidden="true"><div class="pw"></div><div class="sk-t"></div></div>`).join("")}</div>`;
 async function openStudio(k) {
   const s = STUDIOS.find(x => x.k === k); if (!s) return;
   const seq = ++STV.seq;
-  Object.assign(STV, {s, on: true, type: "movie", page: 0, total: 1, busy: false, seen: new Set(), ids: [], years: [], from: 0, to: 0, jump: 0, span: null});
+  Object.assign(STV, {s, on: true, type: "movie", page: 0, total: 1, busy: false, seen: new Set(), ids: [], idx: [], from: 0, to: 0, start: 1, span: null});
   $("#sres").innerHTML = `<div class="stv"><div class="stv-h"><button class="chip" data-studioback aria-label="Back to search">← Back</button><h2>${esc(s.n)}</h2></div>
     <div class="chips stv-t" role="group" aria-label="Movies or series">
       <button class="chip" data-stype="movie" aria-pressed="true">Movies <b data-scount="movie"></b></button>
@@ -2363,19 +2375,19 @@ async function openStudio(k) {
 }
 function setStudioType(type) {
   if (!STV.on) return;
-  STV.type = type; STV.jump = 0;
+  STV.type = type; STV.start = 1;
   $$("[data-stype]").forEach(b => b.setAttribute("aria-pressed", b.dataset.stype === type));
   restartStudio(true);
 }
 // start the list again (a new type, year filter or jump); span: also work out the rail's years again
 function restartStudio(span) {
   const seq = ++STV.seq;
-  Object.assign(STV, {page: 0, total: 1, busy: false, seen: new Set(), years: []});
+  Object.assign(STV, {page: STV.start - 1, total: Math.max(1, STV.start), busy: false, seen: new Set(), idx: [], first: true});
   if (span) { STV.span = null; railDraw(); }
   const g = $("#stvgrid"); if (g) g.innerHTML = stvSkel();
   const sc = $("#search .sres"); if (sc) sc.scrollTop = 0;
   const sub = $("#stvsub");
-  if (sub) sub.innerHTML = STV.jump ? `Showing from <b>${STV.jump}</b> onwards · <button class="linkbtn" data-yjump0>Show from the start</button>`
+  if (sub) sub.innerHTML = STV.start > 1 ? `Showing from ${STV.span ? `<b>${yearAt((STV.start - 1) * 20)}</b>` : "here"} onwards · <button class="linkbtn" data-yjump0>Show from the start</button>`
     : STV.from || STV.to ? `${STV.from || "Earliest"} to ${STV.to || "now"}, oldest first` : "Oldest first, up to the newest release";
   if (STV.ids.length) { loadStudio(); if (span) studioSpan(seq, STV.type); }
 }
@@ -2388,11 +2400,17 @@ async function loadStudio() {
     const j = await tget(`/discover/${type}`, Object.assign({page: STV.page + 1}, studioQuery(type)));
     if (seq !== STV.seq) return;
     STV.page = j.page || STV.page + 1; STV.total = Math.min(j.total_pages || 1, 500);
-    const kept = (j.results || []).map(r => [r, fromTmdb(r, type)]).filter(([, it]) => it && hasPoster(it) && !STV.seen.has(it.id) && STV.seen.add(it.id));
+    const base = (STV.page - 1) * 20;
+    const kept = (j.results || []).map((r, k) => [base + k, fromTmdb(r, type)]).filter(([, it]) => it && hasPoster(it) && !STV.seen.has(it.id) && STV.seen.add(it.id));
     const fresh = kept.map(([, it]) => it);
-    kept.forEach(([r]) => STV.years.push(yearOf(r)));
+    kept.forEach(([i]) => STV.idx.push(i));            // where each card sits in the whole list (for the rail)
     const g = $("#stvgrid"); if (!g) return;
-    if (STV.page === 1) g.innerHTML = fresh.length ? grid(fresh) : `<div class="empty">No ${type === "movie" ? "movies" : "series"} from ${esc(STV.s.n)}${STV.from || STV.to ? " in those years" : ""}.</div>`;
+    const firstBatch = STV.first; STV.first = false;
+    if (firstBatch && STV.start > 1 && j.results && j.results[0]) {   // the real year you landed on
+      const sub = $("#stvsub"), y = yearOf(j.results[0]);
+      if (sub && y) sub.innerHTML = `Showing from <b>${y}</b> onwards · <button class="linkbtn" data-yjump0>Show from the start</button>`;
+    }
+    if (firstBatch) g.innerHTML = fresh.length ? grid(fresh) : `<div class="empty">No ${type === "movie" ? "movies" : "series"} from ${esc(STV.s.n)}${STV.from || STV.to ? " in those years" : ""}.</div>`;
     else { const gg = g.querySelector(".grid"); if (gg) gg.insertAdjacentHTML("beforeend", fresh.map(card).join("")); }
     const sc = $("#search .sres");
     more = STV.page < STV.total && (!fresh.length || (sc && sc.scrollHeight <= sc.clientHeight + 800));   // fill the screen
@@ -2412,26 +2430,27 @@ document.addEventListener("scroll", e => {           // endless: the next page a
 const RAIL = {drag: false, y: 0};
 function railDraw() {
   const r = $("#stvrail"); if (!r) return;
-  const sp = STV.span; r.hidden = !sp || sp[1] - sp[0] < 2;
+  const sp = STV.span; r.hidden = !sp;
   if (r.hidden) return;
-  r.querySelector(".stv-lo").textContent = sp[0]; r.querySelector(".stv-hi").textContent = sp[1];
-  r.setAttribute("aria-valuemin", sp[0]); r.setAttribute("aria-valuemax", sp[1]);
+  r.querySelector(".stv-lo").textContent = sp.pts[0][1]; r.querySelector(".stv-hi").textContent = sp.pts[sp.pts.length - 1][1];
+  r.setAttribute("aria-valuemin", 1); r.setAttribute("aria-valuemax", sp.n);
   railFollow();
 }
-function railSet(year, show) {
+function railSet(i, show) {                           // i: title number in the whole list
   const r = $("#stvrail"), sp = STV.span; if (!r || !sp) return;
-  const f = Math.max(0, Math.min(1, (year - sp[0]) / (sp[1] - sp[0])));
-  r.style.setProperty("--f", f); r.setAttribute("aria-valuenow", year);
-  const b = r.querySelector(".stv-bub"); b.textContent = year; r.classList.toggle("talk", !!show);
+  r.style.setProperty("--f", Math.max(0, Math.min(1, i / Math.max(1, sp.n - 1))));
+  const y = yearAt(Math.floor(i / 20) * 20);           // the year where the list will start (lists move in pages of 20)
+  r.setAttribute("aria-valuenow", i + 1); r.setAttribute("aria-valuetext", String(y));
+  r.querySelector(".stv-bub").textContent = y; r.classList.toggle("talk", !!show);
 }
-function railFollow() {                               // the thumb shows the year you're looking at
-  const sc = $("#search .sres"), g = $("#stvgrid .grid"); if (!sc || !g || !STV.span || !STV.years.length) return;
+function railFollow() {                               // the thumb follows the titles you're looking at
+  const sc = $("#search .sres"), g = $("#stvgrid .grid"); if (!sc || !g || !STV.span || !STV.idx.length) return;
   const top = sc.getBoundingClientRect().top + 120, cards = g.children;
   let i = 0; for (; i < cards.length; i++) if (cards[i].getBoundingClientRect().bottom > top) break;
-  railSet(STV.years[Math.min(i, STV.years.length - 1)] || STV.span[0]);
+  railSet(STV.idx[Math.min(i, STV.idx.length - 1)]);
 }
 const railYear = e => { const r = $("#stvrail").getBoundingClientRect(), sp = STV.span;
-  return Math.round(sp[0] + Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) * (sp[1] - sp[0])); };
+  return Math.round(Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) * (sp.n - 1)); };
 document.addEventListener("pointerdown", e => {
   const r = e.target.closest && e.target.closest("#stvrail"); if (!r || !STV.span) return;
   e.preventDefault(); RAIL.drag = true; r.setPointerCapture && r.setPointerCapture(e.pointerId); RAIL.y = railYear(e); railSet(RAIL.y, true);
@@ -2440,9 +2459,9 @@ document.addEventListener("pointermove", e => { if (!RAIL.drag) return; const y 
 document.addEventListener("pointerup", () => {
   if (!RAIL.drag) return; RAIL.drag = false;
   const r = $("#stvrail"); if (r) r.classList.remove("talk");
-  const y = RAIL.y, sp = STV.span; if (!sp) return;
-  STV.jump = y <= Math.max(sp[0], STV.from || 0) ? 0 : y;    // dropped at the top: the whole list from the start
-  restartStudio(false); railSet(y);
+  const i = RAIL.y; if (!STV.span) return;
+  STV.start = Math.floor(i / 20) + 1;                  // the page holding that title: the list starts right there
+  restartStudio(false); railSet(i);
 });
 /* ── the year filter: From and To ── */
 let yrT = null;
@@ -2459,7 +2478,7 @@ function yearApply() {
   if ((fRaw && !f) || (tRaw && !t)) { toast(`Years go from 1900 to ${now}`); return; }
   if (f && t && f > t) [f, t] = [t, f];
   if (f === STV.from && t === STV.to) return;
-  STV.from = f; STV.to = t; STV.jump = 0;
+  STV.from = f; STV.to = t; STV.start = 1;
   const c = $("[data-yclear]"); if (c) c.hidden = !(f || t);
   restartStudio(true); studioCounts(STV.seq);
 }
@@ -2467,7 +2486,7 @@ document.addEventListener("click", e => {
   const t = e.target.closest && e.target.closest("[data-studio],[data-stype],[data-studioback],[data-yclear],[data-yjump0]"); if (!t) return;
   buzz();
   if (t.hasAttribute("data-yclear")) { $$("[data-yfrom],[data-yto]").forEach(i => { i.value = ""; }); yearApply(); return; }
-  if (t.hasAttribute("data-yjump0")) { STV.jump = 0; restartStudio(false); return; }
+  if (t.hasAttribute("data-yjump0")) { STV.start = 1; restartStudio(false); return; }
   if (t.dataset.studio) openStudio(t.dataset.studio);
   else if (t.dataset.stype) { if (t.dataset.stype !== STV.type) setStudioType(t.dataset.stype); }
   else { const q = $("#q"); if (q) q.value = ""; renderSearch(""); const sc = $("#search .sres"); if (sc) sc.scrollTop = 0; }
