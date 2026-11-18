@@ -1257,6 +1257,8 @@ html.sheeting #app *, html.sheeting #bnav, html.sheeting .bnav{backdrop-filter:n
    SCROLLING is true while any list is moving (and for a moment after): the page does no extra work then.
    A touch listener that can block scrolling makes the browser wait for the page before every scroll starts,
    so those are kept on the spotlight only (the one place that needs it: press and hold, then slide). */
+// focus a text box without opening the on-screen keyboard on phones and tablets (it opens when you tap the box)
+const softFocus = el => { if (el && !matchMedia("(pointer: coarse)").matches) el.focus({preventScroll: true}); };
 var SCROLLING = false;
 (() => {
   let t = 0;
@@ -1880,7 +1882,7 @@ function openSearch() {
     <input id="q" type="search" placeholder="Titles, genres, platforms…" autocomplete="off" enterkeyhint="search"></div>
     <button class="icon" data-closesearch aria-label="Close search">${ICON.close}</button></div><div class="sres"><div class="wrap" id="sres"></div></div>`;
   s.classList.add("on");
-  setTimeout(() => $("#q").focus(), 80);
+  setTimeout(() => softFocus($("#q")), 80);       // phones: no keyboard until you tap the box
   renderSearch("");
 }
 function closeSearch() { $("#search").classList.remove("on"); }
@@ -7274,7 +7276,7 @@ function pzRender() {
   box.innerHTML = `<div class="pz-wrap"><div class="pz-pic"><canvas id="pzc" width="342" height="513" aria-label="Today's mystery poster"></canvas></div>
     <div class="pz-side"><div class="pz-tries" aria-label="${t.g.length} of ${PZ_TRIES} tries used">${tries}</div>${past}${done}<div class="pz-clues">${clues}</div></div></div>`;
   pzDraw(t.done ? 0 : PZ_PIX[Math.min(wrong, PZ_PIX.length - 1)]);
-  if (t.done) pzTick(); else setTimeout(() => { const q = $("#pzq"); if (q && !("ontouchstart" in window)) q.focus(); }, 60);
+  if (t.done) pzTick(); else setTimeout(() => { softFocus($("#pzq")); }, 60);
 }
 function pzDraw(px) {
   const c = $("#pzc"); if (!c || !PZ.ans) return;
@@ -7678,13 +7680,13 @@ document.addEventListener("input", e => { const k = e.target.dataset && e.target
 document.addEventListener("click", e => {
   const t = e.target.closest && e.target.closest("[data-sdp],[data-sdclear],[data-sdgo],[data-sdday],[data-sdswap],[data-sdreset]"); if (!t) return;
   if (t.dataset.sdp) { SD[t.dataset.sdp] = {id: +t.dataset.id, name: t.dataset.name, profile_path: t.dataset.img || null}; sdRefresh();
-    const other = $(`[data-sdq="${t.dataset.sdp === "a" ? "b" : "a"}"]`); if (other) other.focus(); else sdGo(); }
-  else if (t.dataset.sdclear) { SD[t.dataset.sdclear] = null; sdRefresh(); const q = $(`[data-sdq="${t.dataset.sdclear}"]`); if (q) q.focus(); }
+    const other = $(`[data-sdq="${t.dataset.sdp === "a" ? "b" : "a"}"]`); if (other) softFocus(other); else sdGo(); }
+  else if (t.dataset.sdclear) { SD[t.dataset.sdclear] = null; sdRefresh(); softFocus($(`[data-sdq="${t.dataset.sdclear}"]`)); }
   else if (t.hasAttribute("data-sdgo")) sdGo();
   else if (t.hasAttribute("data-sdday")) sdDaily();
   else if (t.hasAttribute("data-sdreset")) {             // both stars and the result gone, any search stopped
     SD.a = SD.b = null; SD.seq++; sdRefresh(); const o = $("#sdout"); if (o) o.innerHTML = "";
-    const q = $('[data-sdq="a"]'); if (q) q.focus(); }
+    softFocus($('[data-sdq="a"]')); }
   else if (t.hasAttribute("data-sdswap")) { [SD.a, SD.b] = [SD.b, SD.a]; sdRefresh(); sdGo(); }
 });
 /* ───────────── Home spotlight on the website: the same Netflix-style poster row as the phone app ─────────────
