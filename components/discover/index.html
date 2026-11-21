@@ -1138,21 +1138,15 @@ html.sheeting #app *, html.sheeting #bnav, html.sheeting .bnav{backdrop-filter:n
 .stv-yr [data-yclear][hidden]{display:none}
 .stv #stvgrid{padding-right:28px}
 
-/* full-screen poster */
-.pview{position:fixed;inset:0;z-index:9999;background:#000;display:grid;place-items:center;opacity:0;pointer-events:none;transition:opacity .25s ease;touch-action:none;
-  --drag:0px;background:rgba(0,0,0,calc(1 - min(var(--drag) / 400px, .6)))}
+/* full-screen poster: one black screen with the poster drawn on it, nothing else */
+.pview{position:fixed;inset:0;z-index:9999;background:#000;opacity:0;pointer-events:none;transition:opacity .22s ease;touch-action:none;--drag:0px;contain:strict}
 .pview.on{opacity:1;pointer-events:auto}
-.pv-stage{position:relative;width:100vw;height:100vh;height:100dvh;transition:transform .28s cubic-bezier(.2,.9,.3,1);will-change:transform;transform-origin:50% 50%}
-.pv-stage.live{transition:none}
-.pview .pv-stage{translate:0 var(--drag)}
-.pv-stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
-.pv-hi{opacity:0;transition:opacity .3s}.pv-hi.ok{opacity:1}
-.pview.on .pv-stage{animation:pvin .32s cubic-bezier(.2,.9,.3,1)}
-@keyframes pvin{from{transform:scale(.88)}}
-.pv-x{position:absolute;top:max(16px,env(safe-area-inset-top));right:16px;width:48px;height:48px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;backdrop-filter:blur(8px)}
-.pv-x svg{width:22px;height:22px}
+.pv-cv{position:absolute;inset:0;width:100%;height:100%;display:block;translate:0 var(--drag);background:#000}
+.pv-x{position:absolute;top:max(16px,env(safe-area-inset-top));right:16px;width:46px;height:46px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;display:grid;place-items:center;transition:opacity .2s}
+.pview[style*="--drag"] .pv-x{opacity:0}
 #sheet .shead .pw{cursor:zoom-in}
-.pv-x svg{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+
+.pv-x svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
 
 /* ── Fluid motion: every move glides and settles like water on glass ──
    One long ease-out for slides and fades, one gentle spring (≈4% settle, no wobble) for things that pop.
@@ -7729,43 +7723,70 @@ document.addEventListener("click", e => {
 });
 
 /* ═════════════ Full-screen poster ═════════════
-   Tap the poster on any title's page and it fills the screen, then behaves like a photo: pinch to zoom in and out
-   (around your fingers), drag to move left, right, up and down when zoomed (it stops at the poster's edges), double-tap
-   to zoom into that spot or back out, mouse wheel on computers. Not zoomed: tap, ✕, swipe down or Back closes it.
-   The sharp, full-size poster fades in over the one already on screen, so there's no blank moment. */
-const PV2 = {pts: new Map(), s: 1, x: 0, y: 0, pinch: null, down: null, tap: 0, tt: 0};
+   Tap the poster on any title's page and it fills the screen like a photo: pinch to zoom (around your fingers), drag
+   in any direction when zoomed (it stops at the edges), double-tap to zoom into a spot or back out, mouse wheel on
+   computers. Not zoomed: tap, ✕, swipe down or Back closes it.
+   It's drawn on a canvas the size of your screen, at your screen's full sharpness: at any zoom only the part you see
+   is drawn, straight from the full-size poster. Nothing is stretched, no giant layer for the graphics chip to choke
+   on (that was the flicker), and it never gets smaller than the screen (no coloured bars around it). */
+const PV2 = {pts: new Map(), s: 1, x: 0, y: 0, pinch: null, down: null, tap: 0, tt: 0, img: null, raf: 0, anim: 0};
 function openPosterView(img) {
   if (!img || !img.src) return;
   let el = $("#pview");
   if (!el) { el = document.createElement("div"); el.id = "pview"; el.className = "pview"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Poster");
-    el.innerHTML = `<div class="pv-stage"><img class="pv-lo" alt="" draggable="false"><img class="pv-hi" alt="" draggable="false"></div><button class="pv-x" data-pvclose aria-label="Close">${ICON.close}</button>`;
+    el.innerHTML = `<canvas class="pv-cv"></canvas><button class="pv-x" data-pvclose aria-label="Close">${ICON.close}</button>`;
     document.body.appendChild(el); }
-  const lo = el.querySelector(".pv-lo"), hi = el.querySelector(".pv-hi");
-  lo.src = img.currentSrc || img.src; PV2.ratio = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : 2 / 3;
-  hi.classList.remove("ok"); hi.removeAttribute("src");
-  const big = lo.src.replace(/\/t\/p\/w\d+\//, "/t/p/original/");
-  if (big !== lo.src) { hi.onload = () => hi.classList.add("ok"); hi.src = big; }
-  Object.assign(PV2, {s: 1, x: 0, y: 0}); pvApply(false);
-  el.style.removeProperty("--drag"); el.classList.add("on"); buzz();
+  Object.assign(PV2, {s: 1, x: 0, y: 0, img}); cancelAnimationFrame(PV2.anim);
+  el.style.removeProperty("--drag"); el.classList.add("on"); pvSize(); buzz();
+  // the full-size poster, decoded off-screen first, then swapped in at the very same spot: only sharper
+  const big = (img.currentSrc || img.src).replace(/\/t\/p\/w\d+\//, "/t/p/original/");
+  if (big !== (img.currentSrc || img.src)) {
+    const hi = new Image(); hi.crossOrigin = img.crossOrigin || null; hi.src = big;
+    (hi.decode ? hi.decode() : new Promise(r => { hi.onload = r; })).then(() => { if (PV2.img === img && $("#pview.on")) { PV2.img = hi; pvDraw(); } }).catch(() => {});
+  }
 }
-function closePosterView() { const el = $("#pview"); if (el) { el.classList.remove("on"); el.style.removeProperty("--drag"); } PV2.pts.clear(); PV2.pinch = PV2.down = null; }
-// how far the zoomed poster may move: just enough to reach each edge, never past it
-function pvClamp() {
-  const W = innerWidth, H = innerHeight, r = PV2.ratio || 2 / 3;
-  const w = Math.min(W, H * r) * PV2.s, h = Math.min(H, W / r) * PV2.s;
-  const mx = Math.max(0, (w - W) / 2), my = Math.max(0, (h - H) / 2);
+function closePosterView() {
+  const el = $("#pview"); if (el) { el.classList.remove("on"); el.style.removeProperty("--drag"); }
+  PV2.pts.clear(); PV2.pinch = PV2.down = null; cancelAnimationFrame(PV2.anim);
+}
+function pvSize() {                                     // the canvas = the screen, in real device pixels
+  const c = $("#pview .pv-cv"); if (!c) return;
+  const d = Math.min(3, devicePixelRatio || 1); c.width = Math.round(innerWidth * d); c.height = Math.round(innerHeight * d);
+  pvDraw();
+}
+addEventListener("resize", () => { if ($("#pview.on")) { pvClamp(); pvSize(); } });
+function pvFit() {                                      // the poster's size when it just fits the screen
+  const im = PV2.img, W = innerWidth, H = innerHeight, r = im && im.naturalWidth ? im.naturalWidth / im.naturalHeight : 2 / 3;
+  return W / H > r ? [H * r, H] : [W, W / r];
+}
+function pvDraw() {
+  cancelAnimationFrame(PV2.raf);
+  PV2.raf = requestAnimationFrame(() => {
+    const c = $("#pview .pv-cv"), im = PV2.img; if (!c || !im) return;
+    const x = c.getContext("2d"), d = c.width / innerWidth, [w0, h0] = pvFit(), w = w0 * PV2.s, h = h0 * PV2.s;
+    x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = "#000"; x.fillRect(0, 0, c.width, c.height);
+    x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "high";
+    try { x.drawImage(im, (innerWidth / 2 - w / 2 + PV2.x) * d, (innerHeight / 2 - h / 2 + PV2.y) * d, w * d, h * d); } catch (e) {}
+  });
+}
+function pvClamp() {                                    // never smaller than the screen, never past an edge
+  PV2.s = Math.max(1, Math.min(6, PV2.s));
+  const [w0, h0] = pvFit(), mx = Math.max(0, (w0 * PV2.s - innerWidth) / 2), my = Math.max(0, (h0 * PV2.s - innerHeight) / 2);
   PV2.x = Math.max(-mx, Math.min(mx, PV2.x)); PV2.y = Math.max(-my, Math.min(my, PV2.y));
 }
-function pvApply(live) {
-  const st = $("#pview .pv-stage"); if (!st) return;
-  st.classList.toggle("live", !!live);                   // following your fingers: no easing; letting go: a soft settle
-  st.style.transform = `translate3d(${PV2.x}px, ${PV2.y}px, 0) scale(${PV2.s})`;
-}
-// zoom to scale s keeping the screen point (px, py) under your finger still
-function pvZoomAt(s, px, py) {
+function pvZoomAt(s, px, py) {                          // zoom keeping the point under your finger still
   const cx = innerWidth / 2, cy = innerHeight / 2, k = s / PV2.s;
   PV2.x = (px - cx) - k * (px - cx - PV2.x); PV2.y = (py - cy) - k * (py - cy - PV2.y); PV2.s = s;
 }
+function pvTween(to) {                                  // a soft glide to a zoom / position (double-tap, settling)
+  cancelAnimationFrame(PV2.anim);
+  const from = {s: PV2.s, x: PV2.x, y: PV2.y}, t0 = performance.now(), dur = 260;
+  const step = now => { const t = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - t, 3);
+    PV2.s = from.s + (to.s - from.s) * e; PV2.x = from.x + (to.x - from.x) * e; PV2.y = from.y + (to.y - from.y) * e; pvDraw();
+    if (t < 1) PV2.anim = requestAnimationFrame(step); };
+  PV2.anim = requestAnimationFrame(step);
+}
+function pvSettle() { const s0 = {s: PV2.s, x: PV2.x, y: PV2.y}; pvClamp(); const to = {s: PV2.s, x: PV2.x, y: PV2.y}; Object.assign(PV2, s0); pvTween(to); }
 document.addEventListener("click", e => {
   const pw = e.target.closest && e.target.closest("#sheet .shead .pw");
   if (pw && pw.querySelector("img")) { e.preventDefault(); e.stopPropagation(); openPosterView(pw.querySelector("img")); return; }
@@ -7773,7 +7794,7 @@ document.addEventListener("click", e => {
 }, true);
 document.addEventListener("pointerdown", e => {
   const el = e.target.closest && e.target.closest("#pview.on"); if (!el || e.target.closest("[data-pvclose]")) return;
-  e.preventDefault();
+  e.preventDefault(); cancelAnimationFrame(PV2.anim);
   PV2.pts.set(e.pointerId, {x: e.clientX, y: e.clientY});
   if (PV2.pts.size === 1) PV2.down = {x: e.clientX, y: e.clientY, ox: PV2.x, oy: PV2.y, moved: false};
   if (PV2.pts.size === 2) {
@@ -7785,46 +7806,43 @@ document.addEventListener("pointerdown", e => {
 document.addEventListener("pointermove", e => {
   if (!PV2.pts.has(e.pointerId)) return;
   PV2.pts.set(e.pointerId, {x: e.clientX, y: e.clientY});
-  const el = $("#pview");
-  if (PV2.pts.size >= 2 && PV2.pinch) {                 // pinch: zoom around the fingers, and follow them as they move
+  if (PV2.pts.size >= 2 && PV2.pinch) {                 // pinch: zoom around the fingers and follow them
     const [a, b] = [...PV2.pts.values()], mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-    const s = Math.max(.7, Math.min(5, PV2.pinch.s * Math.hypot(a.x - b.x, a.y - b.y) / PV2.pinch.d));
+    let s = PV2.pinch.s * Math.hypot(a.x - b.x, a.y - b.y) / PV2.pinch.d;
+    s = s < 1 ? 1 - (1 - s) * .25 : Math.min(6, s);     // squeezing smaller than the screen only gives a little, then springs back
     pvZoomAt(s, mx, my); PV2.x += mx - PV2.pinch.mx; PV2.y += my - PV2.pinch.my; PV2.pinch.mx = mx; PV2.pinch.my = my;
-    pvApply(true); return;
+    pvDraw(); return;
   }
   const d = PV2.down; if (!d) return;
   const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(dx) + Math.abs(dy) > 8) d.moved = true;
-  if (PV2.s > 1.01) { PV2.x = d.ox + dx; PV2.y = d.oy + dy; pvClamp(); pvApply(true); }   // zoomed: move around the poster
-  else if (dy > 0) el.style.setProperty("--drag", dy + "px");                              // not zoomed: pull down to close
+  if (PV2.s > 1.01) { PV2.x = d.ox + dx; PV2.y = d.oy + dy; pvClamp(); pvDraw(); }      // zoomed: move around the poster
+  else if (dy > 0) $("#pview").style.setProperty("--drag", dy + "px");                   // not zoomed: pull down to close
 });
 const pvUp = e => {
   if (!PV2.pts.has(e.pointerId)) return;
   PV2.pts.delete(e.pointerId);
-  if (PV2.pts.size === 1) {                             // one finger lifted from a pinch: carry on moving with the other
-    PV2.pinch = null; const [o] = [...PV2.pts.values()]; PV2.down = {x: o.x, y: o.y, ox: PV2.x, oy: PV2.y, moved: true}; return;
-  }
+  if (PV2.pts.size === 1) { PV2.pinch = null; const [o] = [...PV2.pts.values()]; PV2.down = {x: o.x, y: o.y, ox: PV2.x, oy: PV2.y, moved: true}; return; }
   if (PV2.pts.size) return;
   const d = PV2.down, el = $("#pview"); PV2.down = null; PV2.pinch = null; if (!el) return;
-  if (PV2.s < 1.02) { PV2.s = 1; PV2.x = PV2.y = 0; } else pvClamp();      // settle: never smaller than the screen, never off an edge
-  pvApply(false);
+  pvSettle();
   if (!d) return;
   const dy = e.clientY - d.y;
-  if (PV2.s === 1 && dy > 90) { closePosterView(); return; }
+  if (PV2.s <= 1.01 && dy > 90) { closePosterView(); return; }
   el.style.removeProperty("--drag");
   if (d.moved) return;
   const now = Date.now();
   if (now - PV2.tap < 300) {                            // double-tap: zoom into that spot, or back out
     clearTimeout(PV2.tt); PV2.tap = 0;
-    if (PV2.s > 1) Object.assign(PV2, {s: 1, x: 0, y: 0}); else { pvZoomAt(2.5, e.clientX, e.clientY); pvClamp(); }
-    pvApply(false); return;
+    if (PV2.s > 1.01) pvTween({s: 1, x: 0, y: 0});
+    else { const s0 = {s: PV2.s, x: PV2.x, y: PV2.y}; pvZoomAt(2.5, e.clientX, e.clientY); pvClamp(); const to = {s: PV2.s, x: PV2.x, y: PV2.y}; Object.assign(PV2, s0); pvTween(to); }
+    return;
   }
-  PV2.tap = now; PV2.tt = setTimeout(() => { if (PV2.s === 1) closePosterView(); }, 300);   // a single tap closes (when not zoomed)
+  PV2.tap = now; PV2.tt = setTimeout(() => { if (PV2.s <= 1.01) closePosterView(); }, 300);   // a single tap closes (when not zoomed)
 };
 document.addEventListener("pointerup", pvUp); document.addEventListener("pointercancel", pvUp);
 document.addEventListener("wheel", e => {               // computers: the wheel zooms at the pointer
-  if (!$("#pview.on")) return; e.preventDefault();
-  const s = Math.max(1, Math.min(5, PV2.s * Math.exp(-e.deltaY * .0015)));
-  pvZoomAt(s, e.clientX, e.clientY); if (s === 1) PV2.x = PV2.y = 0; pvClamp(); pvApply(true);
+  if (!$("#pview.on")) return; e.preventDefault(); cancelAnimationFrame(PV2.anim);
+  pvZoomAt(Math.max(1, Math.min(6, PV2.s * Math.exp(-e.deltaY * .0015))), e.clientX, e.clientY); pvClamp(); pvDraw();
 }, {passive: false});
 document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#pview.on")) { e.stopPropagation(); closePosterView(); } }, true);
 /* ───────────── Home spotlight on the website: the same Netflix-style poster row as the phone app ─────────────
