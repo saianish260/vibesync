@@ -20,17 +20,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - name: Download upcoming lists
-        run: python scripts/upcoming_probe.py
-      - name: Report
-        run: |
-          ls -la *.json || echo "::error::no json files"
-          python3 -c "
-          import json
-          d = json.load(open('probe.json'))
-          for k, v in d.items():
-              s = json.dumps(v)[:3500].replace('%','%25').replace(chr(10),' ')
-              print('::notice title=' + k + '::' + s)
-          " || true
+        run: python scripts/upcoming.py
       - name: Save to the data branch
         env:
           TOKEN: ${{ github.token }}
