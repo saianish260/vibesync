@@ -22,8 +22,11 @@ jobs:
       - name: Download upcoming lists
         run: python scripts/upcoming_probe.py
       - name: Save to the data branch
+        env:
+          TOKEN: ${{ github.token }}
         run: |
-          mkdir -p /tmp/out && cp probe.json /tmp/out/ && cp upcoming.json /tmp/out/ 2>/dev/null || true
+          mkdir -p /tmp/out && cp probe.json /tmp/out/ 2>/dev/null; cp upcoming.json /tmp/out/ 2>/dev/null; ls -la /tmp/out
+          cd /tmp/out && git init -q && git checkout -q -b data
           git config user.name "vibesync-bot" && git config user.email "actions@users.noreply.github.com"
-          git checkout --orphan data-tmp && git rm -rq . && cp /tmp/out/* . && git add *.json
-          git commit -qm "Upcoming on OTT: $(date -u +%F)" && git push -f origin HEAD:data
+          git add -A && git commit -qm "Upcoming on OTT: $(date -u +%F)"
+          git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
