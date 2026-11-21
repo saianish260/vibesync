@@ -1,0 +1,29 @@
+# Once a day: download every OTT app's upcoming list for India and save it to the `data` branch
+# (the website reads it from there, so the site itself doesn't redeploy every day).
+name: Upcoming on OTT
+on:
+  schedule:
+    - cron: "41 20 * * *"          # 02:11 India time, every day
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["scripts/upcoming*.py", ".github/workflows/upcoming.yml"]
+permissions:
+  contents: write
+concurrency: { group: upcoming, cancel-in-progress: true }
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Download upcoming lists
+        run: python scripts/upcoming_probe.py
+      - name: Save to the data branch
+        run: |
+          mkdir -p /tmp/out && cp probe.json /tmp/out/ && cp upcoming.json /tmp/out/ 2>/dev/null || true
+          git config user.name "vibesync-bot" && git config user.email "actions@users.noreply.github.com"
+          git checkout --orphan data-tmp && git rm -rq . && cp /tmp/out/* . && git add *.json
+          git commit -qm "Upcoming on OTT: $(date -u +%F)" && git push -f origin HEAD:data
