@@ -6525,12 +6525,48 @@ document.addEventListener("click", e => {
 });
 
 /* ───────────── Coming up on each OTT (under Browse by platform) ─────────────
-   Movies: India's upcoming digital releases whose TMDB release note names this app, plus upcoming titles
-   TMDB already lists on it. Series: shows on this app with a new episode due in the next 30 days. */
+   Each app's own upcoming list for India (movies, new series, new seasons, with their exact dates) comes from
+   JustWatch: a GitHub job downloads it once a day into upcoming.json on the repo's `data` branch. TMDB adds any
+   upcoming movie it already knows for the app. Series also get shows with a new episode due in the next 30 days. */
 const PSOON = {};
+const UPC_URL = "https://raw.githubusercontent.com/saianish260/vibesync/data/upcoming.json";
+let UPC = null;
+const loadUpcoming = () => UPC || (UPC = fetch(`${UPC_URL}?d=${todayIN()}`, {cache: "no-cache"}).then(r => r.ok ? r.json() : null).catch(() => { UPC = null; return null; }));
+const UREF = {};                                         // JustWatch titles without a TMDB id, matched once by name
+async function upcomingFor(k) {
+  const f = await loadUpcoming(); if (!f || !f.packs) return null;
+  const todayS = todayIN(), seen = new Set(), list = [];
+  Object.entries(f.packs).forEach(([app, items]) => { if (provKey(app) === k) items.forEach(x => {
+    if (seen.has(x.jw) || (x.label === "DATE" && !(x.date > todayS))) return;      // only what's still to come
+    seen.add(x.jw); list.push(x); }); });
+  await Promise.all(list.filter(x => !x.tmdb).map(async x => {
+    if (x.jw in UREF) { x.tmdb = UREF[x.jw]; return; }
+    try { const r = ((await tget(`/search/${x.t === "movie" ? "movie" : "tv"}`, {query: x.title})).results || [])
+      .find(r => norm(r.title || r.name) === norm(x.title)); UREF[x.jw] = x.tmdb = r ? r.id : null; } catch (e) {}
+  }));
+  return list;
+}
+function jwItem(x) {                                     // a JustWatch upcoming title as a VibeSync title
+  const type = x.t === "movie" ? "movie" : "tv", id = x.tmdb ? `tmdb:${type}:${x.tmdb}` : `jw:${x.jw}`;
+  if (BY[id]) return BY[id];
+  const [pid, slug] = String(x.poster || "").split("/"), year = String(x.year || "");
+  const it = {id, tmdb: x.tmdb ? {type, id: x.tmdb} : null, title: x.title, kind: type === "tv" ? "series" : "movie", year, meta: "", genres: [],
+    synopsis: "", moods: [], telugu: false, imdb: null, score: null, poster: pid && slug ? {id: pid, slug} : null, tmdbPoster: null, status: null,
+    note: "", emoji: "🎬", colors: ["#3F2A3A", "#1B1220"], offers: [], trailer: "https://www.youtube.com/results?search_query=" + enc(`${x.title} ${year} trailer`)};
+  const twin = curatedTwin(it); if (twin) return twin;   // (no poster yet: the card shows VibeSync's own art until one arrives)
+  return (BY[id] = it);
+}
+function jwWhen(x) {
+  if (x.label === "DATE" && x.date) return shortDate(x.date);
+  if (x.date && /MONTH/i.test(x.label || "")) return new Date(x.date + "T12:00:00").toLocaleString("en-IN", {month: "short", year: "numeric"});
+  if (x.date && /YEAR/i.test(x.label || "")) return x.date.slice(0, 4);
+  return "Coming soon";
+}
+const jwSort = (a, b) => (a.label === "DATE" ? a.date : "9" + (a.date || "")).localeCompare(b.label === "DATE" ? b.date : "9" + (b.date || ""));
 function platSoonHTML(k) {
   const n = esc(D.providers[k].name);
   return `<div class="sec"><h2>Coming soon to ${n}</h2><p class="live-sub"><i></i>Movies</p></div><div class="row" id="psoon-m">${skeleton(5)}</div>
+    <div class="sec"><h2>New series & seasons coming to ${n}</h2><p class="live-sub"><i></i>Series</p></div><div class="row" id="psoon-s">${skeleton(5)}</div>
     <div class="sec"><h2>New episodes coming on ${n}</h2><p class="live-sub"><i></i>Next 30 days</p></div><div class="row" id="psoon-t">${skeleton(5)}</div>
     <div class="sec"><h2>Recently added to ${n}</h2><p class="live-sub"><i></i>Last 30 days</p></div><div class="row" id="padd">${skeleton(5)}</div>`;
 }
@@ -6543,6 +6579,17 @@ async function fillPlatSoon(k) {
   const put = (el, html, empty) => { const e = $(el); if (!e || PSOON.seq !== seq) return; e.className = html ? "row" : ""; e.innerHTML = html || `<div class="empty">${empty}</div>`; };
   const name = D.providers[k].name;
   const todayS = todayIN(), later = d => String(d || "").slice(0, 10) > todayS;   // coming soon = after today (today's are already out)
+  const jw = upcomingFor(k);                            // the app's own upcoming list (downloaded daily)
+  // new series and new seasons, from the app's own upcoming list
+  (async () => {
+    const list = await jw.catch(() => null);
+    if (PSOON.seq !== seq) return;
+    if (!list) return put("#psoon-s", "", "Couldn't load upcoming series right now.");
+    const shows = list.filter(x => x.t !== "movie").sort(jwSort);
+    put("#psoon-s", shows.map(x => { const it = jwItem(x); if (!it) return "";
+      const what = x.season > 1 ? `Season ${x.season}` : "New series"; return dcard(it, `${what} · ${jwWhen(x)}`); }).join(""),
+      `No new series or seasons announced for ${esc(name)} yet.`);
+  })();
   // movies
   (async () => {
     try {
@@ -6559,8 +6606,15 @@ async function fillPlatSoon(k) {
         }));
         if (PSOON.seq !== seq) return;
       }
-      soon.sort((a, b) => (a.date || "9").localeCompare(b.date || "9"));
-      put("#psoon-m", soon.map(({r, date}) => { const it = fromTmdb(r, "movie"); return it ? dcard(it, date ? shortDate(date) : "Date not announced") : ""; }).join(""),
+      // the app's own list first; TMDB adds what it knows that the list doesn't have
+      const rows = [], ids2 = new Set();
+      ((await jw.catch(() => null)) || []).filter(x => x.t === "movie").forEach(x => { const it = jwItem(x);
+        if (it && !ids2.has(it.id)) { ids2.add(it.id); rows.push({it, key: x.label === "DATE" ? x.date : "9" + (x.date || ""), label: jwWhen(x)}); } });
+      soon.forEach(({r, date}) => { const it = fromTmdb(r, "movie");
+        if (it && !ids2.has(it.id)) { ids2.add(it.id); rows.push({it, key: date || "9", label: date ? shortDate(date) : "Date not announced"}); } });
+      if (PSOON.seq !== seq) return;
+      rows.sort((a, b) => a.key.localeCompare(b.key));
+      put("#psoon-m", rows.map(x => dcard(x.it, x.label)).join(""),
           `Nothing announced for ${esc(name)} yet. New dates show up here as soon as they're announced.`);
     } catch (e) { put("#psoon-m", "", "Couldn't load upcoming movies right now."); }
   })();
