@@ -1764,7 +1764,7 @@ function sheetHTML(it) {
   if (it.tmdb) return tmdbSheetHTML(it);
   const subs = it.kind === "sports" ? it.offers : it.offers.filter(o => nativeSub(it, o.p) !== false);   // only the apps' own subscriptions
   const offers = subs.length
-    ? `<div class="offers wicons">${subs.map(o => { const p = D.providers[o.p]; const lg = typeof PLOGO !== "undefined" && PLOGO[o.p];
+    ? `<div class="offers wicons">${subs.map(o => { const p = D.providers[o.p]; const lg = typeof PLOGO !== "undefined" && pinLogo(o.p, PLOGO[o.p]);
         return `<a class="wi" style="--pcol:${p.color}" href="${esc(linkFor(o.url, o.p))}" target="_blank" rel="noopener" title="${esc(p.name)}" aria-label="${esc(`${p.name}: ${it.kind === "sports" ? "Opens the app" : "Opens this exact title"}`)}">${lg ? `<img class="plogo" src="https://image.tmdb.org/t/p/w154${lg}" alt="">` : `<span class="logo">${esc(p.name[0])}</span>`}</a>`; }).join("")}</div>`
     : `<div class="note">Not streaming in India right now. Watch the trailer, or check back later.</div>`;
   const body = `<div class="tags">${it.telugu ? `<span class="tag tel">Telugu audio</span>` : ""}${it.status === "live" ? `<span class="live"><i></i>Live now</span>` : ""}${it.genres.filter(g => !(it.telugu && /^telugu$/i.test(g))).map(g => `<span class="tag">${esc(g)}</span>`).join("")}</div>
@@ -4912,7 +4912,7 @@ function ensureProviders() {
       // Only subscription services: skip rent/buy stores (Apple TV store = 2, Amazon Video = 10, Google Play = 3...)
       // and add-on channels, or rows fill up with titles you can only rent there.
       if (!k || STORE_IDS.has(p.provider_id) || /channel|with ads|store|rent|buy/i.test(p.provider_name)) return;
-      if (p.logo_path && !PLOGO[k]) { PLOGO[k] = p.logo_path; store.set("plogo2", PLOGO); }   // the app's icon, for every title
+      if (p.logo_path && !PLOGO[k]) { PLOGO[k] = pinLogo(k, p.logo_path); store.set("plogo2", PLOGO); }   // the app's icon, for every title
       T.provIds[k] = T.provIds[k] || [];
       if (!T.provIds[k].includes(p.provider_id)) T.provIds[k].push(p.provider_id);
     }));
@@ -4922,6 +4922,10 @@ function ensureProviders() {
 
 /* detail sheet for live titles */
 var PLOGO = store.get("plogo2", {});                     // each app's icon (from TMDB), for the hand-picked titles too
+// Apple TV: always the classic "tv" icon (the one Ted Lasso shows), never TMDB's newer rainbow one. The icon this device
+// already keeps is used if it has one; otherwise TMDB's classic Apple TV icon.
+const APPLE_CLASSIC = "/2E03IAZsX4ZaUqM7tXlctEPMGWS.jpg";
+const pinLogo = (k, path) => k === "appletv" ? (PLOGO.appletv || APPLE_CLASSIC) : path;
 const details = {};
 async function loadDetails(it) {
   if (details[it.id]) return;
@@ -4937,7 +4941,7 @@ async function loadDetails(it) {
       provs.push({name: p.provider_name, logo: p.logo_path, key: provKey(p.provider_name), kind});
     }));
     if (it.tmdb.type === "tv") serialSave(it.id, serialVerdict(d));
-    provs.forEach(p => { if (p.key && p.logo && !PLOGO[p.key]) { PLOGO[p.key] = p.logo; store.set("plogo2", PLOGO); } });
+    provs.forEach(p => { if (p.key && p.logo && !PLOGO[p.key]) { PLOGO[p.key] = pinLogo(p.key, p.logo); store.set("plogo2", PLOGO); } });
     const byKey = new Map(), other = [];          // one button per app
     provs.forEach(p => { if (!p.key) other.push(p); else if (!byKey.has(p.key)) byKey.set(p.key, p); });
     details[it.id] = {genres: (d.genres || []).map(g => g.name).slice(0, 4),
@@ -4967,7 +4971,7 @@ function exactLink(d, name) {
 const viaApp = (link, name) => IN_APP ? link + (link.includes("?") ? "&" : "?") + "vs_app=" + encodeURIComponent(name) : link;
 function tmdbSheetHTML(it) {
   const d = details[it.id];
-  const logo = p => p.logo ? `<img class="plogo" src="https://image.tmdb.org/t/p/w92${p.logo}" alt="">`
+  const logo = p => pinLogo(p.key, p.logo) ? `<img class="plogo" src="https://image.tmdb.org/t/p/w92${pinLogo(p.key, p.logo)}" alt="">`
                            : `<span class="logo">${esc(p.name[0])}</span>`;
   let where;
   const apps = d && !d.error ? d.apps.filter(p => nativeSub(it, p.key) !== false) : [];     // only the apps' own subscriptions
@@ -6484,7 +6488,8 @@ function langsHTML(it) {
       if (!has.length && subs.length) answer += `<div class="lg-sub">${P} subtitles on ${subs.map(nm).join(", ")}</div>`;
     } else answer = `<div class="lg-sub">Pick your language to check it</div>`;
     const row = a => { const k = keyOf(a) || provKey(a.name);
-      return `<div class="lg-row"><span class="logo" style="--pcol:${(D.providers[k] || {}).color || "#666"}">${esc((nm(a) || "?")[0])}</span>
+      return `<div class="lg-row">${k === "appletv" ? `<img class="logo plogo" src="https://image.tmdb.org/t/p/w92${pinLogo(k)}" alt="">`
+        : `<span class="logo" style="--pcol:${(D.providers[k] || {}).color || "#666"}">${esc((nm(a) || "?")[0])}</span>`}
       <span><b>${nm(a)}</b>${isChannel(a.name) && /amazon/i.test(a.name) ? `<small>Add-on bought inside Prime Video</small>` : ""}
       ${a.audio.length ? `<small>🔊 ${lsort(a.audio, pref).map(lname).join(", ")}</small>` : `<small>Audio languages not listed</small>`}
       ${a.subs.length ? `<small>💬 ${lsort(a.subs, pref).map(lname).join(", ")}</small>` : ""}</span></div>`; };
