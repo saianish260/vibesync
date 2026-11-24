@@ -775,6 +775,14 @@ img{display:block}
 .trv-v{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:#000}
 .trv-v iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .trv .chips{margin-top:12px}
+/* a trailer in full screen: only the video is drawn. Everything behind it (hidden anyway) stops painting, and the video
+   loses its rounded clip, so the player's controls and subtitles never flicker. All of it comes back on exit. */
+html.fsplay body{visibility:hidden}
+html.fsplay #trv,html.fsplay #trv *{visibility:visible}
+html.fsplay body *:not(#trv):not(#trv *){animation-play-state:paused!important;transition:none!important}
+html.fsplay :is(.top,.bnav,.tabs,.x,.mx-bar,.btn){backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.fsplay #trv{background:#000;transition:none}
+html.fsplay .trv-v{border-radius:0;overflow:visible}
 /* person page */
 .pp-h{display:flex;gap:14px;align-items:flex-start;margin-bottom:6px}
 .pp-h img{width:110px;border-radius:16px;flex:0 0 auto}
@@ -6615,6 +6623,13 @@ document.addEventListener("click", e => {
   delete RATE.r[b.dataset.rateclear]; store.set("ratings", RATE.r); toast("Rating removed"); refreshSheet(); savedLive();
   $$(`.card[data-open="${CSS.escape(b.dataset.rateclear)}"] .myr`).forEach(x => x.remove());
 });
+
+/* a trailer gone full screen (YouTube's ⤢): mark the page, so only the video is drawn while it plays */
+(() => {
+  const fs = () => document.documentElement.classList.toggle("fsplay", !!(document.fullscreenElement || document.webkitFullscreenElement));
+  document.addEventListener("fullscreenchange", fs);
+  document.addEventListener("webkitfullscreenchange", fs);
+})();
 
 /* ───────────── Coming up on each OTT (under Browse by platform) ─────────────
    Each app's own upcoming list for India (movies, new series, new seasons, with their exact dates) comes from
