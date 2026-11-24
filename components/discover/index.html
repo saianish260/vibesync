@@ -1390,6 +1390,13 @@ function isDevAccount(u) {
   try { return !!mail && sha256hex(mail) === DEV_ACCOUNT; } catch (e) { return false; }
 }
 let RATE_DEV = isDevAccount(store.get("auth", null));          // can switch on / off live when you sign in
+/* No anime for the developer account (and only for it): no Anime tab, no anime rows, cards, search results, shortcuts,
+   Crunchyroll or widget picks. Anime = TMDB animation made in Japanese, or a library title marked anime. */
+const noAnime = () => RATE_DEV;
+const isAnime = it => !!it && (it.kind === "anime");
+const animeDef = p => !!p && String(p.with_genres || "").split(/[,|]/).includes("16") && p.with_original_language === "ja";
+function animeFilter() { if (D && D.allItems) D.items = noAnime() ? D.allItems.filter(i => !isAnime(i)) : D.allItems; }
+const tabList = () => TABS.filter(([k]) => !(k === "anime" && noAnime()));
 
 /* ───────────── helpers ───────────── */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1550,6 +1557,7 @@ function overlay(it) {
   return o + statusBadge(it.id) + myRatingBadge(it.id) + provBadges(it);
 }
 function card(it) {
+  if (noAnime() && isAnime(it)) return "";               // developer account: no anime anywhere
   const sc = scoreOf(it);
   const meta = [sc ? `<span class="sc">★ ${sc.toFixed(1)}</span>` : "", esc(it.kind === "sports" ? it.meta : it.year)].filter(Boolean).join("");
   return `<button class="card" data-open="${it.id}" aria-label="${esc(it.title)}">${poster(it, "s332", overlay(it))}
@@ -1946,7 +1954,7 @@ function renderSearch(q) {
   const tq = twinKey(q);
   const items = !q ? []                                 // nothing until you type: just the shortcuts and studios
     : D.items.filter(i => hay(i).includes(q) || (tq.length > 2 && twinKey(i.title).includes(tq)));
-  const quick = !q ? `<div class="quick"><button class="chip mxchip" data-mixer>🎛️ Genre mixer</button>${QUICK.map(w => `<button class="chip" data-q="${esc(w)}">${esc(w)}</button>`).join("")}</div>` : "";
+  const quick = !q ? `<div class="quick"><button class="chip mxchip" data-mixer>🎛️ Genre mixer</button>${QUICK.filter(w => !(noAnime() && /^(anime|doraemon)$/i.test(w))).map(w => `<button class="chip" data-q="${esc(w)}">${esc(w)}</button>`).join("")}</div>` : "";
   // "Did you mean…?" when the typed text finds little, or isn't literally in the best match's title
   let dym = "", close = [];
   if (q.length >= 3) {
@@ -1982,7 +1990,7 @@ function renderSearch(q) {
 /* Truly random: the whole library (hand-picked + live titles already loaded), filtered by the
    selected mood if there is one, never repeating the last few picks. Saved titles get a small boost. */
 function surprisePool() {
-  const playable = i => i && !i.serial && hasPoster(i) && watchableNow(i) && !isWatched(i.id);
+  const playable = i => i && !i.serial && !(noAnime() && isAnime(i)) && hasPoster(i) && watchableNow(i) && !isWatched(i.id);
   let pool = D.items.filter(playable);
   Object.values(liveState).forEach(st => st.ids.forEach(id => { const it = BY[id]; if (playable(it) && !pool.includes(it)) pool.push(it); }));
   if (state.mood) {
@@ -2091,7 +2099,7 @@ function render() {
       <div class="moodbox" id="moodbox"><div></div></div>
       <button class="surprise" data-surprise><span class="die" aria-hidden="true">🎲</span><span style="flex:1"><b>Surprise me</b><small id="surprise-sub">Tap and VibeSync picks from the whole library</small></span><span class="go" style="width:22px;height:22px;opacity:.7">${ICON.arrow}</span></button>
       ${exploreHTML()}
-      <i id="tabsent" aria-hidden="true" style="display:block;height:1px;margin-bottom:-1px"></i><nav class="tabs" id="tabs" aria-label="Categories"><div class="tabrow" role="tablist"><span class="pill" id="pill"></span>${TABS.map(([k, l]) =>
+      <i id="tabsent" aria-hidden="true" style="display:block;height:1px;margin-bottom:-1px"></i><nav class="tabs" id="tabs" aria-label="Categories"><div class="tabrow" role="tablist"><span class="pill" id="pill"></span>${tabList().map(([k, l]) =>
         `<button class="tab" role="tab" data-tab="${k}" aria-selected="${k === state.tab}">${l}</button>`).join("")}</div></nav>
       <div id="panel" class="panel"></div>
       ${mixCardHTML()}
@@ -2595,7 +2603,7 @@ function renderMixer(first) {
   if (sel && pill) { pill.style.width = sel.offsetWidth + "px"; pill.style.transform = `translateX(${sel.offsetLeft - 4}px)`; }
   $("#mxmixes").innerHTML = MIXES.filter(x => x[2] === M.type).map(([n, e, t, ids], i) =>
     `<button class="chip" data-mix="${MIXES.indexOf(MIXES.find(x => x[0] === n))}">${e} ${esc(n)}</button>`).join("");
-  $("#mxgrid").innerHTML = GENRES[M.type].map(([id, name, emo], i) => {
+  $("#mxgrid").innerHTML = GENRES[M.type].filter(([id]) => !(id === "x-anime" && noAnime())).map(([id, name, emo], i) => {
     const st = M.sel[M.type][id] || 0;
     return `<div class="gz${first ? " fresh" : ""}" data-st="${st}" style="--i:${i}">
       <span class="ge" aria-hidden="true">${emo}</span><span class="gn">${esc(name)}</span>
@@ -4714,7 +4722,8 @@ function serialPump() {
 function fromTmdb(r, typeHint) {
   const type = r.media_type || typeHint;
   if ((type !== "movie" && type !== "tv") || !r.poster_path) return null;
-  if (serialSkip(r, type)) return null;                  // a regional serial: not in VibeSync
+  if (serialSkip(r, type)) return null;
+  if (noAnime() && (r.genre_ids || []).includes(16) && r.original_language === "ja") return null;   // developer account: no anime                  // a regional serial: not in VibeSync
   const g = r.genre_ids || [];
   const kind = g.includes(16) && r.original_language === "ja" ? "anime" : g.includes(10764) ? "reality" : type === "tv" ? "series" : "movie";
   const title = r.title || r.name || "";
@@ -4763,11 +4772,11 @@ function liveRowHTML(key) {
 function liveRowsHTML(tab) {
   if (!T.key || T.failed || !LIVE[tab]) return "";
   const extra = {movie: ["plat|appletv|movie", "plat|sunnxt|movie"], series: ["plat|appletv|tv", "plat|sunnxt|tv"]}[tab] || [];   // endless Apple TV catalogue rows
-  return extra.map(liveRowHTML).join("") + LIVE[tab].map((_, i) => liveRowHTML(`${tab}|${i}`)).join("");
+  return extra.map(liveRowHTML).join("") + LIVE[tab].map((d, i) => noAnime() && animeDef(d[2]) ? "" : liveRowHTML(`${tab}|${i}`)).join("");
 }
 function platformsHTML() {
   if (!T.key || T.failed) return "";
-  return section("Browse by platform", "") + `<div class="chips" role="group" aria-label="Platforms">${PLATS.map(k =>
+  return section("Browse by platform", "") + `<div class="chips" role="group" aria-label="Platforms">${PLATS.filter(k => !(k === "crunchyroll" && noAnime())).map(k =>
     `<button class="chip" data-plat="${k}" aria-pressed="false"><i class="pc" style="--pcol:${D.providers[k].color}">${esc(D.providers[k].name[0])}</i>${esc(D.providers[k].name)}</button>`).join("")}</div><div id="platbox"></div>`;
 }
 async function showPlatform(k) {
@@ -6235,7 +6244,7 @@ function pushWidget() {
   Object.entries(X.swiped).forEach(([id, v]) => { if (v === -1) { avoid.add(id); const t = tid(BY[id]); if (t) avoid.add(t); } });
   queue.forEach(it => { const t = tid(it); if (t) avoid.add(t); });
   Object.entries(SERIALS).forEach(([id, v]) => { if (v === 1) avoid.add(id); });       // regional serials: never
-  try { b.setPick(JSON.stringify({queue: queue.map(widgetCard), key: T.key || "", likeGenres, avoid: [...avoid].slice(-1500)})); } catch (e) {}
+  try { b.setPick(JSON.stringify({queue: queue.filter(it => !(noAnime() && isAnime(it))).map(widgetCard), key: T.key || "", likeGenres, avoid: [...avoid].slice(-1500), noAnime: noAnime()})); } catch (e) {}
 }
 // "Watched it" taps on the widget, made while VibeSync was closed
 function syncWidgetWatched() {
@@ -7165,7 +7174,10 @@ async function gotGoogleToken(t) {
   // signed in with (or away from) the developer account: rating switches on / off right here, no reload
   Promise.resolve(syncAfterSignIn()).catch(() => {}).then(() => {
     const dev = isDevAccount(AUTH.user);
-    if (dev !== RATE_DEV) { RATE_DEV = dev; try { refreshInPlace(); } catch (e) {} }
+    if (dev !== RATE_DEV) {
+      RATE_DEV = dev;
+      try { animeFilter(); D.featured = pickFeatured(); if (noAnime() && state.tab === "anime") state.tab = "foryou"; render(); refreshInPlace(); } catch (e) {}
+    }
   });
 }
 async function authBoot() {
@@ -7310,7 +7322,7 @@ async function pzAnswer() {
   const pool = mine.length ? mine : PZ_POOLS;           // only your picked languages, if you picked any
   const lang = n ? pool[(h >>> 4) % pool.length] : pool[d % pool.length];
   // the most-voted films in that language: an order that barely moves, so everyone gets the same film today
-  const j = await tget("/discover/movie", {with_original_language: lang, sort_by: "vote_count.desc", "vote_count.gte": lang === "en" ? 3000 : 60,
+  const j = await tget("/discover/movie", {with_original_language: lang, sort_by: "vote_count.desc", "vote_count.gte": lang === "en" ? 3000 : 60, ...(noAnime() && lang === "ja" ? {without_genres: "16"} : {}),
     include_adult: "false", page: 1 + (h % (lang === "en" ? 10 : 4))});
   let list = (j.results || []).filter(r => r.poster_path);
   if (!list.length) list = ((await tget("/discover/movie", {with_original_language: lang, sort_by: "vote_count.desc", include_adult: "false", page: 1})).results || []).filter(r => r.poster_path);
@@ -8076,6 +8088,8 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#pview.
 function boot(data) {
   if (D) return;
   D = data; D.items.forEach(i => BY[i.id] = i);
+  D.allItems = D.items; animeFilter();
+  if (noAnime() && state.tab === "anime") state.tab = "foryou";
   D.providers.sunnxt = D.providers.sunnxt || {name: "Sun NXT", color: "#F58220", pkg: "com.suntv.sunnxt"};   // older cached catalogues
   D.featured = pickFeatured();
   T.key = (args.tmdbKey || new URLSearchParams(location.search).get("tmdb") || "").trim();
