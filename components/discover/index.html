@@ -2711,6 +2711,7 @@ function gotServerImdb(map) {
   Object.entries(map || {}).forEach(([k, v]) => {
     const cb = IMDBQ.wait[k]; if (!cb) return;
     delete IMDBQ.wait[k]; if (SERVER_ASK.imdb && SERVER_ASK.imdb.key === k) delete SERVER_ASK.imdb;
+    if (SERVER_ASK.imdbc && SERVER_ASK.imdbc.key === k) delete SERVER_ASK.imdbc;
     cb(v && typeof v === "object" ? v : null);
   });
 }
@@ -2734,6 +2735,58 @@ function imdbFor(items) {
   });
 }
 const imdbOf = i => !notOutYet(i) && typeof i.imdb === "number" ? i.imdb : 0;
+
+/* ───────────── IMDb ★ on every card ─────────────
+   Cards for titles found live (TMDB) don't come with an IMDb rating. Whenever cards appear, the ones without one are
+   looked up on the server (IMDb's daily ratings file, up to 120 at a time) and the ★ is filled in place. Answers are
+   kept on this device for 3 days, so the stars are there at once next time. */
+const CIM = {busy: false, cache: (() => { try { return JSON.parse(localStorage.getItem("vs.imcards") || "{}") || {}; } catch (e) { return {}; } })()};
+const cimDay = () => Math.floor(Date.now() / 864e5);
+const cimRef = it => it && it.tmdb ? `${it.tmdb.type}:${it.tmdb.id}` : "";
+function cimShow(it) {
+  if (!it || notOutYet(it) || !(it.imdb > 0)) return;
+  $$(`[data-open="${CSS.escape(it.id)}"] .cm`).forEach(cm => {
+    const sc = cm.querySelector(".sc"), t = `★ ${it.imdb.toFixed(1)}`;
+    if (sc) { if (sc.textContent !== t) sc.textContent = t; } else cm.insertAdjacentHTML("afterbegin", `<span class="sc">${t}</span>`);
+  });
+}
+function cimScan() {
+  if (!EMBED || !T.key) return;
+  const need = [], seen = new Set(), today = cimDay();
+  $$("[data-open] .cm").forEach(cm => {
+    const id = cm.closest("[data-open]").dataset.open, it = BY[id];
+    if (!it || seen.has(id) || !it.tmdb || it.kind === "sports" || notOutYet(it) || it.imdb > 0 || it.imdbR !== undefined) return;
+    seen.add(id);
+    const c = CIM.cache[cimRef(it)];
+    if (c && today - c[1] <= 3) { it.imdbR = c[0]; if (c[0] > 0) { it.imdb = c[0]; cimShow(it); } return; }
+    need.push(it);
+  });
+  if (!need.length || CIM.busy) return;
+  CIM.busy = true;
+  const batch = need.slice(0, 120), k = "ic" + Date.now() + Math.random().toString(36).slice(2, 6);
+  const done = map => {
+    CIM.busy = false;
+    if (map && !map.error) {
+      batch.forEach(it => {
+        const v = map[cimRef(it)], r = v ? +v[0] : 0;
+        it.imdbR = r; if (v) it.imdbV = +v[1];
+        if (r > 0) { it.imdb = r; cimShow(it); }
+        CIM.cache[cimRef(it)] = [r, today];
+      });
+      const ks = Object.keys(CIM.cache); if (ks.length > 4000) ks.slice(0, ks.length - 4000).forEach(x => delete CIM.cache[x]);
+      try { localStorage.setItem("vs.imcards", JSON.stringify(CIM.cache)); } catch (e) {}
+      if (need.length > batch.length) setTimeout(cimScan, 300);      // more cards waiting
+    }
+  };
+  IMDBQ.wait[k] = done;
+  serverAsk("imdbc", {key: k, ids: batch.map(cimRef)});
+  setTimeout(() => { if (IMDBQ.wait[k]) { delete IMDBQ.wait[k]; CIM.busy = false; } }, 30000);
+}
+// any new cards on screen (rows, search, studios, pages): look them up shortly after they appear
+(() => {
+  let t = 0;
+  new MutationObserver(() => { clearTimeout(t); t = setTimeout(cimScan, 700); }).observe(document.body, {childList: true, subtree: true});
+})();
 async function imdbApply(items) {
   if (!imdbOn() || !items.length) return items;
   const ok = await imdbFor(items);

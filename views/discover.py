@@ -256,6 +256,16 @@ def render(theme: str) -> dict | None:
             while len(imdb) > 12:
                 imdb.pop(next(iter(imdb)))
             st.rerun()
+    # IMDb ratings for the cards on screen (their own channel, so they never knock out a title page's request)
+    cq = value.get("imdbc") if isinstance(value, dict) else None
+    if isinstance(cq, dict) and value.get("n") != st.session_state.get("_imdbc_n"):
+        st.session_state._imdbc_n = value.get("n")
+        k, refs = str(cq.get("key", ""))[:80], cq.get("ids")
+        if k and isinstance(refs, list) and k not in imdb and tmdb_key():
+            imdb[k] = _imdb_for(refs)
+            while len(imdb) > 12:
+                imdb.pop(next(iter(imdb)))
+            st.rerun()
     # ...and Book tickets: the movie's own page on each ticketing site, in the site's official link format
     bq = value.get("book") if isinstance(value, dict) else None
     if isinstance(bq, dict) and value.get("n") != st.session_state.get("_book_n"):
