@@ -1393,7 +1393,11 @@ let RATE_DEV = isDevAccount(store.get("auth", null));          // can switch on 
 /* No anime for the developer account (and only for it): no Anime tab, no anime rows, cards, search results, shortcuts,
    Crunchyroll or widget picks. Anime = TMDB animation made in Japanese, or a library title marked anime. */
 const noAnime = () => RATE_DEV;
-const isAnime = it => !!it && (it.kind === "anime");
+// Kids' cartoons are not anime: anything TMDB tags Kids, plus these well-known cartoons, stays.
+const CARTOON = /doraemon|shin ?-?chan|crayon shin|hattori|perman|kiteretsu|pok[eé]mon|beyblade|hamtaro|chibi maruko|anpanman|obocchama|kochikame|kitty|oggy|bakugan|yo-kai|duel masters|chhota|chota bheem/i;
+const jpAnime = r => !!r && (r.genre_ids || []).includes(16) && r.original_language === "ja" && !(r.genre_ids || []).includes(10762)
+  && !CARTOON.test(`${r.title || ""} ${r.name || ""} ${r.original_title || ""} ${r.original_name || ""}`);
+const isAnime = it => !!it && it.kind === "anime" && !it.cartoon && !CARTOON.test(it.title || "");
 const animeDef = p => !!p && String(p.with_genres || "").split(/[,|]/).includes("16") && p.with_original_language === "ja";
 function animeFilter() { if (D && D.allItems) D.items = noAnime() ? D.allItems.filter(i => !isAnime(i)) : D.allItems; }
 const tabList = () => TABS.filter(([k]) => !(k === "anime" && noAnime()));
@@ -1954,7 +1958,7 @@ function renderSearch(q) {
   const tq = twinKey(q);
   const items = !q ? []                                 // nothing until you type: just the shortcuts and studios
     : D.items.filter(i => hay(i).includes(q) || (tq.length > 2 && twinKey(i.title).includes(tq)));
-  const quick = !q ? `<div class="quick"><button class="chip mxchip" data-mixer>🎛️ Genre mixer</button>${QUICK.filter(w => !(noAnime() && /^(anime|doraemon)$/i.test(w))).map(w => `<button class="chip" data-q="${esc(w)}">${esc(w)}</button>`).join("")}</div>` : "";
+  const quick = !q ? `<div class="quick"><button class="chip mxchip" data-mixer>🎛️ Genre mixer</button>${QUICK.filter(w => !(noAnime() && /^anime$/i.test(w))).map(w => `<button class="chip" data-q="${esc(w)}">${esc(w)}</button>`).join("")}</div>` : "";
   // "Did you mean…?" when the typed text finds little, or isn't literally in the best match's title
   let dym = "", close = [];
   if (q.length >= 3) {
@@ -4723,12 +4727,13 @@ function fromTmdb(r, typeHint) {
   const type = r.media_type || typeHint;
   if ((type !== "movie" && type !== "tv") || !r.poster_path) return null;
   if (serialSkip(r, type)) return null;
-  if (noAnime() && (r.genre_ids || []).includes(16) && r.original_language === "ja") return null;   // developer account: no anime                  // a regional serial: not in VibeSync
+  if (noAnime() && jpAnime(r)) return null;   // developer account: no anime                  // a regional serial: not in VibeSync
   const g = r.genre_ids || [];
   const kind = g.includes(16) && r.original_language === "ja" ? "anime" : g.includes(10764) ? "reality" : type === "tv" ? "series" : "movie";
+  const cartoon = g.includes(16) && r.original_language === "ja" && !jpAnime(r);
   const title = r.title || r.name || "";
   const year = (r.release_date || r.first_air_date || "").slice(0, 4);
-  const it = {id: `tmdb:${type}:${r.id}`, tmdb: {type, id: r.id}, title, kind, year, meta: "", genres: [], synopsis: r.overview || "",
+  const it = {id: `tmdb:${type}:${r.id}`, tmdb: {type, id: r.id}, title, kind, cartoon, year, meta: "", genres: [], synopsis: r.overview || "",
     moods: [], telugu: r.original_language === "te", imdb: null, score: r.vote_average ? Math.round(r.vote_average * 10) / 10 : null,
     poster: null, tmdbPoster: r.poster_path, status: null, note: "", emoji: "🎬", colors: ["#3F2A3A", "#1B1220"], offers: [],
     trailer: "https://www.youtube.com/results?search_query=" + enc(`${title} ${year} trailer`), gids: g, lang: r.original_language || "", rel: r.release_date || r.first_air_date || ""};
@@ -4745,7 +4750,7 @@ function curatedTwin(it) {
     && (!it.year || !c.year || Math.abs(+c.year - +it.year) <= 1)) || null;
 }
 const slim = it => ({id: it.id, tmdb: it.tmdb, title: it.title, kind: it.kind, year: it.year, score: it.score, tmdbPoster: it.tmdbPoster,
-  synopsis: it.synopsis, telugu: it.telugu, trailer: it.trailer, gids: it.gids, lang: it.lang, rel: it.rel, streams: it.streams});
+  synopsis: it.synopsis, telugu: it.telugu, trailer: it.trailer, gids: it.gids, lang: it.lang, rel: it.rel, streams: it.streams, cartoon: it.cartoon});
 function rehydrate(m) {
   return Object.assign({meta: "", genres: [], moods: [], imdb: null, poster: null, status: null, note: "", emoji: "🎬",
     colors: ["#3F2A3A", "#1B1220"], offers: []}, m);
@@ -7322,9 +7327,9 @@ async function pzAnswer() {
   const pool = mine.length ? mine : PZ_POOLS;           // only your picked languages, if you picked any
   const lang = n ? pool[(h >>> 4) % pool.length] : pool[d % pool.length];
   // the most-voted films in that language: an order that barely moves, so everyone gets the same film today
-  const j = await tget("/discover/movie", {with_original_language: lang, sort_by: "vote_count.desc", "vote_count.gte": lang === "en" ? 3000 : 60, ...(noAnime() && lang === "ja" ? {without_genres: "16"} : {}),
+  const j = await tget("/discover/movie", {with_original_language: lang, sort_by: "vote_count.desc", "vote_count.gte": lang === "en" ? 3000 : 60, 
     include_adult: "false", page: 1 + (h % (lang === "en" ? 10 : 4))});
-  let list = (j.results || []).filter(r => r.poster_path);
+  let list = (j.results || []).filter(r => r.poster_path && !(noAnime() && jpAnime(r)));
   if (!list.length) list = ((await tget("/discover/movie", {with_original_language: lang, sort_by: "vote_count.desc", include_adult: "false", page: 1})).results || []).filter(r => r.poster_path);
   if (!list.length) throw new Error("no film");
   const r = list[(h >>> 8) % list.length];
