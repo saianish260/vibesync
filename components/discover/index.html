@@ -1892,6 +1892,7 @@ function toggleFav(id) {
   if (it && it.tmdb) { const m = store.get("favMeta", {}); if (favs.has(id)) m[id] = slim(it); else delete m[id]; store.set("favMeta", m); }
   try { delete liveState["taste|movie"]; delete liveState["taste|tv"]; } catch (e) {}   // suggestions follow Saved next time
   if (state.tab === "saved") setTab("saved");
+  if (favs.has(id)) { clearTimeout(toggleFav.w); toggleFav.w = setTimeout(() => { try { pushWidget(); } catch (e) {} }, 1200); }   // saved: off the widget right away
   buzz();
 }
 function saveTracker() { store.set("tracker", tracker); }
@@ -6218,10 +6219,10 @@ async function applySync(replace) {
 /* ───────────── tonight's pick: the Android home-screen widget ───────────── */
 function pickTonight() {
   const day = new Date().toISOString().slice(0, 10), cur = store.get("tonight", null);
-  if (cur && cur.day === day && watchableNow(BY[cur.id]) && !isWatched(cur.id) && X.swiped[cur.id] !== -1) return BY[cur.id];
-  const pool = surprisePool().filter(it => !isWatched(it.id) && X.swiped[it.id] !== -1 && watchableNow(it));
+  if (cur && cur.day === day && watchableNow(BY[cur.id]) && !isWatched(cur.id) && X.swiped[cur.id] !== -1 && !favs.has(cur.id)) return BY[cur.id];
+  const pool = surprisePool().filter(it => !isWatched(it.id) && X.swiped[it.id] !== -1 && !favs.has(it.id) && watchableNow(it));   // saved titles: never on the widget
   if (!pool.length) return null;
-  const ranked = pool.map(it => [tasteScore(it) + (favs.has(it.id) ? 3 : 0) + Math.random() * 4, it]).sort((a, b) => b[0] - a[0]);
+  const ranked = pool.map(it => [tasteScore(it) + Math.random() * 4, it]).sort((a, b) => b[0] - a[0]);
   const it = ranked[Math.floor(Math.random() * Math.min(8, ranked.length))][1];
   store.set("tonight", {day, id: it.id});
   return it;
@@ -6236,8 +6237,8 @@ const widgetCard = it => {
 function pushWidget() {
   const b = window.VibeSyncApp; if (!b || typeof b.setPick !== "function") return;
   const first = pickTonight(); if (!first) return;
-  const pool = surprisePool().filter(it => it !== first && !isWatched(it.id) && X.swiped[it.id] !== -1 && watchableNow(it));
-  const rest = pool.map(it => [tasteScore(it) + (favs.has(it.id) ? 3 : 0) + Math.random() * 5, it]).sort((a, b) => b[0] - a[0]).slice(0, 39).map(([, it]) => it);
+  const pool = surprisePool().filter(it => it !== first && !isWatched(it.id) && X.swiped[it.id] !== -1 && !favs.has(it.id) && watchableNow(it));
+  const rest = pool.map(it => [tasteScore(it) + Math.random() * 5, it]).sort((a, b) => b[0] - a[0]).slice(0, 39).map(([, it]) => it);
   const queue = [first].concat(rest);
   const meta = {}; queue.forEach(it => { if (it.tmdb) meta[it.id] = slim(it); }); store.set("widgetMeta", meta);
   // for the widget's own endless refills: the TMDB key, the genres you like most, and titles to leave out
@@ -6248,8 +6249,9 @@ function pushWidget() {
   Object.keys(X.st).forEach(id => { avoid.add(id); const t = tid(BY[id]); if (t) avoid.add(t); });
   Object.entries(X.swiped).forEach(([id, v]) => { if (v === -1) { avoid.add(id); const t = tid(BY[id]); if (t) avoid.add(t); } });
   queue.forEach(it => { const t = tid(it); if (t) avoid.add(t); });
+  const savedIds = []; favs.forEach(id => { savedIds.push(id); const t = tid(BY[id]); if (t && t !== id) savedIds.push(t); });   // saved: the widget's refills skip them too
   Object.entries(SERIALS).forEach(([id, v]) => { if (v === 1) avoid.add(id); });       // regional serials: never
-  try { b.setPick(JSON.stringify({queue: queue.filter(it => !(noAnime() && isAnime(it))).map(widgetCard), key: T.key || "", likeGenres, avoid: [...avoid].slice(-1500), noAnime: noAnime()})); } catch (e) {}
+  try { b.setPick(JSON.stringify({queue: queue.filter(it => !(noAnime() && isAnime(it))).map(widgetCard), key: T.key || "", likeGenres, avoid: savedIds.concat([...avoid].filter(id => !favs.has(id)).slice(-1500)), noAnime: noAnime()})); } catch (e) {}
 }
 // "Watched it" taps on the widget, made while VibeSync was closed
 function syncWidgetWatched() {
@@ -6261,6 +6263,16 @@ function syncWidgetWatched() {
   if (skipped.length) {            // skipped on the widget: not suggested again, and taste leans away a little
     skipped.forEach(id => { if (!BY[id] && meta[id]) BY[id] = rehydrate(meta[id]); if (!(id in X.swiped)) { X.swiped[id] = -1; if (BY[id]) learn(BY[id], -1); } });
     store.set("swiped", X.swiped);
+  }
+  let saved = []; try { if (typeof b.takeWidgetSaved === "function") saved = JSON.parse(b.takeWidgetSaved() || "[]"); } catch (e) {}
+  saved = saved.filter(id => id && !favs.has(id));
+  if (saved.length) {              // ♡ Save on the widget: into Saved (and your account), same as saving here
+    const fm = store.get("favMeta", {});
+    saved.forEach(id => { if (!BY[id] && meta[id]) BY[id] = rehydrate(meta[id]); favs.add(id); const it = BY[id]; if (it && it.tmdb) fm[id] = slim(it); });
+    store.set("favs", [...favs]); store.set("favMeta", fm);
+    try { delete liveState["taste|movie"]; delete liveState["taste|tv"]; } catch (e) {}
+    if (state.tab === "saved") setTab("saved");
+    toast(`Saved ${saved.length} widget pick${saved.length > 1 ? "s" : ""} ♥`);
   }
   if (!ids.length) return;
   ids.forEach(id => { if (!BY[id] && meta[id]) BY[id] = rehydrate(meta[id]); const it = BY[id];
