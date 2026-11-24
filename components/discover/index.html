@@ -6534,19 +6534,26 @@ function rdDraw(typing) {
     closeRateDial(); saveRating(RD.id, Math.round(Math.max(0, Math.min(10, RD.v)) * 100) / 100);
   }
 })();
+// Saved tab open: redraw it in place (only what changed, no flicker), so "Rated by you" follows each rating at once.
+// The "Coming up" row is filled in separately, so it's carried over as it is.
+function savedLive() {
+  const pn = $("#panel"); if (!pn || state.tab !== "saved") return;
+  const cu = $("#comingup"), keep = cu ? cu.innerHTML : "";
+  morph(pn, panelHTML("saved").replace('<div id="comingup"></div>', `<div id="comingup">${keep}</div>`));
+}
 function saveRating(id, v) {
   const it = BY[id]; if (!it) return;
   const first = myRating(id) == null;
   RATE.r[id] = {r: v, at: Date.now(), meta: it.tmdb ? slim(it) : null};
   store.set("ratings", RATE.r);
   if (first) learn(it, v >= 7.5 ? 2 : v >= 5 ? .5 : -1);
-  toast(`Rated ${fmtR(v)} / 10 ★`); refreshSheet(); buzz();
+  toast(`Rated ${fmtR(v)} / 10 ★`); refreshSheet(); savedLive(); buzz();
   $$(`.card[data-open="${CSS.escape(id)}"] .pw`).forEach(pw => { const b = pw.querySelector(".myr"); if (b) b.remove(); pw.insertAdjacentHTML("beforeend", myRatingBadge(id)); });
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-rateclear]"); if (!b) return;
   closeRateDial();
-  delete RATE.r[b.dataset.rateclear]; store.set("ratings", RATE.r); toast("Rating removed"); refreshSheet();
+  delete RATE.r[b.dataset.rateclear]; store.set("ratings", RATE.r); toast("Rating removed"); refreshSheet(); savedLive();
   $$(`.card[data-open="${CSS.escape(b.dataset.rateclear)}"] .myr`).forEach(x => x.remove());
 });
 
@@ -7115,7 +7122,7 @@ function refreshInPlace() {
     if (old) old.remove();
     if (html) pw.insertAdjacentHTML("beforeend", html);
   });
-  const pn = $("#panel"); if (pn && state.tab === "saved") morph(pn, panelHTML("saved"));     // only Saved shows this data
+  savedLive();                                           // only Saved shows this data
   if (openId) refreshSheet();
 }
 // after a merge that changed this device, reload once so every screen shows the account's data
