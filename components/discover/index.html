@@ -7080,7 +7080,12 @@ const AUTH = {cfg: null, user: store.get("auth", null), dirty: false, t: null, s
 const CLOUD_SKIP = /^vs\.(auth|authSaved|rt|widgetMeta|tonight)$/;
 // what follows you between devices: only your own data and settings, never this device's caches (title pages,
 // IMDb numbers, news...), which change every session and made every launch look like "new data, reload"
-const CLOUD_DATA = ["favs", "favMeta", "tracker", "status", "swiped", "reminders", "themeUse", "ratings", "mysubs", "themeRecent", "taste"];
+const CLOUD_DATA = ["favs", "favMeta", "tracker", "status", "swiped", "reminders", "themeUse", "ratings", "mysubs", "themeRecent", "taste", "touched"];
+// lists where removing something must stick across devices: every add / remove is noted (with its time) in "touched",
+// which travels with your account. Merging keeps whatever happened LAST to each title, so a removed rating or save
+// never comes back from another device's (or the account's) older copy, and adding it again later still wins.
+const TRACKED = new Set(["favs", "ratings", "reminders", "status", "mysubs"]);
+const trackIds = v => Array.isArray(v) ? v.map(String) : v && typeof v === "object" ? Object.keys(v) : [];
 const CLOUD_PREFS = ["titleTheme", "city", "prefLang", "find", "mix", "sound", "sndsrc", "vol2", "sndmix", "ytmode"];
 const CLOUD_KEYS = new Set(CLOUD_DATA.concat(CLOUD_PREFS).map(k => "vs." + k));
 function setAuthConfig(c) {
@@ -7089,7 +7094,19 @@ function setAuthConfig(c) {
 // every save to this device marks the account copy as out of date
 {
   const _set = store.set.bind(store);
-  store.set = (k, v) => { _set(k, v); if (!/^(auth|authSaved|rt|widgetMeta|tonight)$/.test(k)) cloudDirty(); };
+  store.set = (k, v) => {
+    if (TRACKED.has(k)) {                                   // note what was added / removed, and when
+      const was = new Set(trackIds(store.get(k, null))), now = new Set(trackIds(v)), t = Date.now();
+      const T = store.get("touched", {}); let ch = false;
+      was.forEach(id => { if (!now.has(id)) { T[k + "|" + id] = [t, 0]; ch = true; } });
+      now.forEach(id => { if (!was.has(id)) { T[k + "|" + id] = [t, 1]; ch = true; } });
+      if (ch) {
+        const old = t - 400 * 864e5, ks = Object.keys(T).filter(x => T[x][0] >= old).sort((a, b) => T[b][0] - T[a][0]).slice(0, 6000);
+        _set("touched", Object.fromEntries(ks.map(x => [x, T[x]])));
+      }
+    }
+    _set(k, v); if (!/^(auth|authSaved|rt|widgetMeta|tonight)$/.test(k)) cloudDirty();
+  };
 }
 const fbUrl = path => `${path}${path.includes("?") ? "&" : "?"}key=${encodeURIComponent(AUTH.cfg.apiKey)}`;
 const fsDoc = () => `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(AUTH.cfg.projectId)}/databases/(default)/documents/users/${encodeURIComponent(AUTH.user.uid)}`;
@@ -7172,6 +7189,15 @@ function mergeCloud(remote) {
   merge("themeRecent", (a, b) => a.concat(b.filter(t => !a.some(x => x.id === t.id))).slice(0, 10));
   merge("taste", (a, b) => { const o = {t: {}, k: {}, l: {}, n: Math.max(a.n || 0, b.n || 0)};
     ["t", "k", "l"].forEach(g => [a[g] || {}, b[g] || {}].forEach(m => Object.entries(m).forEach(([k, v]) => o[g][k] = Math.max(o[g][k] || -1e9, v)))); return o; });
+  // removals stick: whatever happened last to each title wins (both sides' notes combined, newest kept)
+  merge("touched", (a, b) => { const o = Object.assign({}, b); Object.entries(a).forEach(([k, v]) => { if (!o[k] || v[0] >= o[k][0]) o[k] = v; }); return o; });
+  const T = J(localData(), "vs.touched") || {};
+  TRACKED.forEach(k => {
+    const v = J(localData(), "vs." + k); if (v == null) return;
+    const gone = id => { const x = T[k + "|" + id]; return x && x[1] === 0; };
+    if (Array.isArray(v)) { const nv = v.filter(id => !gone(String(id))); if (nv.length !== v.length) raw("vs." + k, JSON.stringify(nv)); }
+    else if (typeof v === "object") { let ch = false; Object.keys(v).forEach(id => { if (gone(id)) { delete v[id]; ch = true; } }); if (ch) raw("vs." + k, JSON.stringify(v)); }
+  });
   return canonAll(dataOnly(localData())) !== before;              // settings taken from the account don't count as a change
 }
 /* the account had something new (from another device): show it right here, without reloading the page, so the
