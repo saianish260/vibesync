@@ -1,0 +1,25 @@
+# Every 4 hours: visit VibeSync in a real (headless) browser so Streamlit Community Cloud never puts it to sleep
+# (it sleeps after ~12 h without a visitor), and wake it if it already is.
+name: Keep VibeSync awake
+on:
+  schedule:
+    - cron: "23 */4 * * *"         # every 4 hours
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["scripts/keepawake.py", ".github/workflows/keepawake.yml"]
+concurrency: { group: keepawake, cancel-in-progress: false }
+jobs:
+  visit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install a headless browser
+        run: |
+          pip install -q playwright
+          python -m playwright install --with-deps chromium > /dev/null
+      - name: Visit (and wake) VibeSync
+        run: python scripts/keepawake.py
