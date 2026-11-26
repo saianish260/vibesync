@@ -1900,7 +1900,7 @@ function toggleFav(id) {
   const it = BY[id];
   if (it && it.tmdb) { const m = store.get("favMeta", {}); if (favs.has(id)) m[id] = slim(it); else delete m[id]; store.set("favMeta", m); }
   try { delete liveState["taste|movie"]; delete liveState["taste|tv"]; } catch (e) {}   // suggestions follow Saved next time
-  if (state.tab === "saved") setTab("saved");
+  if (state.tab === "saved") { if (typeof savedLive === "function") savedLive(); else setTab("saved"); }   // in place: rows keep their scroll
   if (favs.has(id)) { clearTimeout(toggleFav.w); toggleFav.w = setTimeout(() => { try { pushWidget(); } catch (e) {} }, 1200); }   // saved: off the widget right away
   buzz();
 }
@@ -5112,7 +5112,7 @@ function setStatus(id, s) {
   }
   store.set("status", X.st);
   refreshSheet(); buzz();
-  if (state.tab === "saved") setTab("saved");
+  if (state.tab === "saved") { if (typeof savedLive === "function") savedLive(); else setTab("saved"); }   // in place: rows keep their scroll
   $$(`.card[data-open="${CSS.escape(id)}"] .pw`).forEach(pw => { const b = pw.querySelector(".stb"); if (b) b.remove(); if (X.st[id]) pw.insertAdjacentHTML("beforeend", statusBadge(id)); });
 }
 const statusBadge = id => { const s = statusOf(id); return s ? `<span class="stb ${s}">${s === "watched" ? "✓ Watched" : "👀 Watching"}</span>` : ""; };
@@ -6337,7 +6337,7 @@ function syncWidgetWatched() {
     saved.forEach(id => { if (!BY[id] && meta[id]) BY[id] = rehydrate(meta[id]); favs.add(id); const it = BY[id]; if (it && it.tmdb) fm[id] = slim(it); });
     store.set("favs", [...favs]); store.set("favMeta", fm);
     try { delete liveState["taste|movie"]; delete liveState["taste|tv"]; } catch (e) {}
-    if (state.tab === "saved") setTab("saved");
+    if (state.tab === "saved") { if (typeof savedLive === "function") savedLive(); else setTab("saved"); }   // in place: rows keep their scroll
     toast(`Saved ${saved.length} widget pick${saved.length > 1 ? "s" : ""} ♥`);
   }
   if (!ids.length) return;
